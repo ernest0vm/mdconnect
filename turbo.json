@@ -1,0 +1,70 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "futureFlags": {
+    "affectedUsingTaskInputs": true
+  },
+  "globalDependencies": [
+    "package.json",
+    ".yarnrc.yml",
+    ".nvmrc",
+    ".husky/**",
+    "eslint.config.mjs",
+    ".prettierrc.json",
+    ".prettierignore",
+    ".gitignore"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "format:check": {
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "//#root:lint": {
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "!apps/**", "!packages/**"]
+    },
+    "//#root:format": {
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "!apps/**", "!packages/**"]
+    },
+    "//#root:typecheck": {
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "!apps/**", "!packages/**"]
+    },
+    "//#root:specs": {
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "!apps/**", "!packages/**"]
+    },
+    "@mdconnect/repo-policy#test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/*/package.json",
+        "$TURBO_ROOT$/packages/*/package.json",
+        "$TURBO_ROOT$/apps/*/tsconfig.json",
+        "$TURBO_ROOT$/packages/*/tsconfig.json",
+        "$TURBO_ROOT$/lint-staged.config.mjs"
+      ]
+    }
+  }
+}

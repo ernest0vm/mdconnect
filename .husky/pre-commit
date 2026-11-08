@@ -1,0 +1,3 @@
+# Serial so formatting fixes land before the affected checks; --hide-all so every task
+# (including turbo typecheck/test) sees only what is being committed.
+yarn lint-staged --concurrent false --hide-all

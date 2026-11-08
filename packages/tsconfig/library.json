@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "display": "mdconnect platform-agnostic library (protocol code: netmd/himd ports)",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"],
+    "types": ["w3c-web-usb"]
+  }
+}

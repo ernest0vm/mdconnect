@@ -1,0 +1,69 @@
+schema: spec-driven
+
+context: |
+  mdconnect is a desktop port of asivery/webminidisc (GPL-2.0) to keep Sony NetMD / Hi-MD
+  MiniDisc devices usable. The project is therefore GPL-2.0-only; keep upstream attribution
+  and license headers on anything derived from webminidisc or its libraries.
+  Target is desktop only (Electron) on macOS, Windows and Linux; every design must state how
+  it behaves on all three. USB access is WebUSB in the renderer, granted through Electron
+  session handlers. Whether Windows still needs a WinUSB driver (Zadig) is an open question.
+  UI uses shadcn/ui + Tailwind CSS with GlassyUI styling. Do NOT use Material UI, Emotion,
+  styled-components, tss-react or react95.
+  Monorepo: Yarn 4 workspaces (node-modules linker) + Turborepo. apps/* are runnable apps,
+  packages/* are shared libraries. Protocol libraries (netmd-js, himd-js, netmd-exploits,
+  networkwm-js, netmd-tocmanip) are consumed from npm; fork one into packages/ only when a
+  design justifies it.
+  Dependencies: Yarn refuses versions younger than 7 days (npmMinimalAgeGate) and dependency
+  install scripts are off. Every new runtime dependency must be justified in the design;
+  prefer fewer dependencies and platform APIs.
+  TypeScript is strict (no `any`, noUncheckedIndexedAccess). Development is test-first with
+  Vitest (see the `tdd` skill); `yarn check:affected` must pass before a task is done.
+  Write all OpenSpec artifacts in English.
+
+rules:
+  proposal:
+    - State what is out of scope.
+  design:
+    - List new dependencies with their purpose, license and maintenance status.
+    - Cover macOS, Windows and Linux behaviour where USB, filesystem or packaging is involved.
+  tasks:
+    - Each group lands its own tests; name the spec scenarios each test task covers.
+    - Mark hardware or OS checks that cannot be automated as manual verification with exact steps.
+
+operations:
+  apply:
+    guidance:
+      - Use the `tdd` skill for every task that changes behaviour; write the failing test first.
+      - Apply the `typescript-clean-code` skill when writing and refactoring; repo rules in CLAUDE.md win on conflicts.
+      - Run `yarn check:affected` before ticking a task.
+
+# Project context (optional)
+# Add only constraints that should guide OpenSpec artifacts and workflows.
+# Include constraints an agent cannot infer by reading the code.
+# Keep general project documentation and discoverable codebase facts out.
+# Example:
+#   context: |
+#     Designs and tasks must cover Windows, macOS, and Linux
+#     Write all artifacts in Spanish
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

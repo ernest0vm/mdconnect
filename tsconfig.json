@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Root project: type-checks repo-level config files only. Workspaces have their own tsconfig and `typecheck` script (run via turbo).",
+  "extends": "./packages/tsconfig/node.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowJs": true,
+    "checkJs": true
+  },
+  "include": ["*.ts", "*.mjs", "*.js", "scripts/**/*"],
+  "exclude": ["node_modules", "apps", "packages"]
+}
