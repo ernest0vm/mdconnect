@@ -14,6 +14,7 @@ export interface UsbDeviceHandle {
   /** WebUSB reports a missing serial number as null. */
   readonly serialNumber?: string | null | undefined;
   open(): Promise<void>;
+  close(): Promise<void>;
 }
 
 export interface UsbConnectionEventLike {

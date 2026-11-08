@@ -1,6 +1,6 @@
-import { contentSecurityPolicy } from '@mdconnect/core';
 import { shell, type Session, type WebContents, type WebPreferences } from 'electron';
 
+import { developmentCsp } from './csp';
 import { isSafeExternalUrl } from './url-policy';
 
 export const SECURE_WEB_PREFERENCES = {
@@ -10,11 +10,6 @@ export const SECURE_WEB_PREFERENCES = {
   webSecurity: true,
   webviewTag: false,
 } as const satisfies WebPreferences;
-
-/** Development only: Vite's client and React Refresh need inline scripts and a websocket. */
-const DEVELOPMENT_CSP = contentSecurityPolicy
-  .replace("script-src 'self'", "script-src 'self' 'unsafe-inline'")
-  .replace("connect-src 'self'", "connect-src 'self' ws://localhost:* http://localhost:*");
 
 /** The window never navigates and never opens windows; web links go to the default browser. */
 export function lockNavigation(contents: WebContents): void {
@@ -40,7 +35,10 @@ export function denyPermissionRequests(session: Session): void {
 export function applyDevelopmentCsp(session: Session): void {
   session.webRequest.onHeadersReceived((details, callback) => {
     callback({
-      responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [DEVELOPMENT_CSP] },
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [developmentCsp()],
+      },
     });
   });
 }

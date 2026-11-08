@@ -37,9 +37,17 @@ describe('resolveAppPath', () => {
     expect(resolveAppPath(root, 'app://mdconnect/assets/%2E%2E%2F%2E%2E%2Fsecret.txt')).toBeNull();
   });
 
-  it('rejects absolute paths', () => {
+  it('keeps decoded absolute paths inside the root even when the target exists', () => {
+    const everythingExists = () => true;
+    const outside = join(root, '..', 'secret.txt');
+    const resolved = resolveAppPath(
+      root,
+      `app://mdconnect/${encodeURIComponent(outside)}`,
+      everythingExists,
+    );
+    expect(resolved?.startsWith(root)).toBe(true);
     expect(
-      resolveAppPath(root, `app://mdconnect/${encodeURIComponent(join(root, '..', 'secret.txt'))}`),
+      resolveAppPath(root, 'app://mdconnect/%2e%2e%2fsecret.txt', everythingExists),
     ).toBeNull();
   });
 

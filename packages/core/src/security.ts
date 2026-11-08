@@ -3,15 +3,25 @@
  * sends it as a response header, and the web app's `vercel.json` must match it exactly.
  * `style-src 'unsafe-inline'` is required by inline `style` attributes in Radix and GlassyUI.
  */
-export const contentSecurityPolicy = [
-  "default-src 'self'",
-  "script-src 'self' 'wasm-unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self'",
-  "connect-src 'self'",
-  "object-src 'none'",
-  "base-uri 'none'",
-  "form-action 'none'",
-  "frame-ancestors 'none'",
-].join('; ');
+export type CspDirectives = Readonly<Record<string, readonly string[]>>;
+
+export const CSP_DIRECTIVES: CspDirectives = {
+  'default-src': ["'self'"],
+  'script-src': ["'self'", "'wasm-unsafe-eval'"],
+  'style-src': ["'self'", "'unsafe-inline'"],
+  'img-src': ["'self'", 'data:', 'blob:'],
+  'font-src': ["'self'"],
+  'connect-src': ["'self'"],
+  'object-src': ["'none'"],
+  'base-uri': ["'none'"],
+  'form-action': ["'none'"],
+  'frame-ancestors': ["'none'"],
+};
+
+export function buildCsp(directives: CspDirectives): string {
+  return Object.entries(directives)
+    .map(([name, sources]) => [name, ...sources].join(' '))
+    .join('; ');
+}
+
+export const contentSecurityPolicy = buildCsp(CSP_DIRECTIVES);

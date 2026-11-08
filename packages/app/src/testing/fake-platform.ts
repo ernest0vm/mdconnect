@@ -14,7 +14,13 @@ export function fakeDevice(
   productId: number,
   serialNumber?: string,
 ): UsbDeviceHandle {
-  return { vendorId, productId, serialNumber, open: () => Promise.resolve() };
+  return {
+    vendorId,
+    productId,
+    serialNumber,
+    open: () => Promise.resolve(),
+    close: () => Promise.resolve(),
+  };
 }
 
 /** Test double for `navigator.usb`, with hooks to drive requests and connection events. */
