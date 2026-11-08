@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "license": "GPL-2.0-only",
+  "author": "mdconnect contributors",
   "type": "module",
   "description": "Electron shell: main process, preload bridge and renderer entry for @mdconnect/app.",
   "main": "out/main/index.js",
@@ -15,13 +16,9 @@
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
     "test": "vitest run"
   },
-  "dependencies": {
+  "devDependencies": {
     "@mdconnect/app": "workspace:^",
     "@mdconnect/core": "workspace:^",
-    "react": "^19",
-    "react-dom": "^19"
-  },
-  "devDependencies": {
     "@mdconnect/tsconfig": "workspace:^",
     "@tailwindcss/vite": "^4",
     "@types/node": "^22.20.5",
@@ -29,9 +26,11 @@
     "@types/react-dom": "^19",
     "@types/w3c-web-usb": "^1.0.14",
     "@vitejs/plugin-react": "^6",
-    "electron": "^44",
+    "electron": "44.10.1",
     "electron-builder": "^26",
     "electron-vite": "^6",
+    "react": "^19",
+    "react-dom": "^19",
     "tailwindcss": "^4",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"

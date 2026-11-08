@@ -897,7 +897,7 @@ __metadata:
     "@types/react-dom": "npm:^19"
     "@types/w3c-web-usb": "npm:^1.0.14"
     "@vitejs/plugin-react": "npm:^6"
-    electron: "npm:^44"
+    electron: "npm:44.10.1"
     electron-builder: "npm:^26"
     electron-vite: "npm:^6"
     react: "npm:^19"
@@ -2815,7 +2815,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"electron@npm:^44":
+"electron@npm:44.10.1":
   version: 44.10.1
   resolution: "electron@npm:44.10.1"
   dependencies:

@@ -1,0 +1,39 @@
+# Unsigned installers for the OS the build runs on. Signing and notarization are out of scope.
+appId: org.mdconnect.desktop
+productName: mdconnect
+copyright: GPL-2.0-only. Derived from Web MiniDisc Pro (asivery/webminidisc).
+directories:
+  output: release
+# main, preload and renderer are fully bundled by electron-vite; no node_modules are shipped.
+files:
+  - out/**/*
+  - package.json
+asar: true
+# No auto-update feeds or publishing yet (release CI is a later change).
+publish: null
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  # The renderer is served from app://, never file://.
+  grantFileProtocolExtraPrivileges: false
+  # Flipping fuses invalidates Electron's ad-hoc signature; macOS on Apple Silicon kills unsigned
+  # binaries (exit 137), so re-sign ad-hoc. Real signing is a later change.
+  resetAdHocDarwinSignature: true
+mac:
+  target: dmg
+  category: public.app-category.music
+  identity: null
+win:
+  target: nsis
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Audio
+  maintainer: mdconnect contributors
+  extraResources:
+    - from: resources/linux/60-mdconnect.rules
+      to: linux/60-mdconnect.rules
