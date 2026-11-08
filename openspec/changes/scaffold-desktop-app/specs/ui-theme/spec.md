@@ -40,8 +40,13 @@ When the OS asks for reduced motion, the app SHALL disable non-essential animati
 
 #### Scenario: Reduced transparency
 
-- **WHEN** the OS "reduce transparency" setting is on
+- **WHEN** the OS "reduce transparency" setting is on and the OS reports it to the app (macOS "Reduce transparency", Windows "Transparency effects" off)
 - **THEN** panels and dialogs render with an opaque background and no blur
+
+#### Scenario: Preference not reported
+
+- **WHEN** a Linux desktop exposes no reduced-transparency preference to Electron or Chromium
+- **THEN** the default glass look is used, and the tested desktop is recorded in the platform setup docs
 
 ### Requirement: Keyboard operable
 

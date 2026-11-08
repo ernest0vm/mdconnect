@@ -8,6 +8,7 @@
     "package.json",
     ".yarnrc.yml",
     ".nvmrc",
+    "packages/tsconfig/*.json",
     ".husky/**",
     "eslint.config.mjs",
     ".prettierrc.json",
