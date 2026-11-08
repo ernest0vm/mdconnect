@@ -12,7 +12,7 @@ The UI SHALL only be able to access USB devices whose vendor and product IDs app
 
 #### Scenario: Supported device
 
-- **WHEN** a supported device (for example Sony MZ-N510, vendor `0x054c`, product `0x00c9`) is connected and the UI requests a MiniDisc device
+- **WHEN** a supported device (for example Sony MZ-N510/N610, vendor `0x054c`, product `0x00c9`) is connected and the UI requests a MiniDisc device
 - **THEN** the device is available to the UI
 
 #### Scenario: Unsupported device
@@ -89,8 +89,8 @@ The app SHALL show a "Connect device" screen. After a successful request it SHAL
 
 #### Scenario: Connected
 
-- **WHEN** the user connects a Sony MZ-N510
-- **THEN** the screen shows "Sony MZ-N510" and `054c:00c9`
+- **WHEN** the user connects a Sony MZ-N510/N610 (vendor `0x054c`, product `0x00c9`)
+- **THEN** the screen shows "Sony MZ-N510/N610" and `054c:00c9`
 
 #### Scenario: Failure message
 

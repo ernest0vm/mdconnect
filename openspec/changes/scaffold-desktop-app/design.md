@@ -130,7 +130,7 @@ Payloads are validated in the main process against the pending `requestId` and t
 
 - Root `eslint.config.mjs` gains `eslint-plugin-react-hooks` (recommended) for `**/*.tsx`, and `globals.browser` for `apps/desktop/src/{renderer,preload}/**`. `components/ui/**` (generated) stays linted. Generated code that violates strict rules is fixed when it is added, not ignored.
 - `apps/desktop/package.json` scripts: `dev` (electron-vite dev), `build` (electron-vite build), `typecheck`, `test` (vitest run), `package` (build + electron-builder for the current OS). Turbo gains an uncached `package` task with `release/**` outputs.
-- `dependenciesMeta.electron.built: true` lets Electron's postinstall download its binary. No other package is opted in. If `esbuild` or another tool fails without its script, the task records it and opts that package in explicitly.
+- `dependenciesMeta.electron.built: true` in the **root** `package.json` (Yarn ignores `dependenciesMeta` in workspace manifests, and `@mdconnect/repo-policy` rejects it there) lets Electron's postinstall download its binary. No other package is opted in. If `esbuild` or another tool fails without its script, the task records it and opts that package in explicitly.
 
 ### Dependencies
 

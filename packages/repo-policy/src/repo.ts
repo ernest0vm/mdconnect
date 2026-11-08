@@ -63,19 +63,31 @@ export function allManifests(): Manifest[] {
   return [readManifest(repoRoot, true), ...workspaceManifests()];
 }
 
+export function readYarnrc(): Map<string, string> {
+  return parseYarnrc(readRootFile('.yarnrc.yml'));
+}
+
 /**
- * Reads top-level scalar keys from `.yarnrc.yml`. Nested values (lists, maps) are recorded
+ * Parses top-level scalar keys of a `.yarnrc.yml`. Nested values (lists, maps) are recorded
  * as present with an empty string, which is enough for "is this key set" checks.
  */
-export function readYarnrc(): Map<string, string> {
+export function parseYarnrc(text: string): Map<string, string> {
   const entries = new Map<string, string>();
-  for (const line of readRootFile('.yarnrc.yml').split('\n')) {
-    const match = /^([A-Za-z][\w-]*):\s*(.*?)\s*$/.exec(line);
+  for (const line of text.split('\n')) {
+    const match = /^([A-Za-z][\w-]*):(.*)$/.exec(line);
     if (!match) continue;
-    const [, key = '', value = ''] = match;
-    entries.set(key, value.replace(/\s+#.*$/, '').replace(/^(['"])(.*)\1$/, '$2'));
+    const [, key = '', rawValue = ''] = match;
+    entries.set(key, parseScalar(rawValue));
   }
   return entries;
+}
+
+/** A quoted scalar ends at its closing quote; anything after it, such as a comment, is dropped. */
+function parseScalar(rawValue: string): string {
+  const value = rawValue.trim();
+  const quoted = /^(['"])(.*?)\1/.exec(value);
+  if (quoted) return quoted[2] ?? '';
+  return value.replace(/\s*#.*$/, '');
 }
 
 const UNIT_MINUTES = { m: 1, h: 60, d: 60 * 24, w: 60 * 24 * 7 } as const;

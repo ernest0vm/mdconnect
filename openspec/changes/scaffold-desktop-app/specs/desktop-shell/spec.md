@@ -42,16 +42,16 @@ UI code SHALL run without access to Node.js or Electron APIs. It SHALL only reac
 
 ### Requirement: Content restrictions
 
-The UI SHALL only execute scripts and styles shipped inside the app. Remote scripts, inline scripts and string evaluation SHALL be blocked. WebAssembly compilation SHALL be allowed.
+In packaged builds the UI SHALL only execute scripts shipped inside the app. Remote scripts, inline scripts and string evaluation SHALL be blocked. WebAssembly compilation SHALL be allowed. Inline style attributes are permitted.
 
 #### Scenario: Remote script is blocked
 
-- **WHEN** the UI attempts to load a script from a remote origin
+- **WHEN** the UI of a packaged build attempts to load a script from a remote origin
 - **THEN** the load is refused and the app keeps working
 
 #### Scenario: String evaluation is blocked
 
-- **WHEN** UI code calls `eval` or `new Function` with a string
+- **WHEN** UI code in a packaged build calls `eval` or `new Function` with a string
 - **THEN** the call fails with a security error
 
 ### Requirement: Navigation lock

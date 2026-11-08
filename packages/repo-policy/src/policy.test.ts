@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   allManifests,
   parseAgeGateMinutes,
+  parseYarnrc,
   readRootFile,
   readYarnrc,
   workspaceManifests,
@@ -41,6 +42,34 @@ describe('parseAgeGateMinutes', () => {
 
   it('rejects values it cannot parse', () => {
     expect(() => parseAgeGateMinutes('soon')).toThrow(/npmMinimalAgeGate/);
+  });
+});
+
+describe('parseYarnrc', () => {
+  it('keeps a hash inside a quoted value and drops the trailing comment', () => {
+    const rc = parseYarnrc('npmRegistryServer: "https://host/x #y"  # mirror\n');
+    expect(rc.get('npmRegistryServer')).toBe('https://host/x #y');
+  });
+
+  it('unquotes single-quoted values', () => {
+    expect(parseYarnrc("nodeLinker: 'node-modules' # linker").get('nodeLinker')).toBe(
+      'node-modules',
+    );
+  });
+
+  it('drops a trailing comment from a plain value', () => {
+    expect(parseYarnrc('enableScripts: false   # off').get('enableScripts')).toBe('false');
+  });
+
+  it('records nested keys as present with an empty value', () => {
+    const rc = parseYarnrc('npmPreapprovedPackages:\n  - left-pad\n');
+    expect(rc.has('npmPreapprovedPackages')).toBe(true);
+    expect(rc.get('npmPreapprovedPackages')).toBe('');
+  });
+
+  it('ignores comment lines and indented lines', () => {
+    const rc = parseYarnrc('# nodeLinker: pnp\n  nested: value\n');
+    expect([...rc.keys()]).toEqual([]);
   });
 });
 
@@ -105,6 +134,13 @@ describe('package manifests', () => {
 describe('workspace conventions', () => {
   const codeWorkspaces = workspaceManifests().filter((m) => m.hasTsconfig);
 
+  it.each(workspaceManifests().map((m) => [m.name, m] as const))(
+    '%s declares no dependenciesMeta (Yarn only reads it from the root manifest)',
+    (_name, manifest) => {
+      expect(manifest.json.dependenciesMeta).toBeUndefined();
+    },
+  );
+
   it('finds at least this package', () => {
     expect(codeWorkspaces.map((m) => m.name)).toContain('@mdconnect/repo-policy');
   });
@@ -126,9 +162,17 @@ describe('workspace conventions', () => {
 });
 
 describe('git hooks', () => {
-  it('pre-commit runs lint-staged and the affected checks', () => {
-    const hook = readRootFile('.husky/pre-commit');
-    expect(hook).toMatch(/lint-staged/);
-    expect(hook).toMatch(/--affected/);
+  const lintStaged = readRootFile('lint-staged.config.mjs');
+
+  it('pre-commit runs lint-staged serially on the staged snapshot only', () => {
+    expect(readRootFile('.husky/pre-commit')).toMatch(/lint-staged --concurrent false --hide-all/);
+  });
+
+  it('runs affected typecheck and tests inside lint-staged, where unstaged changes are hidden', () => {
+    expect(lintStaged).toMatch(/turbo run root:typecheck typecheck test --affected/);
+  });
+
+  it('does not fail commits that stage files ESLint ignores', () => {
+    expect(lintStaged).toMatch(/eslint --fix --no-warn-ignored --max-warnings 0/);
   });
 });

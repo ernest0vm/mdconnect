@@ -46,9 +46,11 @@ jobs:
         run: yarn dedupe --check
 
       # Pull requests: only workspaces affected by changes against the base branch.
-      # Turbo reads the base from GITHUB_BASE_REF automatically.
+      # actions/checkout creates no local base branch, only origin/<base>, so point turbo at it.
       - name: Affected checks
         if: github.event_name == 'pull_request'
+        env:
+          TURBO_SCM_BASE: origin/${{ github.base_ref }}
         run: yarn check:affected
 
       # main and manual runs: everything, so nothing slips through a stale base.

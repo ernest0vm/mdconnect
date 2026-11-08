@@ -15,12 +15,15 @@ Desktop (Electron) port of [webminidisc](https://github.com/asivery/webminidisc)
 - Each workspace with a `tsconfig.json` defines `lint`, `format:check`, `typecheck` and `test`, and depends on `@mdconnect/tsconfig` (`workspace:^`). `@mdconnect/repo-policy` tests fail otherwise.
 - Root-level files are checked by `root:*` scripts (registered as `//#root:*` turbo tasks). Root ESLint/Prettier ignore `apps/**` and `packages/**`, which the workspaces check themselves.
 - Files in `turbo.json` `globalDependencies` (root `package.json`, `.yarnrc.yml`, ESLint/Prettier configs, `.husky/**`) mark every workspace as affected. Task `inputs` do **not** influence `--affected`.
-- Pre-commit: lint-staged on staged files, then `turbo run root:typecheck typecheck test --affected`.
-- CI: `.github/workflows/code-quality.yml` runs `check:affected` on pull requests and `check` on `main`.
+- Pre-commit: `lint-staged --concurrent false --hide-all` fixes staged files, then runs `turbo run root:typecheck typecheck test --affected` on the staged snapshot only (unstaged edits and untracked files are hidden).
+- CI: `.github/workflows/code-quality.yml` runs `check:affected` on pull requests (base `origin/<base_ref>` via `TURBO_SCM_BASE`) and `check` on `main`.
 
 ## Rules
 
-- Package manager is **Yarn 4** (never npm/pnpm). `npmMinimalAgeGate: 7d` rejects versions younger than 7 days; do not bypass it. When `latest` is still quarantined, pin the newest eligible major. Dependency install scripts are disabled; opt a package in with `dependenciesMeta.<pkg>.built: true` only when required and add it to the allowlist in `packages/repo-policy/src/policy.test.ts`.
+- **English only.** Code, comments, docs, OpenSpec artifacts, commit messages, branch names, PR titles and descriptions, and review comments are written in English. (Conversation with the maintainer can be in any language.)
+- **Every change goes through a PR to `main`** (`main` is protected: PR required, the Code quality check must pass, no force pushes). Work on a feature branch (`feat/…`, `fix/…`, `chore/…`, `docs/…`).
+- **Code review on every PR.** Before opening a PR, and again after any push that changes its code, run `/code-review` on the branch. Fix each finding or state why it was not applied, and fill the "Code review" section of the PR template.
+- Package manager is **Yarn 4** (never npm/pnpm). `npmMinimalAgeGate: 7d` rejects versions younger than 7 days; do not bypass it. When `latest` is still quarantined, pin the newest eligible major. Dependency install scripts are disabled; opt a package in with `dependenciesMeta.<pkg>.built: true` in the **root** `package.json` (Yarn ignores it in workspaces) only when required and add it to the allowlist in `packages/repo-policy/src/policy.test.ts`.
 - TypeScript is pinned to `~6.0` because typescript-eslint does not support TS 7 yet.
 - Test-first: use the `tdd` skill for any behaviour change.
 - Clean code: follow the `typescript-clean-code` skill (vendored, see its `SOURCE.md`) when writing, reviewing or refactoring TypeScript. Where it conflicts with this file, this file wins: use the Yarn commands above instead of its `npm` examples (E1/E2), and its "< 100ms per test" rule (T9) applies to unit tests, not to manual hardware verification.
