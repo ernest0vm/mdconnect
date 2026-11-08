@@ -1,0 +1,35 @@
+{
+  "name": "@mdconnect/app",
+  "version": "0.0.0",
+  "private": true,
+  "license": "GPL-2.0-only",
+  "type": "module",
+  "description": "React screens and feature logic, written against the Platform interface.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "format:check": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mdconnect/core": "workspace:^",
+    "@mdconnect/ui": "workspace:^"
+  },
+  "devDependencies": {
+    "@mdconnect/tsconfig": "workspace:^",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/w3c-web-usb": "^1.0.14",
+    "react": "^19",
+    "react-dom": "^19",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "peerDependencies": {
+    "react": "^19",
+    "react-dom": "^19"
+  }
+}

@@ -178,7 +178,7 @@ window.mdconnect = {
 
 - Root `eslint.config.mjs` gains `eslint-plugin-react-hooks` (recommended) for `**/*.tsx`, `globals.browser` for `packages/{ui,app}/**` and `apps/desktop/src/{renderer,preload}/**`, and the `no-restricted-imports` boundaries from decision 1. Generated `components/**` stays linted. Generated code that violates strict rules is fixed when it is added, not ignored.
 - Scripts: shared packages define `lint`, `format:check`, `typecheck`, `test`. `apps/desktop` adds `dev` (electron-vite dev), `build` (electron-vite build) and `package` (build + electron-builder for the current OS). Root forwards `dev` and `package` to the desktop app with `turbo run <task> --filter=@mdconnect/desktop`. Turbo gains an uncached `package` task with `release/**` outputs.
-- `dependenciesMeta.electron.built: true` in the **root** `package.json` (Yarn ignores `dependenciesMeta` in workspace manifests, and `@mdconnect/repo-policy` rejects it there) lets Electron's postinstall download its binary. No other package is opted in. If `esbuild` or another tool fails without its script, the task records it and opts that package in explicitly.
+- No package is opted in to install scripts. Electron 44 has no `postinstall`: its CLI downloads the binary on first run and verifies it against `checksums.json`. If a tool ever fails without its script, the task opts that package in via root `dependenciesMeta` (Yarn ignores it in workspace manifests, and `@mdconnect/repo-policy` rejects it there) and records the reason in the policy test allowlist.
 
 ### Dependencies
 
@@ -217,7 +217,7 @@ The same OS requirements apply to the web app in Chromium-based browsers. `add-w
 - [Windows needs a manual driver install, so the desktop app is not plug-and-play there yet] → Document it, show guidance in-app, verify behaviour on real hardware in this change, and plan a follow-up change for installer-driven driver setup (libwdi) or the node `usb` fallback.
 - [Source-consumed packages couple every consumer to the same TS and bundler settings] → All consumers already share `@mdconnect/tsconfig` and Vite. If a package must ever be published or run unbundled, add a build step to that package only.
 - [Package boundaries erode over time] → `no-restricted-imports` rules fail lint on wrong-direction imports, and `CLAUDE.md` plus `openspec/config.yaml` state where code belongs.
-- [`electron` postinstall downloads a binary from GitHub, outside the npm age gate] → Electron's download is checksum-verified against the npm package's `checksums.json`. It is the only package opted in to install scripts.
+- [Electron downloads its binary from GitHub on first run, outside the npm age gate] → The download is checksum-verified against the npm package's `checksums.json`, which did pass the age gate. No package runs install scripts.
 - [electron-builder downloads NSIS/AppImage tooling from GitHub at package time, also outside the age gate] → Acceptable for unsigned local builds. Revisit pinning or caching when release CI is set up.
 - [GlassyUI is a young, single-maintainer registry] → Its components are copied into the repo as source, so there is no runtime dependency on the project continuing. We own and can edit the code.
 - [`style-src 'unsafe-inline'` weakens the CSP] → Scripts stay strictly `'self'` and the renderer has no Node access, so inline styles cannot escalate to code execution.

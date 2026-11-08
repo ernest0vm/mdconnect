@@ -1,0 +1,7 @@
+{
+  "extends": "@mdconnect/tsconfig/library.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src"]
+}

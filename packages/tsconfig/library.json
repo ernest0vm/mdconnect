@@ -3,7 +3,7 @@
   "display": "mdconnect platform-agnostic library (protocol code: netmd/himd ports)",
   "extends": "./base.json",
   "compilerOptions": {
-    "lib": ["ES2023", "DOM"],
+    "lib": ["ES2023", "WebWorker"],
     "types": ["w3c-web-usb"]
   }
 }

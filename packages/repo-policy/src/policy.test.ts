@@ -11,10 +11,11 @@ import {
 
 const SEVEN_DAYS_IN_MINUTES = 7 * 24 * 60;
 
-/** Packages allowed to run install scripts. Each entry needs a reason. */
-const INSTALL_SCRIPT_ALLOWLIST: Record<string, string> = {
-  electron: 'postinstall downloads the checksum-verified Electron binary',
-};
+/**
+ * Packages allowed to run install scripts. Each entry needs a reason. Empty on purpose: Electron 44+
+ * downloads its binary on first run (checksum-verified) instead of in a postinstall script.
+ */
+const INSTALL_SCRIPT_ALLOWLIST: Record<string, string> = {};
 
 /** UI stacks replaced by shadcn/ui + Tailwind + GlassyUI. */
 const BANNED_DEPENDENCIES = [

@@ -1,0 +1,10 @@
+{
+  "extends": "@mdconnect/tsconfig/react.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@mdconnect/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}

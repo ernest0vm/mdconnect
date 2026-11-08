@@ -1,0 +1,23 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/styles/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@mdconnect/ui/components",
+    "utils": "@mdconnect/ui/lib/utils",
+    "hooks": "@mdconnect/ui/hooks",
+    "lib": "@mdconnect/ui/lib",
+    "ui": "@mdconnect/ui/components"
+  },
+  "registries": {
+    "@glassyui": "https://glassyui.com/r/{name}.json"
+  }
+}
