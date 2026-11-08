@@ -4,12 +4,12 @@
 
 ### Requirement: Web device selection
 
-In the web app, a device request SHALL use the browser's own device chooser, filtered to supported NetMD and Hi-MD devices. Closing the chooser without choosing a device SHALL fail the request as "no device found", whether or not the chooser listed any device, because the browser reports both cases identically. The message SHALL also invite the user to pick the device in the browser's list.
+In the web app, a device request SHALL use the browser's own device chooser, filtered to the supported NetMD device IDs. Closing the chooser without choosing a device SHALL fail the request as "no device found", whether or not the chooser listed any device, because the browser reports both cases identically. The message SHALL invite the user to pick the device in the browser's list.
 
 #### Scenario: Browser chooser lists only MiniDisc devices
 
-- **WHEN** a supported device and a non-MiniDisc USB device are connected and the user clicks "Connect device" in the web app
-- **THEN** the browser's chooser opens and lists only the supported device
+- **WHEN** a supported NetMD device and a non-MiniDisc USB device are connected and the user clicks "Connect device" in the web app
+- **THEN** the browser's chooser opens and lists only the NetMD device
 
 #### Scenario: Chooser closed with a device listed
 
@@ -20,6 +20,21 @@ In the web app, a device request SHALL use the browser's own device chooser, fil
 
 - **WHEN** no supported device is connected and the user opens and closes the browser's chooser
 - **THEN** the Connect screen shows the same "no device found" message
+
+### Requirement: Hi-MD mode is not available on the web
+
+Devices in Hi-MD mode present only the USB mass-storage class, which browsers do not let web pages use. The web app SHALL NOT offer Hi-MD-mode device IDs, and its "no device found" message SHALL explain that Hi-MD mode cannot be used in a browser: switch the device to NetMD mode where it supports it, or use the desktop app. Hi-MD devices connected in NetMD mode SHALL work as NetMD devices.
+
+#### Scenario: Device in Hi-MD mode
+
+- **WHEN** only a Hi-MD device in Hi-MD mode (for example Sony MZ-RH1, vendor `0x054c`, product `0x0287`) is connected and the user clicks "Connect device" in the web app
+- **THEN** the browser's chooser does not offer it
+- **AND** after the chooser closes, the Connect screen shows the "no device found" message, including the explanation that Hi-MD mode is not available in a browser
+
+#### Scenario: Hi-MD device in NetMD mode
+
+- **WHEN** a Sony MZ-RH1 connected in NetMD mode (product `0x0286`) is connected and the user picks it in the browser's chooser
+- **THEN** the Connect screen shows "Sony MZ-RH1" and `054c:0286`
 
 ### Requirement: Web reconnect for granted devices
 

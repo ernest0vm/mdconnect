@@ -10,8 +10,9 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 ## 2. Shared additions in packages
 
 - [ ] 2.1 Export `sourceRepositoryUrl`, `licenseName` and `sourceLink(commit)` from `@mdconnect/core`. Tests first: the URL is the GitHub repository, the license is `GPL-2.0`, `sourceLink('abc123')` ends in `/tree/abc123`, and `sourceLink('')` returns the repository root. Define `__MDCONNECT_COMMIT__` in both `apps/web/vite.config.ts` and `apps/desktop/electron.vite.config.ts` as in design.md decision 3.
-- [ ] 2.2 Add the source/license footer to `@mdconnect/app` (rendered by `App` and by `UnsupportedBrowser`) and the `UnsupportedBrowser` screen (supported browsers list, link to the README download section). Verify both render in `yarn dev:web` and in the desktop app (web-delivery: "Source availability", "Supported browsers").
-- [ ] 2.3 Extend `guidanceFor` in `@mdconnect/app` to take the platform kind (`guidanceFor(kind, os, platformKind)`) and add the "pick the device in the browser's list" hint to `no-device` on the web. Tests first: the hint appears for `web` and not for `desktop`; every other kind × OS result is unchanged (usb-device-access: "Web device selection").
+- [ ] 2.2 Add the source/license footer to `@mdconnect/app` (rendered by `App` and by `UnsupportedBrowser`) and the `UnsupportedBrowser` screen (supported browsers list, link to the README's `#download` section, created in 7.1). Verify both render in `yarn dev:web` and in the desktop app (web-delivery: "Source availability", "Supported browsers").
+- [ ] 2.3 Extend `guidanceFor` in `@mdconnect/app` to take the platform kind (`guidanceFor(kind, os, platformKind)`) and add to `no-device` on the web the "pick the device in the browser's list" hint and the explanation that Hi-MD mode cannot be used in a browser (switch to NetMD mode or use the desktop app). Tests first: the hint appears for `web` and not for `desktop`; every other kind × OS result is unchanged (usb-device-access: "Web device selection", "Hi-MD mode is not available on the web").
+- [ ] 2.4 Add an optional `kinds` filter to `usbFilters` in `@mdconnect/core` (default: every kind, so the desktop app is unchanged). Tests first: `usbFilters({ kinds: ['netmd'] })` returns the 47 NetMD IDs and none of the Hi-MD-mode IDs (for example `054c:0287`), and `usbFilters()` still returns all 61. The web `Platform` entry passes `kinds: ['netmd']` (usb-device-access: "Web device selection", "Hi-MD mode is not available on the web").
 
 ## 3. Web platform
 
@@ -36,10 +37,11 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 - [ ] 6.2 Chrome or Edge on Windows: record the behaviour before and after installing the WinUSB driver, and confirm the guidance shown matches the desktop app.
 - [ ] 6.3 Chrome on Linux (non-Snap): confirm the udev guidance appears without the rule and the connect succeeds with it.
 - [ ] 6.4 Firefox and Safari: the unsupported-browser screen appears with the source footer, and DevTools shows no USB calls.
+- [ ] 6.5 Chrome with a Hi-MD device (for example MZ-RH1): in Hi-MD mode the chooser does not offer it and the Connect screen shows the Hi-MD explanation; switched to NetMD mode, it connects. Record the observed chooser behaviour in `docs/platform-setup.md`.
 
 ## 7. Documentation
 
-- [ ] 7.1 Update `README.md` with the web app URL, supported browsers and `yarn dev:web`, and `docs/platform-setup.md` with browser notes (secure context, Snap/Flatpak Chrome on Linux). Verify the commands run as written.
+- [ ] 7.1 Update `README.md` with a `## Download` section (how to get the desktop app: build from source with `yarn package` until a release workflow publishes installers, then the GitHub Releases page), the web app URL, supported browsers and `yarn dev:web`. Verify the `UnsupportedBrowser` link resolves to that heading's `#download` anchor on GitHub. Also update `docs/platform-setup.md` with browser notes (secure context, Snap/Flatpak Chrome on Linux). Verify the commands run as written.
 
 ## Workflow follow-up
 
