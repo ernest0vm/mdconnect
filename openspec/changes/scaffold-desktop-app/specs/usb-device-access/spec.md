@@ -58,7 +58,7 @@ In the desktop app, a device request SHALL resolve without any browser-style cho
 
 - **WHEN** two connected devices have the same name and USB IDs and the desktop app asks the user to choose
 - **THEN** each entry also shows the device's serial number when it reports one
-- **AND** when serial numbers are missing or identical, entries are numbered in the order the list presents them and the dialog suggests unplugging the other device to be certain which one is chosen
+- **AND** when serial numbers are missing or identical, entries are numbered in the order the list presents them and the dialog suggests unplugging the other device, then cancelling and connecting again, to be certain which one is chosen (the open list does not update when a device is unplugged)
 
 #### Scenario: User cancels the choice
 
