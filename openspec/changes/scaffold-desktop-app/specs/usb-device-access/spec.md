@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Controls how the app reaches MiniDisc hardware over WebUSB: which devices the UI may open, how one is chosen, how known devices are found again, and what the user sees when access fails on each OS.
+Controls how mdconnect (desktop and web) reaches MiniDisc hardware over WebUSB: which devices the UI may open, how one is chosen, how known devices are found again, and what the user sees when access fails on each OS.
 
 ## ADDED Requirements
 
 ### Requirement: Known MiniDisc devices only
 
-The UI SHALL only be able to access USB devices whose vendor and product IDs appear in the app's list of supported NetMD and Hi-MD devices. All other USB devices SHALL be inaccessible, and USB access SHALL be refused to any origin other than the app's own.
+The UI SHALL only be able to access USB devices whose vendor and product IDs appear in the app's list of supported NetMD and Hi-MD devices. All other USB devices SHALL be inaccessible. In the desktop app, USB access SHALL also be refused to any origin other than the app's own.
 
 #### Scenario: Supported device
 
@@ -22,7 +22,7 @@ The UI SHALL only be able to access USB devices whose vendor and product IDs app
 
 #### Scenario: Foreign origin
 
-- **WHEN** content from any origin other than the app's requests USB access
+- **WHEN**, in the desktop app, content from any origin other than the app's requests USB access
 - **THEN** access is denied
 
 ### Requirement: Supported device list
@@ -39,24 +39,24 @@ The supported device list SHALL include every NetMD device listed by upstream `n
 - **WHEN** a device with vendor `0x054c` and product `0x0287` is connected
 - **THEN** the app identifies it as a supported Hi-MD device named "Sony MZ-RH1"
 
-### Requirement: Device selection without a browser prompt
+### Requirement: Desktop device selection
 
-A device request SHALL resolve without any browser-style chooser. With one matching device connected it SHALL be selected automatically. With several, the app SHALL ask the user to pick one in its own UI. With none, the request SHALL fail as "no device found".
+In the desktop app, a device request SHALL resolve without any browser-style chooser. With one matching device connected it SHALL be selected automatically. With several, the app SHALL ask the user to pick one in its own UI. With none, the request SHALL fail as "no device found".
 
 #### Scenario: Exactly one device
 
-- **WHEN** one supported device is connected and the user clicks "Connect device"
+- **WHEN** one supported device is connected and the user clicks "Connect device" in the desktop app
 - **THEN** that device is selected with no further prompt
 
 #### Scenario: Several devices
 
-- **WHEN** two supported devices are connected and the user clicks "Connect device"
+- **WHEN** two supported devices are connected and the user clicks "Connect device" in the desktop app
 - **THEN** the app lists both by name and waits for the user to choose one
 - **AND** the chosen device is returned to the request
 
 #### Scenario: Several devices of the same model
 
-- **WHEN** two connected devices have the same name and USB IDs
+- **WHEN** two connected devices have the same name and USB IDs and the desktop app asks the user to choose
 - **THEN** each entry also shows the device's serial number when it reports one
 - **AND** when serial numbers are missing or identical, entries are numbered in the order the list presents them and the dialog suggests unplugging the other device to be certain which one is chosen
 
@@ -67,31 +67,31 @@ A device request SHALL resolve without any browser-style chooser. With one match
 
 #### Scenario: No device
 
-- **WHEN** no supported device is connected and the user clicks "Connect device"
+- **WHEN** no supported device is connected and the user clicks "Connect device" in the desktop app
 - **THEN** the request fails as "no device found"
 
-### Requirement: Reconnect without prompting
+### Requirement: Desktop reconnect without prompting
 
-Supported devices that are connected SHALL be listable by the UI without any prompt, including right after the app starts, so the app can reconnect to a device it used before.
+In the desktop app, supported devices that are connected SHALL be listable by the UI without any prompt, including right after the app starts, so the app can reconnect to a device it used before.
 
 #### Scenario: Device already plugged in at launch
 
-- **WHEN** a supported device is connected and the app starts
+- **WHEN** a supported device is connected and the desktop app starts
 - **THEN** the UI can list the device without user interaction
 
 #### Scenario: Device plugged in while running
 
-- **WHEN** a supported device is plugged in while the app is open
+- **WHEN** a supported device is plugged in while the desktop app is open
 - **THEN** the UI is notified and can list it without a prompt
 
 #### Scenario: Device unplugged
 
-- **WHEN** the selected device is unplugged
+- **WHEN** the selected device is unplugged while the desktop app is open
 - **THEN** the UI is notified and shows that no device is connected
 
 ### Requirement: Connect screen
 
-The app SHALL show a "Connect device" screen. After a successful request it SHALL show the device name and its vendor and product IDs in hexadecimal. After a failure it SHALL show a readable message for the failure kind instead of a raw error.
+Both apps SHALL show the same "Connect device" screen. After a successful request it SHALL show the device name and its vendor and product IDs in hexadecimal. After a failure it SHALL show a readable message for the failure kind instead of a raw error.
 
 #### Scenario: Connected
 

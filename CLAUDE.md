@@ -1,6 +1,14 @@
 # mdconnect
 
-Desktop (Electron) port of [webminidisc](https://github.com/asivery/webminidisc) for Sony NetMD / Hi-MD MiniDisc devices. GPL-2.0-only.
+Port of [webminidisc](https://github.com/asivery/webminidisc) for Sony NetMD / Hi-MD MiniDisc devices, shipped as a desktop app (Electron) and a web app (Vercel) from one codebase. GPL-2.0-only.
+
+## Layout
+
+- `apps/desktop`, `apps/web`: thin shells. Each implements the `Platform` interface from `@mdconnect/app` and nothing else of substance.
+- `packages/core`: platform-agnostic TypeScript (device table, USB filters, error classification, later the NetMD/Hi-MD integration). No React, DOM or Node imports.
+- `packages/ui`: shadcn/ui + GlassyUI components and theme tokens.
+- `packages/app`: React screens and feature logic, written against `Platform`.
+- `packages/tsconfig`, `packages/repo-policy`: shared TS config and executable repo rules.
 
 ## Commands
 

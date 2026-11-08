@@ -1,16 +1,22 @@
 schema: spec-driven
 
 context: |
-  mdconnect is a desktop port of asivery/webminidisc (GPL-2.0) to keep Sony NetMD / Hi-MD
-  MiniDisc devices usable. The project is therefore GPL-2.0-only; keep upstream attribution
-  and license headers on anything derived from webminidisc or its libraries.
-  Target is desktop only (Electron) on macOS, Windows and Linux; every design must state how
-  it behaves on all three. USB access is WebUSB in the renderer, granted through Electron
-  session handlers. Whether Windows still needs a WinUSB driver (Zadig) is an open question.
+  mdconnect is a port of asivery/webminidisc (GPL-2.0) to keep Sony NetMD / Hi-MD MiniDisc
+  devices usable. The project is therefore GPL-2.0-only; keep upstream attribution and license
+  headers on anything derived from webminidisc or its libraries.
+  Two delivery targets share one codebase: a desktop app (Electron) on macOS, Windows and Linux,
+  and a web app for Chromium-based browsers deployed on Vercel. Every design must state how it
+  behaves on both targets and, where USB, filesystem or packaging is involved, on all three OSes.
+  USB access is WebUSB in both: granted through Electron session handlers on desktop, through
+  the browser's own chooser on the web. Whether Windows still needs a WinUSB driver (Zadig) is an
+  open question.
   UI uses shadcn/ui + Tailwind CSS with GlassyUI styling. Do NOT use Material UI, Emotion,
   styled-components, tss-react or react95.
-  Monorepo: Yarn 4 workspaces (node-modules linker) + Turborepo. apps/* are runnable apps,
-  packages/* are shared libraries. Protocol libraries (netmd-js, himd-js, netmd-exploits,
+  Monorepo: Yarn 4 workspaces (node-modules linker) + Turborepo. apps/* are thin shells
+  (apps/desktop, apps/web); behaviour lives in shared packages/*: core (platform-agnostic
+  TypeScript, no React/DOM/Node), ui (shadcn/GlassyUI design system) and app (React screens
+  that depend on a Platform interface each shell implements). Do not put feature logic in an
+  app shell. Protocol libraries (netmd-js, himd-js, netmd-exploits,
   networkwm-js, netmd-tocmanip) are consumed from npm; fork one into packages/ only when a
   design justifies it.
   Dependencies: Yarn refuses versions younger than 7 days (npmMinimalAgeGate) and dependency
@@ -26,6 +32,7 @@ rules:
   design:
     - List new dependencies with their purpose, license and maintenance status.
     - Cover macOS, Windows and Linux behaviour where USB, filesystem or packaging is involved.
+    - State how the change behaves in the desktop app and in the web app, or why it applies to one only.
   tasks:
     - Each group lands its own tests; name the spec scenarios each test task covers.
     - Mark hardware or OS checks that cannot be automated as manual verification with exact steps.
