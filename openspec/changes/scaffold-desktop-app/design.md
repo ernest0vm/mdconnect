@@ -4,155 +4,203 @@
 
 See proposal.md for motivation. Relevant current state:
 
-- Root tooling exists: Yarn 4 workspaces (`node-modules` linker, 7-day `npmMinimalAgeGate`, dependency install scripts disabled), Turborepo, TypeScript 6.0 strict, ESLint (typescript-eslint `strictTypeChecked`), Prettier, husky + lint-staged. Shared tsconfig bases live in `@mdconnect/tsconfig` (`node.json`, `react.json`, `library.json`).
+- Root tooling exists: Yarn 4 workspaces (`node-modules` linker, 7-day `npmMinimalAgeGate`, dependency install scripts disabled), Turborepo with `--affected` checks, TypeScript 6.0 strict, ESLint (typescript-eslint `strictTypeChecked`), Prettier, Vitest 5, husky + lint-staged. Shared tsconfig bases live in `@mdconnect/tsconfig` (`node.json`, `react.json`, `library.json`). `@mdconnect/repo-policy` enforces that every workspace with a `tsconfig.json` defines `lint`, `format:check`, `typecheck` and `test`, depends on `@mdconnect/tsconfig`, and declares no `dependenciesMeta`.
 - Upstream webminidisc is a Vite + React + TypeScript web app using MUI. Its protocol libraries `netmd-js` 4.4.1 and `himd-js` 0.2.15 are TypeScript, but their npm packages depend on the native `usb` module, `bunyan`, `yargs` and a GitHub-hosted `crypto-js-wasm`. Integrating them is a separate change; this one only copies their USB device ID tables.
-- Electron's WebUSB does not show Chrome's device chooser. The main process must handle `select-usb-device` and grant permissions through session handlers.
+- mdconnect ships a desktop app (this change) and a web app (`add-web-app`) from the same code. Most behaviour is identical. The differences are in how a USB device is chosen and granted, how appearance preferences are read, which security headers are set and by whom, and packaging.
+- Electron's WebUSB does not show Chrome's device chooser. The main process must handle `select-usb-device` and grant permissions through session handlers. In a browser, Chrome shows its own chooser and remembers grants per origin.
 - Hi-MD devices in Hi-MD mode present the USB mass-storage class, which Chromium blocks for WebUSB by default.
 
 ## Goals / Non-Goals
 
 **Goals:**
 
+- One place for each piece of behaviour: platform-agnostic logic in `@mdconnect/core`, UI primitives in `@mdconnect/ui`, screens in `@mdconnect/app`. App shells contain only what is specific to their runtime.
 - A secure Electron shell whose main, preload and renderer code all pass `yarn check`, with fast HMR in development.
-- WebUSB that works the same way on macOS, Windows and Linux once OS-level access is in place, with the main process as the only place that decides which devices are reachable.
-- A UI base (Tailwind 4, shadcn/ui, GlassyUI) that later webminidisc screens can be ported onto.
-- Pure, unit-tested modules for the logic that can break silently: the device table, device selection, error classification and the protocol handler's path guard.
+- WebUSB that works the same way on macOS, Windows and Linux once OS-level access is in place, with the desktop main process as the only place that decides which devices are reachable.
+- Pure, unit-tested modules for the logic that can break silently: the device table, device selection, error classification, OS guidance, appearance resolution and the protocol handler's path guard.
 
 **Non-Goals:**
 
-- Automated end-to-end UI tests (Playwright for Electron). The connect screen is verified manually on hardware in this change.
+- The web shell. `add-web-app` adds `apps/web` and its `Platform` implementation on top of these packages.
+- Automated end-to-end UI tests (Playwright). The connect screen is verified manually on hardware in this change.
+- Component tests with a DOM (jsdom, Testing Library). Logic is extracted into pure functions and tested there. DOM testing can be added when screens grow beyond the walking skeleton.
 - Calling `setUSBProtectedClassesHandler` to unblock mass storage for Hi-MD. This is decided with the Hi-MD integration change.
 - Cross-compiling installers for other OSes from one machine.
 
 ## Decisions
 
-### 1. Build with electron-vite, package with electron-builder
+### 1. Workspace layout and dependency direction
+
+```
+packages/core   @mdconnect/core   pure TS: devices, USB filters, selection, error kinds
+packages/ui     @mdconnect/ui     shadcn + GlassyUI components, globals.css, theme helpers
+packages/app    @mdconnect/app    React screens + feature logic, Platform interface
+apps/desktop    @mdconnect/desktop  Electron main/preload + renderer entry
+apps/web        @mdconnect/web      (add-web-app) Vite SPA entry
+```
+
+Dependencies only point downward: `apps/* → app → ui, core`. `ui` and `core` do not depend on each other or on `app`. `core` has no React or Node imports. Its base, `@mdconnect/tsconfig/library.json`, changes from `lib: ["ES2023", "DOM"]` to `["ES2023", "WebWorker"]`: that still provides `DOMException` and the WebUSB navigator types, but `document` and `window` fail to compile, so the protocol work can later run in a worker or a test without a DOM. A lint rule (`no-restricted-imports`) enforces the direction: `core` may not import `react`, `node:*` or other workspaces; `ui` may not import `@mdconnect/app` or `@mdconnect/core`.
+
+- Alternative: **everything inside `apps/desktop` first, extract later**. Rejected: the web app is a confirmed target, and extracting after code exists means moving files, rewriting imports and re-splitting tests.
+- Alternative: **separate repositories for core/ui**. Rejected: it slows every cross-cutting change and duplicates the harness. Turborepo `--affected` already gives per-package checks.
+
+### 2. Internal packages consumed as source
+
+Shared packages export TypeScript source directly. `core` and `app` export a barrel (`"exports": { ".": "./src/index.ts" }`). `ui` follows shadcn's monorepo layout with explicit per-folder patterns, because export targets are not extension-probed: `"./components/*": "./src/components/*.tsx"`, `"./lib/*": "./src/lib/*.ts"`, `"./theme": "./src/theme.ts"`, `"./globals.css": "./src/styles/globals.css"`. Consumers' bundlers compile them: Vite in the renderer, and electron-vite for main/preload. Shared packages therefore have no `build` script. `typecheck`, `lint` and `test` run per package, and turbo's `^build` dependency is a no-op for them.
+
+- electron-vite externalizes dependencies for main and preload by default. `@mdconnect/core` must be excluded from that so the workspace source is bundled instead of `require`-d as `.ts` at runtime. Earlier majors did this with `externalizeDepsPlugin({ exclude })`; task 2.3 uses whatever electron-vite 6 documents for it.
+- Alternative: **compiled packages (`tsc` → `dist`)**. Rejected for now. It adds build ordering, watch mode and `.d.ts` drift for no benefit while every consumer is a bundler. It can be revisited if a package is ever published.
+
+### 3. The `Platform` interface
+
+`@mdconnect/app` defines what a shell must provide and never touches Electron or browser-detection APIs directly:
+
+```ts
+export interface Platform {
+  readonly kind: 'desktop' | 'web';
+  readonly os: 'macos' | 'windows' | 'linux' | 'chromeos' | 'other';
+  readonly usb: USB; // navigator.usb, injected so tests can fake it
+  /** Desktop only: the in-app chooser bridge. On the web, the browser shows its own chooser. */
+  readonly deviceChooser?: {
+    onChooseDevice(cb: (req: ChooseDeviceRequest) => void): () => void;
+    respond(requestId: string, deviceId: string | null): void;
+  };
+  readonly appearance: {
+    get(): AppearanceSignals; // { prefersReducedTransparency?: boolean }
+    onChange(cb: (s: AppearanceSignals) => void): () => void;
+  };
+}
+```
+
+Each shell's entry builds its `Platform` and renders `<App platform={platform} />`. The desktop implementation wraps `window.mdconnect` (decision 7). `packages/app/src/testing/fake-platform.ts` provides a fake for unit tests.
+
+### 4. Build the desktop app with electron-vite, package with electron-builder
 
 `electron-vite` builds main, preload and renderer from one `electron.vite.config.ts`, with renderer HMR and main/preload hot restart. `electron-builder` turns the output into `.dmg`, NSIS `.exe`, AppImage and `.deb` from one `electron-builder.yml`, and can flip Electron fuses at package time.
 
-- Alternative: **Electron Forge** with its Vite plugin. It covers build and packaging in one tool, but needs one Vite config per process and its plugin has historically trailed Vite releases. Rejected for now. Both tools are MIT and moving to Forge later would only touch build config.
+- Alternative: **Electron Forge** with its Vite plugin. It covers build and packaging in one tool, but needs one Vite config per process and its plugin has historically trailed Vite releases. Rejected for now. Both tools are MIT, and moving to Forge later would only touch build config.
 - Alternative: **hand-rolled Vite configs + scripts**. Rejected: it rebuilds what electron-vite already does (externalizing Node built-ins, preload format, dev-server URL injection).
 
-### 2. Process layout and file structure
+### 5. File structure
 
 ```
+packages/core/src/
+  devices.ts              NetMD + Hi-MD ID table (GPL attribution header), findDevice, usbFilters
+  device-selection.ts     chooseDevice(list) -> none | auto(id) | ask(list)
+  usb-errors.ts           classifyUsbError(error, phase) -> no-device | cancelled | access-denied | unknown
+packages/ui/
+  components.json         shadcn (monorepo: aliases @mdconnect/ui/components, .../lib/utils)
+  src/components/         shadcn + GlassyUI generated source
+  src/lib/utils.ts
+  src/styles/globals.css  Tailwind 4, theme tokens, reduced-transparency overrides
+  src/theme.ts            resolveAppearance(signals, media) + applyAppearance(root, state)
+packages/app/src/
+  platform.ts             Platform interface + shared types
+  App.tsx                 root: theme wiring, screen routing
+  features/connect/       Connect screen, chooser dialog, guidanceFor(kind, os)
+  testing/fake-platform.ts
 apps/desktop/
-  electron.vite.config.ts
-  electron-builder.yml
-  components.json                  # shadcn config
+  electron.vite.config.ts, electron-builder.yml, components.json
   resources/linux/60-mdconnect.rules
-  src/
-    shared/                        # pure TS, no Node or DOM APIs; used by main and renderer
-      devices.ts                   # NetMD + Hi-MD ID table (GPL attribution header)
-      device-selection.ts          # chooseDevice(list) -> auto | ask | none
-      ipc.ts                       # channel names + payload types
-    main/
-      index.ts                     # app lifecycle, single-instance lock, window
-      security.ts                  # window hardening, navigation lock, CSP
-      app-protocol.ts              # app:// handler + path guard
-      usb.ts                       # session USB handlers, chooser bridge
-    preload/index.ts               # contextBridge: window.mdconnect
-    renderer/
-      index.html, main.tsx, App.tsx
-      components/ui/               # shadcn + GlassyUI generated source
-      features/connect/            # Connect screen, error -> message mapping
-      lib/theme.ts                 # OS appearance -> data attributes
+  src/shared/ipc.ts       channel names + payload types (main <-> preload only)
+  src/main/               index.ts, security.ts, app-protocol.ts, usb.ts
+  src/preload/index.ts    contextBridge: window.mdconnect
+  src/renderer/           index.html, main.tsx (desktopPlatform + <App/>), styles.css
 ```
 
-`tsconfig.json` in the app is a solution file referencing `tsconfig.node.json` (main, preload, shared, config files; extends `@mdconnect/tsconfig/node.json`) and `tsconfig.web.json` (renderer, shared; extends `react.json`, adds `w3c-web-usb` types and the `@/*` alias shadcn expects). `typecheck` runs `tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit`.
+Each shared package's `tsconfig.json` extends the matching base (`core` → `library.json`, `ui`/`app` → `react.json` with `w3c-web-usb` types for `app`). In `apps/desktop`, `tsconfig.json` is a solution file referencing `tsconfig.node.json` (main, preload, shared, config files; extends `node.json`) and `tsconfig.web.json` (renderer; extends `react.json`). Its `typecheck` runs `tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit`, because `tsc -p` on a solution file checks none of its references.
 
-### 3. Secure app origin via a privileged custom scheme
+### 6. Secure desktop origin and window hardening
 
-In packaged builds the renderer loads `app://mdconnect/index.html`. `app` is registered with `protocol.registerSchemesAsPrivileged` (`standard`, `secure`, `supportFetchAPI`, `codeCache`) and served by `protocol.handle`. The handler resolves paths only inside the bundled renderer directory. Any path that normalizes outside it, or does not exist, returns 404. In development the renderer loads the Vite dev server URL that electron-vite provides.
+In packaged builds the renderer loads `app://mdconnect/index.html`. `app` is registered with `protocol.registerSchemesAsPrivileged` (`standard`, `secure`, `supportFetchAPI`, `codeCache`) and served by `protocol.handle`. The handler resolves paths only inside the bundled renderer directory. Any path that normalizes outside it, or does not exist, returns 404. In development the renderer loads the Vite dev server URL that electron-vite provides. `isAppOrigin(origin)` accepts `app://mdconnect` always and the dev-server origin only when `!app.isPackaged`.
 
 - Why not `file://`: the origin is opaque (`file://` / `null`), so permission handlers cannot scope USB to "our" origin, and the CSP cannot be sent as a response header.
-- Bonus: the handler can later add `Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy` headers, which the ported wasm audio encoders need for `SharedArrayBuffer`.
+- The handler can later add `Cross-Origin-Opener-Policy` / `Cross-Origin-Embedder-Policy` headers, which the ported wasm audio encoders need for `SharedArrayBuffer`. The web app sets the same headers through Vercel.
 
-`isAppOrigin(origin)` accepts `app://mdconnect` always and the dev-server origin only when `!app.isPackaged`.
-
-### 4. Window and session hardening
+Hardening:
 
 - `BrowserWindow` `webPreferences`: `contextIsolation: true`, `sandbox: true`, `nodeIntegration: false`, `webSecurity: true`, `webviewTag: false`. `app.enableSandbox()` is called before ready.
 - `will-navigate` and `will-redirect` are prevented. `setWindowOpenHandler` returns `deny` and calls `shell.openExternal` only for `http:` / `https:` URLs.
-- `setPermissionRequestHandler` denies everything (USB uses the device-permission path below, not this one).
-- CSP is sent as a response header by the `app://` handler: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`. `style-src 'unsafe-inline'` is needed because Radix and GlassyUI set inline `style` attributes. In development a relaxed CSP is applied through `session.webRequest.onHeadersReceived`, allowing the Vite client and React Refresh preamble.
+- `setPermissionRequestHandler` denies everything (USB uses the device-permission path in decision 7, not this one).
+- CSP is sent as a response header by the `app://` handler: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`. `style-src 'unsafe-inline'` is needed because Radix and GlassyUI set inline `style` attributes. In development a relaxed CSP is applied through `session.webRequest.onHeadersReceived`, allowing the Vite client and React Refresh preamble. The CSP string lives in `@mdconnect/core` (`contentSecurityPolicy`) so the web app sends exactly the same policy.
 - Electron fuses are set at package time: `RunAsNode` off, `EnableNodeOptionsEnvironmentVariable` off, `EnableNodeCliInspectArguments` off, `EnableEmbeddedAsarIntegrityValidation` on, `OnlyLoadAppFromAsar` on.
-- `app.requestSingleInstanceLock()`. A second instance quits and the first restores and focuses its window. This also prevents two processes from fighting over the same USB device.
+- `app.requestSingleInstanceLock()`. A second instance quits. The first restores and focuses its main window, or creates one if none exists (macOS after the window was closed). This also prevents two processes from fighting over the same USB device.
 
-### 5. USB access is decided in the main process
+### 7. Desktop USB access is decided in the main process
 
 All on `session.defaultSession`:
 
 - `setPermissionCheckHandler`: returns `true` for `usb` only when `isAppOrigin(requestingOrigin)`, `false` for every other permission.
-- `setDevicePermissionHandler`: returns `true` when `deviceType === 'usb'`, the origin is the app origin, and `(vendorId, productId)` is in the device table. This is why connected known devices are listable through `navigator.usb.getDevices()` at launch without a prompt, and why `navigator.usb` `connect`/`disconnect` events reach the renderer.
-- `select-usb-device`: `event.preventDefault()`, filter `details.deviceList` through the device table, then call the pure `chooseDevice`:
+- `setDevicePermissionHandler`: returns `true` when `deviceType === 'usb'`, the origin is the app origin, and `isSupportedDevice(vendorId, productId)` from `@mdconnect/core`. This is why connected known devices are listable through `navigator.usb.getDevices()` at launch without a prompt, and why `navigator.usb` `connect`/`disconnect` events reach the renderer.
+- `select-usb-device`: `event.preventDefault()`, filter `details.deviceList` through the device table, then call `chooseDevice` from `@mdconnect/core`:
   - `none` → `callback()` (renderer gets `NotFoundError`).
   - `auto` → `callback(deviceId)`.
   - `ask` → send `usb:choose-device` with `{ requestId, devices: [{ deviceId, name, vendorId, productId, serialNumber }] }` to the window. Wait for `usb:device-chosen` with `{ requestId, deviceId | null }`, then `callback(deviceId ?? undefined)`. Only one pending request is kept. A new request, a renderer reload or the window closing resolves the old one as cancelled.
 
-The renderer calls `navigator.usb.requestDevice({ filters })`, with filters built from the same table, so Chromium's own filtering and the main-process check agree.
+The renderer calls `platform.usb.requestDevice({ filters: usbFilters() })`, with filters built from the same table, so Chromium's own filtering and the main-process check agree.
 
-The preload exposes only:
+The preload exposes only the following. Every value crossing the bridge is serializable, except that subscription functions take a callback and return an unsubscribe function.
 
 ```ts
 window.mdconnect = {
-  platform: 'darwin' | 'win32' | 'linux',
+  os: 'macos' | 'windows' | 'linux',
   usb: {
     onChooseDevice(cb: (req: ChooseDeviceRequest) => void): () => void,
     respondChooseDevice(requestId: string, deviceId: string | null): void,
   },
   appearance: {
-    get(): AppearanceState,                                 // { reducedTransparency }
-    onChange(cb: (s: AppearanceState) => void): () => void,
+    get(): AppearanceSignals,
+    onChange(cb: (s: AppearanceSignals) => void): () => void,
   },
 };
 ```
 
-Payloads are validated in the main process against the pending `requestId` and the offered `deviceId`s before being trusted.
+`apps/desktop/src/renderer/main.tsx` adapts this to `Platform` (`kind: 'desktop'`, `usb: navigator.usb`, `deviceChooser` from `window.mdconnect.usb`). Payloads are validated in the main process against the pending `requestId` and the offered `deviceId`s before being trusted.
 
-- Alternative: **node `usb` (libusb) in the main process with IPC to the renderer**, which is what netmd-js does under Node. Rejected for this change: it needs a native module (install scripts, per-OS prebuilds, rebuilds per Electron version) and duplicates WebUSB, which upstream code already targets. It remains the fallback if WebUSB proves unworkable on Windows.
+- Alternative: **node `usb` (libusb) in the main process with IPC to the renderer**, which is what netmd-js does under Node. Rejected for this change: it needs a native module (install scripts, per-OS prebuilds, rebuilds per Electron version), duplicates WebUSB, and would not exist on the web. It remains the desktop fallback if WebUSB proves unworkable on Windows.
 
-### 6. Device table copied, not imported
+### 8. Device table copied, not imported
 
-`src/shared/devices.ts` contains the NetMD list from `netmd-js` 4.4.1 (`DevicesIds`, 47 entries) and the Hi-MD list from `himd-js` 0.2.15 (14 entries), each entry `{ vendorId, productId, name, kind: 'netmd' | 'himd' }`, under a GPL-2.0 header crediting both projects. Importing the packages only for these tables would pull in `usb`, `bunyan` and `yargs`. One ID pair is in both lists (`054c:0187`: NetMD "Sony MZ-NH600D", Hi-MD "Sony MZ-NH600"). The table keeps both entries, and name lookup returns the NetMD name for it. The protocol-integration change will switch to the packages' own exports if they become dependencies anyway.
+`packages/core/src/devices.ts` contains the NetMD list from `netmd-js` 4.4.1 (`DevicesIds`, 47 entries) and the Hi-MD list from `himd-js` 0.2.15 (14 entries), each entry `{ vendorId, productId, name, kind: 'netmd' | 'himd' }`, under a GPL-2.0 header crediting both projects. Importing the packages only for these tables would pull in `usb`, `bunyan` and `yargs`. One ID pair is in both lists (`054c:0187`: NetMD "Sony MZ-NH600D", Hi-MD "Sony MZ-NH600"). The table keeps both entries, and name lookup returns the NetMD name for it. The protocol-integration change will switch to the packages' own exports if they become dependencies anyway.
 
-### 7. Failure kinds and OS guidance
+### 9. Failure kinds and OS guidance
 
-`classifyUsbError(error, phase)` maps `DOMException` names to `no-device` (`NotFoundError` from `requestDevice`), `cancelled` (`NotFoundError` after a chooser cancel, tracked via the chooser result), `access-denied` (`SecurityError` / `NetworkError` from `open()`), or `unknown`. The connect screen maps `(kind, platform)` to the message and the link required by the spec. Links open the community setup guide in the default browser (`https://www.minidisc.wiki/guides/webminidisc/requirements#windows` / `#linux`), which upstream webminidisc also points to and which stays reachable from an installed app. `docs/platform-setup.md` holds the same steps for contributors, plus what this project verified on hardware. Both functions are pure and unit-tested.
+`classifyUsbError(error, phase)` in `@mdconnect/core` maps `DOMException` names to `no-device` (`NotFoundError` from `requestDevice`), `cancelled` (`NotFoundError` after a chooser cancel, tracked via the chooser result), `access-denied` (`SecurityError` / `NetworkError` from `open()`), or `unknown`. `guidanceFor(kind, os)` in `@mdconnect/app` maps the result to the message and link required by the spec. It works the same in both apps, because `os` comes from `Platform`. Links open the community setup guide (`https://www.minidisc.wiki/guides/webminidisc/requirements#windows` / `#linux`), which upstream webminidisc also points to. `docs/platform-setup.md` holds the same steps for contributors, plus what this project verified on hardware. Both functions are pure and unit-tested.
 
-### 8. UI foundation
+### 10. UI foundation (`@mdconnect/ui`)
 
-- React 19, Tailwind CSS 4 via `@tailwindcss/vite` (no PostCSS config), shadcn/ui initialized with `components.json` (`rsc: false`, `tsx: true`, alias `@/`).
-- GlassyUI components are added with the shadcn CLI from its registry (`@glassyui/<component>`), which writes source into `components/ui/glassyui`. The CLI is run through `yarn dlx shadcn@4.23.0` (pinned, older than 7 days) and is not a project dependency. Initial set: Surface, Panel, Button, Dialog, Spinner, Alert, Badge.
-- Theme: `nativeTheme.themeSource = 'system'`. The renderer sets `data-lg-theme` (GlassyUI) and the `dark` class (shadcn) from `matchMedia('(prefers-color-scheme: dark)')` and updates them on change. Reduced motion uses the CSS `prefers-reduced-motion` media query. Reduced transparency is on when either signal reports it: Electron's `nativeTheme.prefersReducedTransparency` (forwarded through the preload) or Chromium's `prefers-reduced-transparency: reduce` media query. Neither is reliable on every platform, so the renderer ORs them. The result sets `data-reduced-transparency` on `<html>`, and CSS overrides make glass surfaces opaque and remove `backdrop-filter`. On Linux, many desktops expose no such preference; there the default glass look is used, as the ui-theme spec states, and task 7.3 records what each tested desktop reports.
+- React 19, Tailwind CSS 4. shadcn/ui is set up in monorepo mode: `packages/ui/components.json` owns the components (aliases `@mdconnect/ui/components`, `@mdconnect/ui/lib/utils`, `tailwind.css: src/styles/globals.css`, empty `tailwind.config` for v4). Each app has its own `components.json` with the same `style`, `iconLibrary` and `baseColor`, pointing `ui`/`utils` at `@mdconnect/ui`. Running `shadcn add` inside an app installs into `packages/ui`.
+- The shadcn CLI runs through `yarn dlx shadcn@4.23.0` (pinned, older than 7 days) and is not a project dependency. GlassyUI components come from its registry (`@glassyui/<component>`). Initial set: Surface, Panel, Button, Dialog, Spinner, Alert, Badge.
+- Each app's stylesheet does `@import "@mdconnect/ui/globals.css"` and declares `@source` for `packages/ui/src` and `packages/app/src`. Tailwind 4 skips workspace packages that resolve through `node_modules`, so their classes would be missing without these declarations.
+- Theme: `resolveAppearance(signals, media)` combines the OS colour scheme (`prefers-color-scheme`) with reduced transparency. Reduced transparency is on when either `signals.prefersReducedTransparency` (desktop: Electron's `nativeTheme`, via `Platform.appearance`) or Chromium's `prefers-reduced-transparency: reduce` reports it. Neither is reliable on every platform, so they are ORed. `applyAppearance` sets `data-lg-theme` (GlassyUI), the `dark` class (shadcn) and `data-reduced-transparency` on `<html>`. `watchAppearance(platform.appearance, matchMedia, onChange)` re-resolves whenever the platform signal changes or the `prefers-color-scheme` / `prefers-reduced-transparency` media queries fire `change`, so OS switches apply live in both apps (the web has no platform signal at all). CSS overrides in `globals.css` make glass surfaces opaque and remove `backdrop-filter` when that attribute is set. Reduced motion uses `prefers-reduced-motion`. On Linux desktops that expose no reduced-transparency preference, the default glass look is used, as the ui-theme spec states. Desktop main sets `nativeTheme.themeSource = 'system'` and forwards `nativeTheme` `updated` events.
 
-### 9. Lint and monorepo wiring
+### 11. Lint and monorepo wiring
 
-- Root `eslint.config.mjs` gains `eslint-plugin-react-hooks` (recommended) for `**/*.tsx`, and `globals.browser` for `apps/desktop/src/{renderer,preload}/**`. `components/ui/**` (generated) stays linted. Generated code that violates strict rules is fixed when it is added, not ignored.
-- `apps/desktop/package.json` scripts: `dev` (electron-vite dev), `build` (electron-vite build), `typecheck`, `test` (vitest run), `package` (build + electron-builder for the current OS). Turbo gains an uncached `package` task with `release/**` outputs.
+- Root `eslint.config.mjs` gains `eslint-plugin-react-hooks` (recommended) for `**/*.tsx`, `globals.browser` for `packages/{ui,app}/**` and `apps/desktop/src/{renderer,preload}/**`, and the `no-restricted-imports` boundaries from decision 1. Generated `components/**` stays linted. Generated code that violates strict rules is fixed when it is added, not ignored.
+- Scripts: shared packages define `lint`, `format:check`, `typecheck`, `test`. `apps/desktop` adds `dev` (electron-vite dev), `build` (electron-vite build) and `package` (build + electron-builder for the current OS). Root forwards `dev` and `package` to the desktop app with `turbo run <task> --filter=@mdconnect/desktop`. Turbo gains an uncached `package` task with `release/**` outputs.
 - `dependenciesMeta.electron.built: true` in the **root** `package.json` (Yarn ignores `dependenciesMeta` in workspace manifests, and `@mdconnect/repo-policy` rejects it there) lets Electron's postinstall download its binary. No other package is opted in. If `esbuild` or another tool fails without its script, the task records it and opts that package in explicitly.
 
 ### Dependencies
 
 All versions are the newest that pass the 7-day gate at implementation time. Majors as of 2026-11-08:
 
-| Package                                                              | Kind    | Purpose                                       | License                | Status                                                        |
-| -------------------------------------------------------------------- | ------- | --------------------------------------------- | ---------------------- | ------------------------------------------------------------- |
-| `electron` 44.x                                                      | dev     | Runtime (45.x is still inside the 7-day gate) | MIT                    | Active, release every 8 weeks                                 |
-| `electron-vite` 6.x                                                  | dev     | Build main/preload/renderer, HMR              | MIT                    | Active (6.0.0, Oct 2026)                                      |
-| `vite` 8.x, `@vitejs/plugin-react` 6.x                               | dev     | Renderer bundler, React transform             | MIT                    | Active                                                        |
-| `electron-builder` 26.x                                              | dev     | Installers, fuses                             | MIT                    | Active (Oct 2026)                                             |
-| `tailwindcss` 4.x, `@tailwindcss/vite` 4.x                           | dev     | Styling                                       | MIT                    | Active                                                        |
-| `vitest` 4.x                                                         | dev     | Unit tests (5.x still inside the 7-day gate)  | MIT                    | Active                                                        |
-| `@types/react`, `@types/react-dom` 19.x, `@types/w3c-web-usb` 1.x    | dev     | Types                                         | MIT                    | Active                                                        |
-| `eslint-plugin-react-hooks` 7.x                                      | dev     | Hooks lint rules                              | MIT                    | Active (React team)                                           |
-| `react`, `react-dom` 19.x                                            | runtime | UI                                            | MIT                    | Active                                                        |
-| `radix-ui` 1.x (or per-primitive `@radix-ui/*` as GlassyUI requests) | runtime | Accessible primitives under shadcn/GlassyUI   | MIT                    | Active (Oct 2026)                                             |
-| `class-variance-authority` 0.7, `clsx` 2.x, `tailwind-merge` 3.x     | runtime | shadcn variant/class helpers                  | Apache-2.0 / MIT / MIT | Stable; cva has no release since 2024 but is feature-complete |
-| `lucide-react` 1.x                                                   | runtime | Icons                                         | ISC                    | Active                                                        |
-| `tw-animate-css` 1.x                                                 | runtime | shadcn animation utilities                    | MIT                    | Stable                                                        |
+| Package                                                              | Where                    | Kind    | Purpose                                       | License                | Status                                                        |
+| -------------------------------------------------------------------- | ------------------------ | ------- | --------------------------------------------- | ---------------------- | ------------------------------------------------------------- |
+| `react`, `react-dom` 19.x                                            | app, ui (peer); desktop  | runtime | UI                                            | MIT                    | Active                                                        |
+| `radix-ui` 1.x (or per-primitive `@radix-ui/*` as GlassyUI requests) | ui                       | runtime | Accessible primitives under shadcn/GlassyUI   | MIT                    | Active (Oct 2026)                                             |
+| `class-variance-authority` 0.7, `clsx` 2.x, `tailwind-merge` 3.x     | ui                       | runtime | shadcn variant/class helpers                  | Apache-2.0 / MIT / MIT | Stable; cva has no release since 2024 but is feature-complete |
+| `lucide-react` 1.x                                                   | ui                       | runtime | Icons                                         | ISC                    | Active                                                        |
+| `tw-animate-css` 1.x                                                 | ui                       | runtime | shadcn animation utilities                    | MIT                    | Stable                                                        |
+| `tailwindcss` 4.x, `@tailwindcss/vite` 4.x                           | ui (peer); desktop       | dev     | Styling                                       | MIT                    | Active                                                        |
+| `electron` 44.x                                                      | desktop                  | dev     | Runtime (45.x is still inside the 7-day gate) | MIT                    | Active, release every 8 weeks                                 |
+| `electron-vite` 6.x                                                  | desktop                  | dev     | Build main/preload/renderer, HMR              | MIT                    | Active (6.0.0, Oct 2026)                                      |
+| `vite` 8.x, `@vitejs/plugin-react` 6.x                               | desktop                  | dev     | Renderer bundler, React transform             | MIT                    | Active                                                        |
+| `electron-builder` 26.x                                              | desktop                  | dev     | Installers, fuses                             | MIT                    | Active (Oct 2026)                                             |
+| `vitest` 5.x                                                         | every package with tests | dev     | Unit tests (already used by repo-policy)      | MIT                    | Active                                                        |
+| `@types/react`, `@types/react-dom` 19.x, `@types/w3c-web-usb` 1.x    | ui, app, core, desktop   | dev     | Types                                         | MIT                    | Active                                                        |
+| `eslint-plugin-react-hooks` 7.x                                      | root                     | dev     | Hooks lint rules                              | MIT                    | Active (React team)                                           |
 
-Every runtime dependency above is required by the shadcn/GlassyUI generated code. Anything else GlassyUI's CLI tries to add is reviewed before it is accepted.
+Every runtime dependency in `ui` is required by the shadcn/GlassyUI generated code. Anything else GlassyUI's CLI tries to add is reviewed before it is accepted. `core` has no runtime dependencies.
 
 ### Platform behaviour (USB, packaging)
 
@@ -162,9 +210,13 @@ Every runtime dependency above is required by the shadcn/GlassyUI generated code
 | Package        | `.dmg`, unsigned (Gatekeeper requires right-click → Open)                                   | NSIS `.exe`, unsigned (SmartScreen warning)                                                                                                                                                                                                                            | AppImage + `.deb`. The rules file is shipped inside the app's resources but not installed.                                                                                                                                                  |
 | Setup guidance | In-app hint only                                                                            | In-app link to minidisc.wiki `#windows`; `docs/platform-setup.md#windows`                                                                                                                                                                                              | In-app link to minidisc.wiki `#linux`; `docs/platform-setup.md#linux` with the bundled rules file                                                                                                                                           |
 
+The same OS requirements apply to the web app in Chromium-based browsers. `add-web-app` covers how they are presented there.
+
 ## Risks / Trade-offs
 
 - [Windows needs a manual driver install, so the desktop app is not plug-and-play there yet] → Document it, show guidance in-app, verify behaviour on real hardware in this change, and plan a follow-up change for installer-driven driver setup (libwdi) or the node `usb` fallback.
+- [Source-consumed packages couple every consumer to the same TS and bundler settings] → All consumers already share `@mdconnect/tsconfig` and Vite. If a package must ever be published or run unbundled, add a build step to that package only.
+- [Package boundaries erode over time] → `no-restricted-imports` rules fail lint on wrong-direction imports, and `CLAUDE.md` plus `openspec/config.yaml` state where code belongs.
 - [`electron` postinstall downloads a binary from GitHub, outside the npm age gate] → Electron's download is checksum-verified against the npm package's `checksums.json`. It is the only package opted in to install scripts.
 - [electron-builder downloads NSIS/AppImage tooling from GitHub at package time, also outside the age gate] → Acceptable for unsigned local builds. Revisit pinning or caching when release CI is set up.
 - [GlassyUI is a young, single-maintainer registry] → Its components are copied into the repo as source, so there is no runtime dependency on the project continuing. We own and can edit the code.
