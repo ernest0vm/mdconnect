@@ -16,7 +16,7 @@ Every behaviour change starts with a failing test. Work in small red â†’ green â
 
 ## The cycle
 
-1. **Pick one behaviour.** In an OpenSpec change, take the next unchecked task in `tasks.md` and the spec scenario it serves (`#### Scenario:` in `openspec/changes/<change>/specs/**/spec.md`). One scenario becomes one or more `it(...)` cases. Name the test after the scenario so the trace is obvious.
+1. **Pick one behaviour.** In an OpenSpec change, take the first unchecked task in `tasks.md` whose prerequisites are done (a task that names a later step, such as "after group 2", waits until that step is complete), and the spec scenario it serves (`#### Scenario:` in `openspec/changes/<change>/specs/**/spec.md`). One scenario becomes one or more `it(...)` cases. Name the test after the scenario so the trace is obvious.
 2. **Red.** Write the test before the implementation. Run only that file:
    ```bash
    yarn workspace <pkg> vitest run src/foo.test.ts

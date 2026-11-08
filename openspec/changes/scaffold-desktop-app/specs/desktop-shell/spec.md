@@ -8,7 +8,7 @@ Defines the desktop application container: how mdconnect starts on macOS, Window
 
 ### Requirement: Single main window
 
-The app SHALL open one main window on launch on macOS, Windows and Linux. A second launch while the app is running SHALL NOT start another instance; it SHALL restore and focus the existing window.
+The app SHALL open one main window on launch on macOS, Windows and Linux. A second launch while the app is running SHALL NOT start another instance; it SHALL restore and focus the existing main window, or open one if none exists (for example on macOS after the window was closed).
 
 #### Scenario: First launch
 
@@ -17,9 +17,15 @@ The app SHALL open one main window on launch on macOS, Windows and Linux. A seco
 
 #### Scenario: Second launch
 
-- **WHEN** the user starts mdconnect while an instance is already running
-- **THEN** no new instance or window is created
+- **WHEN** the user starts mdconnect while an instance is already running with its main window open
+- **THEN** no new instance or additional window is created
 - **AND** the existing window is restored if minimized and brought to the front
+
+#### Scenario: Second launch with no window on macOS
+
+- **WHEN** the user closes the main window on macOS (the app keeps running) and starts mdconnect again
+- **THEN** no new instance is created
+- **AND** the running instance opens one main window and brings it to the front
 
 #### Scenario: macOS window closed
 
@@ -38,7 +44,8 @@ UI code SHALL run without access to Node.js or Electron APIs. It SHALL only reac
 #### Scenario: Exposed API is the only bridge
 
 - **WHEN** UI code inspects the privileged API exposed to it
-- **THEN** it finds only the documented functions, and each accepts and returns plain serializable data
+- **THEN** it finds only the documented functions
+- **AND** every value crossing the bridge (arguments, return values and event payloads) is plain serializable data, except that subscription functions take a callback and return an unsubscribe function
 
 ### Requirement: Content restrictions
 

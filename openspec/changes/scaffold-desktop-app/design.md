@@ -124,7 +124,7 @@ Payloads are validated in the main process against the pending `requestId` and t
 
 - React 19, Tailwind CSS 4 via `@tailwindcss/vite` (no PostCSS config), shadcn/ui initialized with `components.json` (`rsc: false`, `tsx: true`, alias `@/`).
 - GlassyUI components are added with the shadcn CLI from its registry (`@glassyui/<component>`), which writes source into `components/ui/glassyui`. The CLI is run through `yarn dlx shadcn@4.23.0` (pinned, older than 7 days) and is not a project dependency. Initial set: Surface, Panel, Button, Dialog, Spinner, Alert, Badge.
-- Theme: `nativeTheme.themeSource = 'system'`. The renderer sets `data-lg-theme` (GlassyUI) and the `dark` class (shadcn) from `matchMedia('(prefers-color-scheme: dark)')` and updates them on change. Reduced motion uses the CSS `prefers-reduced-motion` media query. Reduced transparency comes from Electron's `nativeTheme.prefersReducedTransparency` through the preload, because Chromium's `prefers-reduced-transparency` media query is not reliable across platforms. It sets `data-reduced-transparency` on `<html>`, and CSS overrides make glass surfaces opaque and remove `backdrop-filter`.
+- Theme: `nativeTheme.themeSource = 'system'`. The renderer sets `data-lg-theme` (GlassyUI) and the `dark` class (shadcn) from `matchMedia('(prefers-color-scheme: dark)')` and updates them on change. Reduced motion uses the CSS `prefers-reduced-motion` media query. Reduced transparency is on when either signal reports it: Electron's `nativeTheme.prefersReducedTransparency` (forwarded through the preload) or Chromium's `prefers-reduced-transparency: reduce` media query. Neither is reliable on every platform, so the renderer ORs them. The result sets `data-reduced-transparency` on `<html>`, and CSS overrides make glass surfaces opaque and remove `backdrop-filter`. On Linux, many desktops expose no such preference; there the default glass look is used, as the ui-theme spec states, and task 7.3 records what each tested desktop reports.
 
 ### 9. Lint and monorepo wiring
 
@@ -180,4 +180,4 @@ Not applicable: no existing app or users. Rollback is reverting the change.
 
 - Exact Windows behaviour without WinUSB (device hidden vs. `open()` failing). It is recorded during manual testing and only changes the wording in the docs.
 - Final app ID, product name and icon for installers. `mdconnect` / `org.mdconnect.desktop` and Electron's default icon are placeholders.
-- Whether `nativeTheme.prefersReducedTransparency` reports anything on Linux. If not, Linux users get the default glass look, and the media-query path can be added later.
+- Which Linux desktops report a reduced-transparency preference through either signal. This only changes the documentation of supported desktops, not the behaviour.

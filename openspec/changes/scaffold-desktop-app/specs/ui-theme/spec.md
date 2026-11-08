@@ -31,7 +31,7 @@ Body text and interactive controls SHALL meet WCAG 2.2 AA contrast (4.5:1 for no
 
 ### Requirement: Respect reduced motion and transparency
 
-When the OS asks for reduced motion, the app SHALL disable non-essential animations. When the OS asks for reduced transparency, glass surfaces SHALL become opaque.
+When the OS asks for reduced motion, the app SHALL disable non-essential animations. When the OS reports a reduced-transparency preference through Electron or Chromium, glass surfaces SHALL become opaque. On Linux desktops that expose no such preference, the default glass look is used.
 
 #### Scenario: Reduced motion
 

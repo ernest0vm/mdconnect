@@ -54,6 +54,12 @@ A device request SHALL resolve without any browser-style chooser. With one match
 - **THEN** the app lists both by name and waits for the user to choose one
 - **AND** the chosen device is returned to the request
 
+#### Scenario: Several devices of the same model
+
+- **WHEN** two connected devices have the same name and USB IDs
+- **THEN** each entry also shows the device's serial number when it reports one
+- **AND** when serial numbers are missing or identical, entries are numbered in connection order and the dialog suggests unplugging the other device to be certain which one is chosen
+
 #### Scenario: User cancels the choice
 
 - **WHEN** the app is asking the user to choose between devices and the user cancels
