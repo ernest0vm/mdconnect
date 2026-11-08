@@ -8,7 +8,7 @@
   "description": "Electron shell: main process, preload bridge and renderer entry for @mdconnect/app.",
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "node scripts/ensure-electron.mjs && electron-vite dev",
     "build": "electron-vite build",
     "package": "electron-vite build && electron-builder",
     "lint": "eslint . --max-warnings 0",
