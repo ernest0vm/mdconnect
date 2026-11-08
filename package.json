@@ -1,4 +1,44 @@
 {
   "name": "mdconnect",
-  "packageManager": "yarn@4.14.1"
+  "private": true,
+  "license": "GPL-2.0-only",
+  "type": "module",
+  "packageManager": "yarn@4.14.1",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "husky",
+    "build": "turbo run build",
+    "check": "turbo run root:format root:lint root:typecheck root:specs format:check lint typecheck test",
+    "check:affected": "turbo run root:format root:lint root:typecheck root:specs format:check lint typecheck test --affected",
+    "lint": "turbo run root:lint lint",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "turbo run root:format format:check",
+    "typecheck": "turbo run root:typecheck typecheck",
+    "test": "turbo run test",
+    "root:lint": "eslint . --max-warnings 0 --ignore-pattern 'apps/**' --ignore-pattern 'packages/**'",
+    "root:format": "prettier --check . '!apps/**' '!packages/**'",
+    "root:typecheck": "tsc -p tsconfig.json",
+    "root:specs": "openspec validate --all --strict --no-interactive"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@fission-ai/openspec": "^1.16.0",
+    "@types/node": "^22.20.5",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.14.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "prettier": "^3.9.10",
+    "turbo": "^2.11.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.1"
+  }
 }

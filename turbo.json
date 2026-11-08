@@ -1,0 +1,51 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "ui": "stream",
+  "globalDependencies": [
+    "package.json",
+    ".yarnrc.yml",
+    ".nvmrc",
+    ".husky/**",
+    "eslint.config.mjs",
+    ".prettierrc.json",
+    ".prettierignore",
+    ".gitignore"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "out/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "format:check": {
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "//#root:lint": {
+      "outputs": []
+    },
+    "//#root:format": {
+      "outputs": []
+    },
+    "//#root:typecheck": {
+      "outputs": []
+    },
+    "//#root:specs": {
+      "outputs": []
+    }
+  }
+}

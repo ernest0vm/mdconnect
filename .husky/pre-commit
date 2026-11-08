@@ -1,0 +1,5 @@
+# Fix and verify the staged files themselves.
+yarn lint-staged
+# Then type-check and test every workspace affected by changes relative to main
+# (committed on this branch plus uncommitted work).
+yarn turbo run root:typecheck typecheck test --affected
