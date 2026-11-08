@@ -34,6 +34,7 @@ operations:
   apply:
     guidance:
       - Use the `tdd` skill for every task that changes behaviour; write the failing test first.
+      - Apply the `typescript-clean-code` skill when writing and refactoring; repo rules in CLAUDE.md win on conflicts.
       - Run `yarn check:affected` before ticking a task.
 
 # Project context (optional)

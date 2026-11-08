@@ -23,7 +23,7 @@ Every behaviour change starts with a failing test. Work in small red â†’ green â
    ```
    Confirm it fails **for the expected reason** (an assertion or a missing export, not a typo, a bad import path or a config error). If it fails for another reason, fix the test first. If it passes, the test is not testing new behaviour: tighten it or pick another behaviour.
 3. **Green.** Write the minimum code that makes it pass. Rerun the same command. Do not touch the test to make it pass. If the test was wrong, say so explicitly, fix it, and go back to red.
-4. **Refactor.** Clean up names, duplication and types with the test still green. Then run the affected checks:
+4. **Refactor.** Clean up names, duplication and types with the test still green, applying the `typescript-clean-code` skill (cite rule numbers, e.g. "G25: extracted magic number"). Then run the affected checks:
    ```bash
    yarn check:affected
    ```

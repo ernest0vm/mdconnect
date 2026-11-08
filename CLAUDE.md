@@ -23,5 +23,6 @@ Desktop (Electron) port of [webminidisc](https://github.com/asivery/webminidisc)
 - Package manager is **Yarn 4** (never npm/pnpm). `npmMinimalAgeGate: 7d` rejects versions younger than 7 days; do not bypass it. When `latest` is still quarantined, pin the newest eligible major. Dependency install scripts are disabled; opt a package in with `dependenciesMeta.<pkg>.built: true` only when required and add it to the allowlist in `packages/repo-policy/src/policy.test.ts`.
 - TypeScript is pinned to `~6.0` because typescript-eslint does not support TS 7 yet.
 - Test-first: use the `tdd` skill for any behaviour change.
+- Clean code: follow the `typescript-clean-code` skill (vendored, see its `SOURCE.md`) when writing, reviewing or refactoring TypeScript. Where it conflicts with this file, this file wins: use the Yarn commands above instead of its `npm` examples (E1/E2), and its "< 100ms per test" rule (T9) applies to unit tests, not to manual hardware verification.
 - UI: shadcn/ui + Tailwind + GlassyUI. No Material UI, Emotion, styled-components, tss-react or react95 (enforced by repo-policy tests).
 - Work goes through OpenSpec: `/opsx:propose` → `/opsx:apply` → `/opsx:archive`. Project constraints live in `openspec/config.yaml`.
