@@ -14,7 +14,7 @@ Desktop (Electron) port of [webminidisc](https://github.com/asivery/webminidisc)
 
 - Each workspace with a `tsconfig.json` defines `lint`, `format:check`, `typecheck` and `test`, and depends on `@mdconnect/tsconfig` (`workspace:^`). `@mdconnect/repo-policy` tests fail otherwise.
 - Root-level files are checked by `root:*` scripts (registered as `//#root:*` turbo tasks). Root ESLint/Prettier ignore `apps/**` and `packages/**`, which the workspaces check themselves.
-- Files in `turbo.json` `globalDependencies` (root `package.json`, `.yarnrc.yml`, ESLint/Prettier configs, `.husky/**`) mark every workspace as affected. Task `inputs` do **not** influence `--affected`.
+- Files in `turbo.json` `globalDependencies` (root `package.json`, `.yarnrc.yml`, ESLint/Prettier configs, `.husky/**`) mark every workspace as affected. With `futureFlags.affectedUsingTaskInputs`, a task's `inputs` also decide whether it is affected: `@mdconnect/repo-policy#test` lists every workspace `package.json` / `tsconfig.json` and `lint-staged.config.mjs`, and root `root:*` tasks exclude `apps/**` and `packages/**`. When a check reads files outside its package, add them to that task's `inputs`.
 - Pre-commit: `lint-staged --concurrent false --hide-all` fixes staged files, then runs `turbo run root:typecheck typecheck test --affected` on the staged snapshot only (unstaged edits and untracked files are hidden).
 - CI: `.github/workflows/code-quality.yml` runs `check:affected` on pull requests (base `origin/<base_ref>` via `TURBO_SCM_BASE`) and `check` on `main`.
 

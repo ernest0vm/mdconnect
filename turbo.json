@@ -1,6 +1,9 @@
 {
   "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
+  "futureFlags": {
+    "affectedUsingTaskInputs": true
+  },
   "globalDependencies": [
     "package.json",
     ".yarnrc.yml",
@@ -36,16 +39,32 @@
       "persistent": true
     },
     "//#root:lint": {
-      "outputs": []
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "!apps/**", "!packages/**"]
     },
     "//#root:format": {
-      "outputs": []
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "!apps/**", "!packages/**"]
     },
     "//#root:typecheck": {
-      "outputs": []
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "!apps/**", "!packages/**"]
     },
     "//#root:specs": {
-      "outputs": []
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "!apps/**", "!packages/**"]
+    },
+    "@mdconnect/repo-policy#test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/*/package.json",
+        "$TURBO_ROOT$/packages/*/package.json",
+        "$TURBO_ROOT$/apps/*/tsconfig.json",
+        "$TURBO_ROOT$/packages/*/tsconfig.json",
+        "$TURBO_ROOT$/lint-staged.config.mjs"
+      ]
     }
   }
 }
