@@ -4,13 +4,14 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 
 ## 1. Workspace
 
-- [ ] 1.1 Create `apps/web/package.json` (`@mdconnect/web`, private, `GPL-2.0-only`, `type: module`, depends on `@mdconnect/app`, `@mdconnect/core`, `@mdconnect/ui`, `react`, `react-dom`; dev `@mdconnect/tsconfig`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite`, `vitest`, `@types/react`, `@types/react-dom`, `@types/w3c-web-usb`) with scripts `dev`, `build`, `preview`, `lint`, `format:check`, `typecheck`, `test`. Add root `dev:web` (`turbo run dev --filter=@mdconnect/web`). Verify `yarn install` adds no new packages to `yarn.lock` and the repo-policy tests pass.
+- [ ] 1.1 Create `apps/web/package.json` (`@mdconnect/web`, private, `GPL-2.0-only`, `type: module`, depends on `@mdconnect/app`, `@mdconnect/core`, `@mdconnect/ui`, `react`, `react-dom`; dev `@mdconnect/tsconfig`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite`, `vitest`, `@types/react`, `@types/react-dom`, `@types/w3c-web-usb`) with scripts `dev`, `build`, `preview`, `lint`, `format:check`, `typecheck`, `test`. Add root `dev:web` (`turbo run dev --filter=@mdconnect/web`). Verify with `git diff yarn.lock` that the only addition is the `@mdconnect/web@workspace:apps/web` entry (no new third-party packages), and that the repo-policy tests pass.
 - [ ] 1.2 Add `tsconfig.json` (extends `react.json`, `types: ["w3c-web-usb", "vite/client"]`), `index.html`, `vite.config.ts` (React + Tailwind plugins, dev server COOP/COEP headers) and `src/styles.css` (`@import "@mdconnect/ui/globals.css"` + `@source` for `packages/ui/src` and `packages/app/src`). Extend the root ESLint browser globals to `apps/web/src/**`. Verify `yarn workspace @mdconnect/web build` writes `apps/web/dist` and `yarn check:affected` runs the web workspace's checks.
 
 ## 2. Shared additions in packages
 
-- [ ] 2.1 Export `sourceRepositoryUrl` and `licenseName` from `@mdconnect/core`, with a test that the URL is the GitHub repository and the license is `GPL-2.0`.
+- [ ] 2.1 Export `sourceRepositoryUrl`, `licenseName` and `sourceLink(commit)` from `@mdconnect/core`. Tests first: the URL is the GitHub repository, the license is `GPL-2.0`, `sourceLink('abc123')` ends in `/tree/abc123`, and `sourceLink('')` returns the repository root. Define `__MDCONNECT_COMMIT__` in both `apps/web/vite.config.ts` and `apps/desktop/electron.vite.config.ts` as in design.md decision 3.
 - [ ] 2.2 Add the source/license footer to `@mdconnect/app` (rendered by `App` and by `UnsupportedBrowser`) and the `UnsupportedBrowser` screen (supported browsers list, link to the README download section). Verify both render in `yarn dev:web` and in the desktop app (web-delivery: "Source availability", "Supported browsers").
+- [ ] 2.3 Extend `guidanceFor` in `@mdconnect/app` to take the platform kind (`guidanceFor(kind, os, platformKind)`) and add the "pick the device in the browser's list" hint to `no-device` on the web. Tests first: the hint appears for `web` and not for `desktop`; every other kind × OS result is unchanged (usb-device-access: "Web device selection").
 
 ## 3. Web platform
 
@@ -20,7 +21,7 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 
 ## 4. Headers, routing and Vercel config
 
-- [ ] 4.1 Add `apps/web/vercel.json` with the headers and rewrite from design.md decision 4, `installCommand: "yarn install --immutable"` and `outputDirectory: "dist"`. Tests first in `src/vercel-config.test.ts`: CSP equals `contentSecurityPolicy` from `@mdconnect/core`; COOP is `same-origin`; COEP is `require-corp`; the `/(.*)` → `/index.html` rewrite exists. Verify the test fails when the CSP in `vercel.json` is edited by one character.
+- [ ] 4.1 Add `apps/web/vercel.json` with the headers and rewrite from design.md decision 4, `installCommand: "yarn install --immutable"`, `buildCommand: "yarn turbo run build"` and `outputDirectory: "dist"`. Tests first in `src/vercel-config.test.ts`: CSP equals `contentSecurityPolicy` from `@mdconnect/core`; COOP is `same-origin`; COEP is `require-corp`; the `/(.*)` → `/index.html` rewrite exists. Verify the test fails when the CSP in `vercel.json` is edited by one character.
 - [ ] 4.2 Write `docs/deployment.md` with the Vercel project settings table from design.md decision 5 and the Corepack fallback. Verify every setting name matches the current Vercel dashboard.
 
 ## 5. Vercel project (maintainer, manual)
@@ -31,7 +32,7 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 
 ## 6. Browser and hardware verification
 
-- [ ] 6.1 Chrome on macOS with a real NetMD device and one non-MiniDisc USB device connected: the chooser lists only the MiniDisc device; choosing it shows name and IDs; closing the chooser shows the cancelled state; reloading shows the device without the chooser; unplugging shows "no device connected" (usb-device-access: "Web device selection", "Web reconnect for granted devices"). In DevTools, `crossOriginIsolated` is `true`.
+- [ ] 6.1 Chrome on macOS with a real NetMD device and one non-MiniDisc USB device connected: the chooser lists only the MiniDisc device; choosing it shows name and IDs; closing the chooser (with and without a device listed) shows the "no device found" message with the browser-list hint; reloading shows the device without the chooser; unplugging shows "no device connected" (usb-device-access: "Web device selection", "Web reconnect for granted devices"). In DevTools, `crossOriginIsolated` is `true`.
 - [ ] 6.2 Chrome or Edge on Windows: record the behaviour before and after installing the WinUSB driver, and confirm the guidance shown matches the desktop app.
 - [ ] 6.3 Chrome on Linux (non-Snap): confirm the udev guidance appears without the rule and the connect succeeds with it.
 - [ ] 6.4 Firefox and Safari: the unsupported-browser screen appears with the source footer, and DevTools shows no USB calls.

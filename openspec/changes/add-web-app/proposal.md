@@ -28,7 +28,7 @@ Upstream webminidisc is used mostly as a website: people open a URL in Chrome an
 
 ### Modified Capabilities
 
-None. `usb-device-access` is introduced by `scaffold-desktop-app`, which must be archived first. This change only adds web-specific requirements to it.
+- `usb-device-access`: adds the web-specific requirements (browser chooser, grants remembered by the browser). The capability is introduced by `scaffold-desktop-app`, which must be archived first; existing requirements are unchanged.
 
 ## Impact
 

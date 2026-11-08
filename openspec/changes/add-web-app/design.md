@@ -49,14 +49,14 @@ apps/web/
 - `kind: 'web'`.
 - `os`: `detectOs()` reads `navigator.userAgentData.platform` when available, falling back to `navigator.userAgent`. It maps to `macos` / `windows` / `linux` / `chromeos` / `other`. It is pure and unit-tested with recorded user-agent samples.
 - `usb`: `navigator.usb`.
-- `deviceChooser`: omitted. The browser's chooser handles selection, so `@mdconnect/app` never shows its own dialog on the web.
+- `deviceChooser`: omitted. The browser's chooser handles selection, so `@mdconnect/app` never shows its own dialog on the web. Chrome rejects `requestDevice` with the same `NotFoundError` whether the user cancelled or the list was empty, and `classifyUsbError` has no chooser result to tell them apart, so on the web both map to `no-device`. `guidanceFor('no-device', os)` adds the "pick the device in the browser's list" hint when `platform.kind === 'web'`.
 - `appearance`: no platform signal (`{}`), so reduced transparency comes only from the `prefers-reduced-transparency` media query that `resolveAppearance()` already reads. `onChange` returns a no-op unsubscribe.
 
 `isWebUsbSupported({ secureContext, hasUsb })` decides between `<App>` and `<UnsupportedBrowser>` before any USB call. Both screens live in `@mdconnect/app`, so they share the design system and the source footer.
 
 ### 3. Source link and unsupported-browser screen in `@mdconnect/app`
 
-`@mdconnect/core` exports `sourceRepositoryUrl` (`https://github.com/ernest0vm/mdconnect`) and `licenseName` (`GPL-2.0`). `@mdconnect/app` renders a small footer with both on every screen. That satisfies the GPL obligation for distributed JavaScript on the web, and it is harmless on desktop. `<UnsupportedBrowser>` names Chrome, Edge, Opera and other Chromium-based browsers, and links to the repository README's download section. A releases page replaces that link once a release workflow exists.
+`@mdconnect/core` exports `sourceRepositoryUrl` (`https://github.com/ernest0vm/mdconnect`) and `licenseName` (`GPL-2.0`). Each shell injects the commit it was built from as `__MDCONNECT_COMMIT__` (Vite `define`: `VERCEL_GIT_COMMIT_SHA` on Vercel, `git rev-parse HEAD` otherwise, empty in dev). `sourceLink(commit)` in `core` returns `<repo>/tree/<sha>`, or the repository root when no commit is known. `@mdconnect/app` renders a small footer with that link and the license on every screen, so users reach the source of the exact version they run. That satisfies the GPL obligation for distributed JavaScript on the web, and it is harmless on desktop. `<UnsupportedBrowser>` names Chrome, Edge, Opera and other Chromium-based browsers, and links to the repository README's download section. A releases page replaces that link once a release workflow exists.
 
 ### 4. Headers and routing in `vercel.json`
 
@@ -93,16 +93,16 @@ The desktop and web policies cannot drift without a failing test. Vercel serves 
 
 Done once by the maintainer in the Vercel dashboard. The values are documented in `docs/deployment.md`:
 
-| Setting                            | Value                      | Why                                                                                                                 |
-| ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Root Directory                     | `apps/web`                 | Vercel infers the turbo filter from it                                                                              |
-| Framework preset                   | Vite                       | Output directory `dist`                                                                                             |
-| Build command                      | `turbo run build`          | Builds `@mdconnect/web` and its workspace dependencies                                                              |
-| Install command                    | `yarn install --immutable` | Lockfile must match. The 7-day `npmMinimalAgeGate` from `.yarnrc.yml` applies in the build too                      |
-| Env `ENABLE_EXPERIMENTAL_COREPACK` | `1`                        | Vercel uses the `packageManager` Yarn 4 only with Corepack enabled                                                  |
-| Node.js version                    | 22.x                       | Matches `.nvmrc` / `engines`                                                                                        |
-| Skip unaffected deployments        | On                         | Vercel's built-in monorepo skipping. Fallback: Ignored Build Step `yarn dlx turbo-ignore@2.11.10 --fallback=HEAD^1` |
-| Vercel Toolbar on previews         | Off                        | Its injected script is blocked by our CSP and COEP                                                                  |
+| Setting                            | Value                                     | Why                                                                                                                 |
+| ---------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Root Directory                     | `apps/web`                                | Vercel infers the turbo filter from it                                                                              |
+| Framework preset                   | Vite                                      | Output directory `dist`                                                                                             |
+| Build command                      | `yarn turbo run build` (in `vercel.json`) | Yarn resolves the root-hoisted `turbo` binary from `apps/web`; filter inferred from the Root Directory              |
+| Install command                    | `yarn install --immutable`                | Lockfile must match. The 7-day `npmMinimalAgeGate` from `.yarnrc.yml` applies in the build too                      |
+| Env `ENABLE_EXPERIMENTAL_COREPACK` | `1`                                       | Vercel uses the `packageManager` Yarn 4 only with Corepack enabled                                                  |
+| Node.js version                    | 22.x                                      | Matches `.nvmrc` / `engines`                                                                                        |
+| Skip unaffected deployments        | On                                        | Vercel's built-in monorepo skipping. Fallback: Ignored Build Step `yarn dlx turbo-ignore@2.11.10 --fallback=HEAD^1` |
+| Vercel Toolbar on previews         | Off                                       | Its injected script is blocked by our CSP and COEP                                                                  |
 
 Previews are created for every pull request by Vercel's GitHub integration, which comments the URL on the PR. The preview check is informative and is not added to the `main` rulesets: the Code quality check already gates merges, and an outage at Vercel should not block them.
 

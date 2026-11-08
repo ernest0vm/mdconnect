@@ -4,17 +4,22 @@
 
 ### Requirement: Web device selection
 
-In the web app, a device request SHALL use the browser's own device chooser, filtered to supported NetMD and Hi-MD devices. Closing the chooser without a choice SHALL fail the request as "cancelled", and a chooser with no matching device SHALL fail it as "no device found".
+In the web app, a device request SHALL use the browser's own device chooser, filtered to supported NetMD and Hi-MD devices. Closing the chooser without choosing a device SHALL fail the request as "no device found", whether or not the chooser listed any device, because the browser reports both cases identically. The message SHALL also invite the user to pick the device in the browser's list.
 
 #### Scenario: Browser chooser lists only MiniDisc devices
 
 - **WHEN** a supported device and a non-MiniDisc USB device are connected and the user clicks "Connect device" in the web app
 - **THEN** the browser's chooser opens and lists only the supported device
 
-#### Scenario: Chooser closed
+#### Scenario: Chooser closed with a device listed
 
-- **WHEN** the user closes the browser's chooser without choosing a device
-- **THEN** the Connect screen shows the cancelled state and no device is opened
+- **WHEN** the browser's chooser lists a supported device and the user closes it without choosing
+- **THEN** the Connect screen shows the "no device found" message, including the hint to pick the device in the browser's list, and no device is opened
+
+#### Scenario: Chooser with no devices
+
+- **WHEN** no supported device is connected and the user opens and closes the browser's chooser
+- **THEN** the Connect screen shows the same "no device found" message
 
 ### Requirement: Web reconnect for granted devices
 
