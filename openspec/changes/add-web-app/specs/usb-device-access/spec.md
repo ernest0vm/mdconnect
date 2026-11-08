@@ -23,7 +23,7 @@ In the web app, a device request SHALL use the browser's own device chooser, fil
 
 ### Requirement: Hi-MD mode is not available on the web
 
-Devices in Hi-MD mode present only the USB mass-storage class, which browsers do not let web pages use. The web app SHALL NOT offer Hi-MD-mode device IDs, and its "no device found" message SHALL explain that Hi-MD mode cannot be used in a browser: switch the device to NetMD mode where it supports it, or use the desktop app. Hi-MD devices connected in NetMD mode SHALL work as NetMD devices.
+Devices in Hi-MD mode present only the USB mass-storage class, which browsers do not let web pages use. The web app SHALL NOT offer Hi-MD-mode device IDs, and its "no device found" message SHALL explain that Hi-MD mode cannot be used in a browser and suggest switching the device to NetMD mode where it supports it. The message SHALL NOT point to the desktop app for Hi-MD mode until a change adds Hi-MD-mode support there. Hi-MD devices connected in NetMD mode SHALL work as NetMD devices.
 
 #### Scenario: Device in Hi-MD mode
 
