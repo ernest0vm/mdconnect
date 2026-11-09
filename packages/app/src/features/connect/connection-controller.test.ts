@@ -194,6 +194,36 @@ describe('ConnectionController', () => {
     });
   });
 
+  it('reports an unplug, not a failure, when a first open rejects because the device left', async () => {
+    const { log, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const opening = controller.autoConnect(a.handle);
+    controller.handleDisconnect(a.handle);
+    a.failOpen(new DOMException('The device was disconnected.', 'NotFoundError'));
+    await opening;
+    expect(actions).not.toContain('failed');
+    expect(log.at(-1)).toMatchObject({
+      type: 'device-disconnected',
+      device: { productId: MZ_N510 },
+    });
+  });
+
+  it('keeps reporting a failed switch while the previous device stays open', async () => {
+    const { usb, log, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    const first = controller.autoConnect(a.handle);
+    a.finishOpen();
+    await first;
+    usb.nextRequest = () => Promise.resolve(b.handle);
+    const second = controller.request(() => false);
+    await flush();
+    controller.handleDisconnect(b.handle);
+    b.failOpen(new DOMException('The device was disconnected.', 'NotFoundError'));
+    await second;
+    expect(log.at(-1)?.type).toBe('failed');
+  });
+
   it('reports which open device was unplugged', async () => {
     const { log, controller } = setup();
     const a = controllableDevice(MZ_N510);

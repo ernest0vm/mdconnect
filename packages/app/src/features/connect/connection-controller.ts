@@ -105,6 +105,11 @@ export class ConnectionController {
     try {
       await switchDevice(this.openHandle, handle);
     } catch (error) {
+      if (this.unplugged.has(handle) && this.openHandle === null) {
+        // The open failed because the device left; with nothing else open, that is an unplug.
+        this.dispatch({ type: 'device-disconnected', device });
+        return;
+      }
       this.dispatch({ type: 'failed', failure: classifyUsbError(error, 'open') });
       return;
     } finally {
