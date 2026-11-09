@@ -94,15 +94,15 @@ The desktop and web policies cannot drift without a failing test. Vercel serves 
 
 Done once by the maintainer in the Vercel dashboard. The values are documented in `docs/deployment.md`:
 
-| Setting                     | Value                                     | Why                                                                                                                 |
-| --------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Root Directory              | `apps/web`                                | Vercel infers the turbo filter from it                                                                              |
-| Framework preset            | Vite                                      | Output directory `dist`                                                                                             |
-| Build command               | `yarn turbo run build` (in `vercel.json`) | Yarn resolves the root-hoisted `turbo` binary from `apps/web`; filter inferred from the Root Directory              |
-| Install command             | `yarn install --immutable`                | Lockfile must match. The 7-day `npmMinimalAgeGate` from `.yarnrc.yml` applies in the build too                      |
-| Node.js version             | 22.x                                      | Matches `.nvmrc` / `engines`                                                                                        |
-| Skip unaffected deployments | On                                        | Vercel's built-in monorepo skipping. Fallback: Ignored Build Step `yarn dlx turbo-ignore@2.11.10 --fallback=HEAD^1` |
-| Vercel Toolbar on previews  | Off                                       | Its injected script is blocked by our CSP and COEP                                                                  |
+| Setting                     | Value                                            | Why                                                                                                                            |
+| --------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Root Directory              | `apps/web`                                       | Vercel infers the turbo filter from it                                                                                         |
+| Framework preset            | Vite                                             | Output directory `dist`                                                                                                        |
+| Build command               | `yarn run -T turbo run build` (in `vercel.json`) | Yarn 4 resolves binaries per workspace, so `-T` takes `turbo` from the root workspace; filter inferred from the Root Directory |
+| Install command             | `yarn install --immutable`                       | Lockfile must match. The 7-day `npmMinimalAgeGate` from `.yarnrc.yml` applies in the build too                                 |
+| Node.js version             | 22.x                                             | Matches `.nvmrc` / `engines`                                                                                                   |
+| Skip unaffected deployments | On                                               | Vercel's built-in monorepo skipping. Fallback: Ignored Build Step `yarn dlx turbo-ignore@2.11.10 --fallback=HEAD^1`            |
+| Vercel Toolbar on previews  | Off                                              | Its injected script is blocked by our CSP and COEP                                                                             |
 
 Previews are created for every pull request by Vercel's GitHub integration, which comments the URL on the PR. The preview check is informative and is not added to the `main` rulesets: the Code quality check already gates merges, and an outage at Vercel should not block them.
 

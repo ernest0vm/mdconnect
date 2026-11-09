@@ -38,7 +38,8 @@ describe('vercel.json (web-delivery: "Security and isolation headers")', () => {
 
   it('installs immutably and builds through turbo from the workspace root', () => {
     expect(config.installCommand).toBe('yarn install --immutable');
-    expect(config.buildCommand).toBe('yarn turbo run build');
+    // Yarn 4 resolves binaries per workspace; turbo lives in the root workspace.
+    expect(config.buildCommand).toBe('yarn run -T turbo run build');
     expect(config.outputDirectory).toBe('dist');
   });
 });

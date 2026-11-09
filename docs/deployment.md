@@ -6,13 +6,13 @@ The web app (`apps/web`) is a static Vite build served by Vercel. Vercel's GitHu
 
 `apps/web/vercel.json` pins everything that can be versioned:
 
-| Setting          | Value                       | Why                                                                                                |
-| ---------------- | --------------------------- | -------------------------------------------------------------------------------------------------- |
-| Install command  | `yarn install --immutable`  | The lockfile must match; the 7-day `npmMinimalAgeGate` in `.yarnrc.yml` also applies on Vercel     |
-| Build command    | `yarn turbo run build`      | Yarn resolves the root-hoisted `turbo` binary; turbo infers the `@mdconnect/web` filter            |
-| Output directory | `dist`                      | Vite's output                                                                                      |
-| Headers          | CSP, COOP, COEP, and others | The CSP is the same string the desktop app sends; `test/vercel-config.test.ts` fails if they drift |
-| Rewrites         | `/(.*)` → `/index.html`     | Reloads and shared links on any path load the app                                                  |
+| Setting          | Value                         | Why                                                                                                                                                                        |
+| ---------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Install command  | `yarn install --immutable`    | The lockfile must match; the 7-day `npmMinimalAgeGate` in `.yarnrc.yml` also applies on Vercel                                                                             |
+| Build command    | `yarn run -T turbo run build` | Yarn 4 resolves binaries per workspace, so `-T` (`--top-level`) takes `turbo` from the root workspace; turbo infers the `@mdconnect/web` filter from the working directory |
+| Output directory | `dist`                        | Vite's output                                                                                                                                                              |
+| Headers          | CSP, COOP, COEP, and others   | The CSP is the same string the desktop app sends; `test/vercel-config.test.ts` fails if they drift                                                                         |
+| Rewrites         | `/(.*)` → `/index.html`       | Reloads and shared links on any path load the app                                                                                                                          |
 
 ## One-time project setup (maintainer)
 
