@@ -48,4 +48,4 @@ curl -sI https://mdconnect.vercel.app/ | grep -iE 'content-security-policy|cross
 curl -s -o /dev/null -w '%{http_code}\n' https://mdconnect.vercel.app/device
 ```
 
-The first command must show the three headers; the second must print `200` (the SPA fallback), not `404`. Both passed on the first production deploy (merge of PR #4, 2026-11-09).
+The first command must show the three headers; the second must print `200` (the SPA fallback), not `404`. If the production domain changes, update the URL here and in the README's Download section.
