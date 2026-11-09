@@ -110,7 +110,8 @@ describe('package manifests', () => {
 
   it('runs the committed Yarn release that packageManager names, without Corepack', () => {
     const root = manifests.find((m) => m.isRoot);
-    const version = root?.json.packageManager?.replace(/^yarn@/, '');
+    // Corepack may append a hash: `yarn@4.14.1+sha512.…`.
+    const version = /^yarn@([^+]+)/.exec(root?.json.packageManager ?? '')?.[1];
     const yarnPath = readYarnrc().get('yarnPath');
     expect(yarnPath).toBe(`.yarn/releases/yarn-${String(version)}.cjs`);
     expect(existsSync(join(repoRoot, String(yarnPath)))).toBe(true);
