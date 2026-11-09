@@ -37,7 +37,7 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 - [ ] 6.2 Chrome or Edge on Windows: record the behaviour before and after installing the WinUSB driver, and confirm the guidance shown matches the desktop app.
 - [ ] 6.3 Chrome on Linux (non-Snap): confirm the udev guidance appears without the rule and the connect succeeds with it.
 - [ ] 6.4 Firefox and Safari: the unsupported-browser screen appears with the source footer, and DevTools shows no USB calls.
-- [ ] 6.5 Chrome with a Hi-MD device (for example MZ-RH1): in Hi-MD mode the chooser does not offer it and the Connect screen shows the "Hi-MD mode not supported yet" note; switched to NetMD mode, it connects. Record the observed chooser behaviour in `docs/platform-setup.md`.
+- [ ] 6.5 Chrome with a Hi-MD device (for example MZ-RH1): in Hi-MD mode the chooser does not offer it and the Connect screen shows the "Hi-MD mode not supported yet" note; switched to NetMD mode, it connects. Record the observed chooser behaviour in `docs/platform-setup.md`. If an MZ-NH600 is available, record what happens in Hi-MD mode: it shares `054c:0187` with the NetMD MZ-NH600D (see design.md, Risks).
 
 ## 7. Documentation
 
