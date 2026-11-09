@@ -83,7 +83,7 @@ A failed read SHALL show a readable message with a Retry action, never a raw err
 
 ### Requirement: Device in use or in Hi-MD mode
 
-A device that cannot be opened SHALL get a message that another app or browser tab may be using it, with Retry. Only on positive evidence of Hi-MD mode SHALL the app say it cannot read discs in Hi-MD mode yet and suggest NetMD mode. A failed or timed-out command and a device that cannot be opened SHALL NOT be taken as Hi-MD mode.
+A device that cannot be opened SHALL get a message that another app or browser tab may be using it, with Retry. Only on positive evidence of Hi-MD mode SHALL the app say it cannot read discs in Hi-MD mode yet and suggest NetMD mode. A failed or timed-out command, or a failure to open the device, SHALL NOT by itself be taken as Hi-MD mode; positive evidence observed when opening fails still takes precedence.
 
 #### Scenario: Device in Hi-MD mode
 
