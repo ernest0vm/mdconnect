@@ -11,6 +11,8 @@ reviews:
   # withhold the automatic approval.
   path_filters:
     - '!yarn.lock'
+    # NetMD replies recorded from real devices (data, not code).
+    - '!packages/netmd/src/fixtures/**'
     # The committed Yarn release (yarnPath), a third-party build.
     - '!.yarn/releases/**'
     - '!LICENSE'
