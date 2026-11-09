@@ -32,6 +32,17 @@ describe('isAppOrigin', () => {
     expect(isAppOrigin('http://localhost:5173', packaged)).toBe(false);
   });
 
+  it('accepts the origin serialized with a trailing slash, as the permission check handler passes it', () => {
+    expect(isAppOrigin(`${APP_ORIGIN}/`, packaged)).toBe(true);
+    expect(isAppOrigin('http://localhost:5173/', dev)).toBe(true);
+  });
+
+  it('rejects a path or anything else after the origin', () => {
+    expect(isAppOrigin(`${APP_ORIGIN}/index.html`, packaged)).toBe(false);
+    expect(isAppOrigin(`${APP_ORIGIN}//`, packaged)).toBe(false);
+    expect(isAppOrigin(`${APP_ORIGIN}.evil/`, packaged)).toBe(false);
+  });
+
   it('rejects other origins', () => {
     expect(isAppOrigin('https://evil.example', dev)).toBe(false);
     expect(isAppOrigin('http://localhost:5174', dev)).toBe(false);

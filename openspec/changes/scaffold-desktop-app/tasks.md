@@ -66,7 +66,7 @@
 
 ## 11. Hardware verification per OS
 
-- [ ] 11.1 macOS with a real NetMD device: connect, see name and IDs, unplug and replug, relaunch with the device attached. Record the model tested in `docs/platform-setup.md`.
+- [x] 11.1 macOS with a real NetMD device: connect, see name and IDs, unplug and replug, relaunch with the device attached. Record the model tested in `docs/platform-setup.md`.
 - [ ] 11.2 Chooser with two real supported devices: choosing either one returns that device, and Cancel shows the cancelled state. A fake list entry cannot be used, because Electron cancels the request for an ID that is not in its own device list. If two devices are not available, leave this unticked; 7.2's unit tests cover the selection logic.
 - [ ] 11.3 Windows: build the installer on Windows, install it, try connecting before installing the WinUSB driver and record the exact behaviour (device not listed vs. `open()` error) and the message shown. Install the driver with Zadig and confirm the connect succeeds. Turn off Settings → Personalization → Colors → Transparency effects and confirm panels become opaque (ui-theme: "Reduced transparency"). Update `docs/platform-setup.md#windows` and resolve the matching open question in design.md.
 - [ ] 11.4 Linux: build the AppImage and `.deb`, try connecting without the udev rule (expect the access-denied guidance), install the rule per the docs and confirm the connect succeeds. Record whether the desktop reports a reduced-transparency preference.
