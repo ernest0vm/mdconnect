@@ -15,6 +15,8 @@ export interface ConnectState {
   readonly device: ConnectedDevice | null;
   readonly requesting: boolean;
   readonly failure: UsbFailureKind | null;
+  /** The device whose unplug reset the screen, until a device connects again. */
+  readonly unplugged: ConnectedDevice | null;
 }
 
 export type ConnectAction =
@@ -24,7 +26,12 @@ export type ConnectAction =
   /** Dispatched only when the open device itself is unplugged. */
   | { readonly type: 'device-disconnected' };
 
-export const initialConnectState: ConnectState = { device: null, requesting: false, failure: null };
+export const initialConnectState: ConnectState = {
+  device: null,
+  requesting: false,
+  failure: null,
+  unplugged: null,
+};
 
 /**
  * State transitions of the Connect screen. Failures never clear the connected device: a failed
@@ -35,11 +42,11 @@ export function connectReducer(state: ConnectState, action: ConnectAction): Conn
     case 'request-started':
       return { ...state, requesting: true, failure: null };
     case 'connected':
-      return { device: action.device, requesting: false, failure: null };
+      return { device: action.device, requesting: false, failure: null, unplugged: null };
     case 'failed':
       return { ...state, requesting: false, failure: action.failure };
     case 'device-disconnected':
-      return initialConnectState;
+      return { ...initialConnectState, unplugged: state.device };
   }
 }
 

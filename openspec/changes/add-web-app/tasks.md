@@ -33,7 +33,7 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 
 ## 6. Browser and hardware verification
 
-- [ ] 6.1 Chrome on macOS with a real NetMD device and one non-MiniDisc USB device connected: the chooser lists only the MiniDisc device; choosing it shows name and IDs; closing the chooser (with and without a device listed) shows the "no device found" message with the browser-list hint; reloading shows the device without the chooser; unplugging shows "no device connected" (usb-device-access: "Web device selection", "Web reconnect for granted devices"). In DevTools, `crossOriginIsolated` is `true`.
+- [x] 6.1 Chrome on macOS with a real NetMD device and one non-MiniDisc USB device connected: the chooser lists only the MiniDisc device; choosing it shows name and IDs; closing the chooser (with and without a device listed) shows the "no device found" message with the browser-list hint; reloading shows the device without the chooser; unplugging shows "no device connected" (usb-device-access: "Web device selection", "Web reconnect for granted devices"). In DevTools, `crossOriginIsolated` is `true`.
 - [ ] 6.2 Chrome or Edge on Windows: record the behaviour before and after installing the WinUSB driver, and confirm the guidance shown matches the desktop app.
 - [ ] 6.3 Chrome on Linux (non-Snap): confirm the udev guidance appears without the rule and the connect succeeds with it.
 - [ ] 6.4 Firefox and Safari: the unsupported-browser screen appears with the source footer, and DevTools shows no USB calls.
@@ -42,6 +42,11 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 ## 7. Documentation
 
 - [x] 7.1 Update `README.md` with a `## Download` section (how to get the desktop app: build from source with `yarn package` until a release workflow publishes installers, then the GitHub Releases page), the web app URL, supported browsers and `yarn dev:web`. Verify the `UnsupportedBrowser` link resolves to that heading's `#download` anchor on GitHub. Also update `docs/platform-setup.md` with browser notes (secure context, Snap/Flatpak Chrome on Linux). Verify the commands run as written.
+
+## 8. Replug hint (found during hardware verification)
+
+- [x] 8.1 Tests first: `replugHint(device, platformKind)` returns a message naming the device only on the web and only when the device reports no serial number (`undefined` or the empty string Chrome returns); the reducer remembers the unplugged device until the next connect. Then show the hint on the Connect screen (usb-device-access: "Replug of a device without a USB serial number", "Unplug where reconnecting needs no prompt").
+- [x] 8.2 Verify in Chrome with the MZ-NE410/NF520D (no serial number): unplug shows the hint; replug, Connect device and picking it in the chooser connects and hides the hint.
 
 ## Workflow follow-up
 

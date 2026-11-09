@@ -9,7 +9,7 @@ import type { Platform, UsbConnectionEventLike } from '../../platform';
 import { ChooserDialog } from './ChooserDialog';
 import { connectReducer, formatUsbId, initialConnectState } from './connect-state';
 import { ConnectionController } from './connection-controller';
-import { connectPrompt, guidanceFor } from './guidance';
+import { connectPrompt, guidanceFor, replugHint } from './guidance';
 
 /**
  * The walking-skeleton screen: connect a MiniDisc device and show it, or explain why not.
@@ -63,6 +63,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
           deviceKinds: platform.deviceKinds,
         });
 
+  const hint = state.device === null ? replugHint(state.unplugged, platform.kind) : null;
+
   return (
     <GlassPanel className="flex w-full max-w-md flex-col gap-4 p-6">
       <h1 className="text-xl font-semibold">Connect your MiniDisc</h1>
@@ -76,6 +78,12 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
         </div>
       ) : (
         <p className="text-sm opacity-80">{connectPrompt(platform.deviceKinds)}</p>
+      )}
+
+      {hint && (
+        <GlassAlert tone="info" title="Device unplugged">
+          <p>{hint}</p>
+        </GlassAlert>
       )}
 
       {guidance && (
