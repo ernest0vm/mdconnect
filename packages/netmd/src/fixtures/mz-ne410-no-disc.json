@@ -1,0 +1,25 @@
+{
+  "device": "Sony MZ-NE410/NF520D (054c:00ca)",
+  "recorded": "2026-11-09, desktop app (Electron) on macOS 27.0.1",
+  "disc": "No disc inserted",
+  "transfers": [
+    { "dir": "in", "request": 1, "length": 4, "data": "00000000" },
+    { "dir": "out", "request": 128, "data": "00180880000100" },
+    { "dir": "in", "request": 1, "length": 4, "data": "01810700" },
+    { "dir": "in", "request": 129, "length": 7, "data": "09180880000100" },
+    { "dir": "in", "request": 1, "length": 4, "data": "00000000" },
+    { "dir": "out", "request": 128, "data": "0018098001023088000030880400ff0000000000" },
+    { "dir": "in", "request": 1, "length": 4, "data": "01811d00" },
+    {
+      "dir": "in",
+      "request": 129,
+      "length": 29,
+      "data": "091809800102308800003088040010000009000000078804000380ff40"
+    },
+    { "dir": "in", "request": 1, "length": 4, "data": "00000000" },
+    { "dir": "out", "request": 128, "data": "00180880000000" },
+    { "dir": "in", "request": 1, "length": 4, "data": "01810700" },
+    { "dir": "in", "request": 129, "length": 7, "data": "09180880000000" },
+    { "dir": "in", "request": 1, "length": 4, "data": "00000000" }
+  ]
+}

@@ -4,6 +4,8 @@ import { listContent } from './content';
 import { Encoding, NetMdInterface } from './interface';
 import { NetMdTransport, type NetMdUsbDevice } from './transport';
 import grouped from './fixtures/mz-ne410-grouped-lp4.json';
+import noDisc from './fixtures/mz-ne410-no-disc.json';
+import refresh from './fixtures/mz-ne410-refresh-lp2.json';
 
 interface Transfer {
   readonly dir: 'in' | 'out';
@@ -82,5 +84,35 @@ describe('reading a recorded disc (MZ-NE410/NF520D, 60 LP4 tracks, titles anonym
     expect(secondsOf(disc.used)).toBe(300 * 60 + 18);
     // Track 1 is 5:43 on the device.
     expect(Math.floor((disc.groups[1]?.tracks[0]?.duration ?? 0) / 512)).toBe(5 * 60 + 43);
+  });
+
+  it('replays the status read of a device with no disc (disc-contents: "No disc inserted")', async () => {
+    const device = replay(noDisc.transfers as Transfer[]);
+    const transport = new NetMdTransport(device, { sleep: () => Promise.resolve() });
+    await transport.init();
+    const md = new NetMdInterface(transport, { sleep: () => Promise.resolve() });
+    expect(await md.isDiscPresent()).toBe(false);
+    expect(device.remaining()).toBe(0);
+  });
+
+  it('replays a Refresh on an open session after a disc was inserted (disc-contents: "Refresh after changing discs")', async () => {
+    const device = replay(refresh.transfers as Transfer[]);
+    // Refresh reuses the session opened for the earlier read, so there is no init here.
+    const md = new NetMdInterface(new NetMdTransport(device, { sleep: () => Promise.resolve() }), {
+      sleep: () => Promise.resolve(),
+    });
+    expect(await md.isDiscPresent()).toBe(true);
+    const disc = await listContent(md);
+    expect(device.remaining()).toBe(0);
+    expect(disc.trackCount).toBe(37);
+    expect(disc.groups).toHaveLength(1);
+    expect(disc.groups[0]?.title).toBeNull();
+    const LP2: number = Encoding.lp2;
+    expect(disc.groups[0]?.tracks.every((t) => t.encoding === LP2)).toBe(true);
+    const secondsOf = (frames: number) => Math.floor(frames / 512);
+    expect(secondsOf(disc.total)).toBe(74 * 60 + 59);
+    expect(secondsOf(disc.left)).toBe(2 * 60 + 25);
+    // Track 14 is stored with a space where an accented letter was ("Te Llor  un Rio").
+    expect(disc.groups[0]?.tracks[13]?.title).toBe('xx xxxx  xx xxx');
   });
 });
