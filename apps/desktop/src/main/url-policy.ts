@@ -15,9 +15,14 @@ export interface OriginContext {
   readonly devServerUrl: string | undefined;
 }
 
-/** True for the app's own origin; the dev-server origin counts only in unpackaged development. */
+/**
+ * True for the app's own origin; the dev-server origin counts only in unpackaged development.
+ * Electron's permission check handler passes the origin with a trailing slash (`app://mdconnect/`)
+ * while the device permission handler passes it without one, so one trailing slash is ignored.
+ */
 export function isAppOrigin(origin: string, context: OriginContext): boolean {
-  if (origin === APP_ORIGIN) return true;
+  const bare = origin.endsWith('/') ? origin.slice(0, -1) : origin;
+  if (bare === APP_ORIGIN) return true;
   if (context.packaged || context.devServerUrl === undefined) return false;
-  return URL.canParse(context.devServerUrl) && origin === new URL(context.devServerUrl).origin;
+  return URL.canParse(context.devServerUrl) && bare === new URL(context.devServerUrl).origin;
 }
