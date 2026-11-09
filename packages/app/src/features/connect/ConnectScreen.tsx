@@ -1,90 +1,46 @@
-import { classifyUsbError, usbFilters } from '@mdconnect/core';
 import { GlassAlert } from '@mdconnect/ui/components/glassyui/glass-alert';
 import { GlassBadge } from '@mdconnect/ui/components/glassyui/glass-badge';
 import { GlassButton } from '@mdconnect/ui/components/glassyui/glass-button';
 import { GlassPanel } from '@mdconnect/ui/components/glassyui/glass-panel';
 import { GlassSpinner } from '@mdconnect/ui/components/glassyui/glass-spinner';
-import { useCallback, useEffect, useReducer, useRef } from 'react';
+import { useEffect, useMemo, useReducer, useRef } from 'react';
 
-import type { Platform, UsbConnectionEventLike, UsbDeviceHandle } from '../../platform';
+import type { Platform, UsbConnectionEventLike } from '../../platform';
 import { ChooserDialog } from './ChooserDialog';
-import {
-  connectReducer,
-  describeDevice,
-  formatUsbId,
-  initialConnectState,
-  isIdle,
-} from './connect-state';
+import { connectReducer, describeDevice, formatUsbId, initialConnectState } from './connect-state';
+import { ConnectionController } from './connection-controller';
 import { guidanceFor } from './guidance';
-import { switchDevice } from './switch-device';
 
 export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   const [state, dispatch] = useReducer(connectReducer, initialConnectState);
   const chooserCancelled = useRef(false);
-  const idle = useRef(true);
-  const openHandle = useRef<UsbDeviceHandle | null>(null);
+  const controller = useMemo(
+    () => new ConnectionController(platform.usb, dispatch),
+    [platform.usb],
+  );
 
-  useEffect(() => {
-    idle.current = isIdle(state);
-  }, [state]);
-
-  const openDevice = useCallback(async (handle: UsbDeviceHandle) => {
-    const device = describeDevice(handle);
-    if (device === undefined) {
-      dispatch({ type: 'failed', failure: 'no-device' });
-      return;
-    }
-    try {
-      await switchDevice(openHandle.current, handle);
-      openHandle.current = handle;
-      dispatch({ type: 'connected', device });
-    } catch (error) {
-      dispatch({ type: 'failed', failure: classifyUsbError(error, 'open') });
-    }
-  }, []);
-
-  const requestDevice = async () => {
+  const requestDevice = () => {
     chooserCancelled.current = false;
-    dispatch({ type: 'request-started' });
-    let handle: UsbDeviceHandle;
-    try {
-      handle = await platform.usb.requestDevice({ filters: usbFilters() });
-    } catch (error) {
-      const chooserWasCancelled = chooserCancelled.current;
-      dispatch({
-        type: 'failed',
-        failure: classifyUsbError(error, 'request', { chooserCancelled: chooserWasCancelled }),
-      });
-      return;
-    }
-    await openDevice(handle);
+    void controller.request(() => chooserCancelled.current);
   };
 
   // Reconnect without prompting: devices the platform already granted, now and when plugged in.
   useEffect(() => {
     let active = true;
-    const connectIfIdle = (handle: UsbDeviceHandle) => {
-      if (active && idle.current && describeDevice(handle) !== undefined) {
-        void openDevice(handle);
-      }
-    };
     platform.usb
       .getDevices()
       .then((devices) => {
         const [first] = devices.filter((d) => describeDevice(d) !== undefined);
-        if (first !== undefined) connectIfIdle(first);
+        if (active && first !== undefined) void controller.autoConnect(first);
       })
       .catch(() => {
         // Reconnecting on launch is best-effort; the Connect button still works.
       });
-    const onConnect = (event: UsbConnectionEventLike) => {
-      connectIfIdle(event.device);
+    const onConnect = ({ device }: UsbConnectionEventLike) => {
+      if (active) void controller.autoConnect(device);
     };
     const onDisconnect = ({ device }: UsbConnectionEventLike) => {
-      // Identical devices can share IDs and lack serials, so match the open handle itself.
-      if (device !== openHandle.current) return;
-      openHandle.current = null;
-      dispatch({ type: 'device-disconnected' });
+      controller.handleDisconnect(device);
     };
     platform.usb.addEventListener('connect', onConnect);
     platform.usb.addEventListener('disconnect', onDisconnect);
@@ -93,7 +49,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
       platform.usb.removeEventListener('connect', onConnect);
       platform.usb.removeEventListener('disconnect', onDisconnect);
     };
-  }, [platform, openDevice]);
+  }, [platform.usb, controller]);
 
   const guidance = state.failure === null ? null : guidanceFor(state.failure, platform.os);
 
@@ -126,13 +82,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
       )}
 
       <div className="flex items-center gap-3">
-        <GlassButton
-          variant="primary"
-          disabled={state.requesting}
-          onClick={() => {
-            void requestDevice();
-          }}
-        >
+        <GlassButton variant="primary" disabled={state.requesting} onClick={requestDevice}>
           {state.device ? 'Connect another device' : 'Connect device'}
         </GlassButton>
         {state.requesting && <GlassSpinner label="Connecting" size="sm" />}

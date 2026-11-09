@@ -12,6 +12,14 @@ mdconnect is derived from Web MiniDisc Pro by asivery and builds on [netmd-js](h
 
 Requirements: Node.js 22.22.1+ on the 22 line, 24.x, or 26+ (the intersection of what lint-staged, ESLint, Vitest and Vite support; Node 23 and 25 are not supported), and Yarn 4 through Corepack. `.nvmrc` selects the latest Node 22.
 
+Node 22 and 24 ship Corepack. Node 26 no longer does, so install it first there:
+
+```bash
+npm install -g corepack
+```
+
+Then enable it and install:
+
 ```bash
 corepack enable
 ```

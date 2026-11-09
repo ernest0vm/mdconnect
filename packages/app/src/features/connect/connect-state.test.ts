@@ -5,7 +5,6 @@ import {
   describeDevice,
   formatUsbId,
   initialConnectState,
-  isIdle,
   type ConnectedDevice,
   type ConnectState,
 } from './connect-state';
@@ -97,21 +96,5 @@ describe('connectReducer', () => {
 
   it('clears the device when the open device is unplugged', () => {
     expect(connectReducer(connected, { type: 'device-disconnected' })).toEqual(initialConnectState);
-  });
-});
-
-describe('isIdle', () => {
-  it('is idle with no device and no request, even after a failure', () => {
-    expect(isIdle(initialConnectState)).toBe(true);
-    expect(isIdle({ device: null, requesting: false, failure: 'no-device' })).toBe(true);
-  });
-
-  it('is not idle while a device is connected, so a plug-in event cannot replace it', () => {
-    expect(isIdle(connected)).toBe(false);
-    expect(isIdle({ device: mzN510, requesting: false, failure: 'access-denied' })).toBe(false);
-  });
-
-  it('is not idle while a request is running', () => {
-    expect(isIdle({ device: null, requesting: true, failure: null })).toBe(false);
   });
 });

@@ -39,11 +39,6 @@ export function connectReducer(state: ConnectState, action: ConnectAction): Conn
   }
 }
 
-/** Plug-in events may connect automatically only when nothing is connected or being requested. */
-export function isIdle(state: ConnectState): boolean {
-  return state.device === null && !state.requesting;
-}
-
 /** Formats USB IDs the way device lists show them, for example `054c:00c9`. */
 export function formatUsbId(vendorId: number, productId: number): string {
   const hex = (value: number) => value.toString(16).padStart(4, '0');
