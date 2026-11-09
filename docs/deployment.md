@@ -41,11 +41,11 @@ yarn set version <x.y.z> --yarn-path
 ## After the first production deploy
 
 ```bash
-curl -sI https://<production-domain>/ | grep -iE 'content-security-policy|cross-origin-(opener|embedder)-policy'
+curl -sI https://mdconnect.vercel.app/ | grep -iE 'content-security-policy|cross-origin-(opener|embedder)-policy'
 ```
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' https://<production-domain>/device
+curl -s -o /dev/null -w '%{http_code}\n' https://mdconnect.vercel.app/device
 ```
 
-The first command must show the three headers; the second must print `200` (the SPA fallback), not `404`. Record the production URL in the README.
+The first command must show the three headers; the second must print `200` (the SPA fallback), not `404`. Both passed on the first production deploy (merge of PR #4, 2026-11-09).

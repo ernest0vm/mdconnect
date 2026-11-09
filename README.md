@@ -6,7 +6,7 @@ Current status: the walking skeleton. The app connects to a supported MiniDisc d
 
 ## Download
 
-- **Web app:** open it in Google Chrome, Microsoft Edge, Opera or another Chromium-based browser. Firefox and Safari do not support WebUSB. The production URL is added here once the Vercel project is live (see [docs/deployment.md](docs/deployment.md)). The web app supports NetMD devices, including Hi-MD devices switched to NetMD mode.
+- **Web app:** open <https://mdconnect.vercel.app> in Google Chrome, Microsoft Edge, Opera or another Chromium-based browser. Firefox and Safari do not support WebUSB. Deployment is described in [docs/deployment.md](docs/deployment.md). The web app supports NetMD devices, including Hi-MD devices switched to NetMD mode.
 - **Desktop app:** there are no published installers yet. Build one for your OS from source with `yarn package` (see [Getting started](#getting-started)); the installer is written to `apps/desktop/release/`. Once a release workflow exists, installers will be on the [GitHub Releases](https://github.com/ernest0vm/mdconnect/releases) page.
 
 Before connecting a device on Windows or Linux, follow [docs/platform-setup.md](docs/platform-setup.md).
