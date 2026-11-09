@@ -67,17 +67,23 @@ export default defineConfig(
     languageOptions: { globals: { ...globals.browser } },
   },
 
-  // Dependency direction: apps -> app -> ui, core. See CLAUDE.md "Layout".
+  // Dependency direction: apps -> app -> ui, core, netmd. See CLAUDE.md "Layout".
   {
-    files: ['packages/core/**'],
+    files: ['packages/core/**', 'packages/netmd/**'],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'error',
         {
           paths: ['react', 'react-dom'],
           patterns: [
-            { group: ['node:*'], message: 'core is platform-agnostic: no Node.js modules.' },
-            { group: ['@mdconnect/*'], message: 'core depends on no other workspace.' },
+            {
+              group: ['node:*'],
+              message: 'core and netmd are platform-agnostic: no Node.js modules.',
+            },
+            {
+              group: ['@mdconnect/*'],
+              message: 'core and netmd depend on no other workspace.',
+            },
           ],
         },
       ],
