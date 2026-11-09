@@ -5,6 +5,7 @@ import type { UsbDeviceHandle } from '../../platform';
 import { FakeUsb } from '../../testing/fake-platform';
 import type { ConnectAction } from './connect-state';
 import { ConnectionController } from './connection-controller';
+import { netMdStub } from '../../testing/netmd-stub';
 
 /** A device whose open() and close() resolve only when the test says so. */
 function controllableDevice(productId: number) {
@@ -13,6 +14,7 @@ function controllableDevice(productId: number) {
   let resolveClose: () => void = () => undefined;
   const calls: string[] = [];
   const handle: UsbDeviceHandle = {
+    ...netMdStub(),
     vendorId: 0x054c,
     productId,
     open: () => {
@@ -119,6 +121,7 @@ describe('ConnectionController', () => {
   it('ignores unsupported devices on plug-in', async () => {
     const { actions, controller } = setup();
     const keyboard: UsbDeviceHandle = {
+      ...netMdStub(),
       vendorId: 0x046d,
       productId: 0xc52b,
       open: () => Promise.resolve(),
@@ -224,6 +227,18 @@ describe('ConnectionController', () => {
     expect(log.at(-1)?.type).toBe('failed');
   });
 
+  it('exposes the open device once connected, and none after it is unplugged', async () => {
+    const { controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    expect(controller.openDevice()).toBeNull();
+    const opening = controller.autoConnect(a.handle);
+    a.finishOpen();
+    await opening;
+    expect(controller.openDevice()).toBe(a.handle);
+    controller.handleDisconnect(a.handle);
+    expect(controller.openDevice()).toBeNull();
+  });
+
   it('reports which open device was unplugged', async () => {
     const { log, controller } = setup();
     const a = controllableDevice(MZ_N510);
@@ -263,6 +278,7 @@ describe('ConnectionController', () => {
 
   describe('automatic reconnect on the web (usb-device-access: "Web reconnect for granted devices")', () => {
     const handleFor = (productId: number): UsbDeviceHandle => ({
+      ...netMdStub(),
       vendorId: 0x054c,
       productId,
       open: () => Promise.resolve(),

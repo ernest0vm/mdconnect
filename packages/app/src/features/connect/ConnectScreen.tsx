@@ -6,6 +6,7 @@ import { GlassSpinner } from '@mdconnect/ui/components/glassyui/glass-spinner';
 import { useEffect, useMemo, useReducer, useRef } from 'react';
 
 import type { Platform, UsbConnectionEventLike } from '../../platform';
+import { DiscPanel } from '../disc/DiscPanel';
 import { ChooserDialog } from './ChooserDialog';
 import { connectReducer, formatUsbId, initialConnectState } from './connect-state';
 import { ConnectionController } from './connection-controller';
@@ -64,6 +65,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
         });
 
   const hint = replugHint(state, platform.kind);
+  // The controller sets the open device before dispatching `connected`, so it is current here.
+  const openDevice = state.device === null ? null : controller.openDevice();
 
   return (
     <GlassPanel className="flex w-full max-w-md flex-col gap-4 p-6">
@@ -79,6 +82,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
       ) : (
         <p className="text-sm opacity-80">{connectPrompt(platform.deviceKinds)}</p>
       )}
+
+      {openDevice !== null && <DiscPanel key={deviceKey(openDevice)} device={openDevice} />}
 
       {hint && (
         <GlassAlert tone="info" title="Device unplugged">
@@ -114,4 +119,18 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
       )}
     </GlassPanel>
   );
+}
+
+const deviceKeys = new WeakMap<object, string>();
+let nextDeviceKey = 0;
+
+/** A stable React key per device object, so a different device remounts the disc panel. */
+function deviceKey(device: object): string {
+  let key = deviceKeys.get(device);
+  if (key === undefined) {
+    nextDeviceKey += 1;
+    key = `device-${String(nextDeviceKey)}`;
+    deviceKeys.set(device, key);
+  }
+  return key;
 }

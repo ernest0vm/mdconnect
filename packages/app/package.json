@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@mdconnect/core": "workspace:^",
+    "@mdconnect/netmd": "workspace:^",
     "@mdconnect/ui": "workspace:^"
   },
   "devDependencies": {

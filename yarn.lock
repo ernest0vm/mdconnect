@@ -858,6 +858,7 @@ __metadata:
   resolution: "@mdconnect/app@workspace:packages/app"
   dependencies:
     "@mdconnect/core": "workspace:^"
+    "@mdconnect/netmd": "workspace:^"
     "@mdconnect/tsconfig": "workspace:^"
     "@mdconnect/ui": "workspace:^"
     "@types/react": "npm:^19"
@@ -908,7 +909,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mdconnect/netmd@workspace:packages/netmd":
+"@mdconnect/netmd@workspace:^, @mdconnect/netmd@workspace:packages/netmd":
   version: 0.0.0-use.local
   resolution: "@mdconnect/netmd@workspace:packages/netmd"
   dependencies:

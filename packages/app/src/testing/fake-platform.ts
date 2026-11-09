@@ -6,6 +6,7 @@ import type {
   UsbConnectionEventLike,
   UsbDeviceHandle,
 } from '../platform';
+import { netMdStub } from './netmd-stub';
 
 type ConnectionListener = (event: UsbConnectionEventLike) => void;
 
@@ -16,6 +17,7 @@ export function fakeDevice(
   serialNumber?: string,
 ): UsbDeviceHandle {
   return {
+    ...netMdStub(),
     vendorId,
     productId,
     serialNumber,

@@ -31,6 +31,11 @@ export class ConnectionController {
     return handles.find((handle) => this.offers(handle));
   }
 
+  /** The device that is open now, for features that talk to it (the disc reader). */
+  openDevice(): UsbDeviceHandle | null {
+    return this.openHandle;
+  }
+
   /** The "Connect device" button. Ignored while another open is in progress. */
   async request(chooserWasCancelled: () => boolean): Promise<void> {
     if (!this.begin()) return;
