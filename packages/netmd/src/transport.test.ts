@@ -82,6 +82,20 @@ describe('NetMdTransport', () => {
     expect(waits).toEqual([10, 20]);
   });
 
+  it.each(['stall', 'babble'] as const)(
+    'rejects a %s input transfer instead of using its bytes (disc-contents: "Command fails")',
+    async (status) => {
+      const device: NetMdUsbDevice = {
+        ...scriptedDevice([], []).device,
+        controlTransferIn: () =>
+          Promise.resolve({ status, data: new DataView(new Uint8Array([0, 0, 3, 0]).buffer) }),
+      };
+      await expect(new NetMdTransport(device, { sleep: noSleep }).readReply()).rejects.toThrow(
+        new RegExp(status),
+      );
+    },
+  );
+
   it('gives up with a timeout error when no reply arrives in time (disc-contents: "Command fails")', async () => {
     const { device } = scriptedDevice(new Array<number>(100).fill(0), []);
     let waited = 0;

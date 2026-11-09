@@ -6,9 +6,10 @@
  * - Works on a minimal device interface instead of `USBDevice`, so it stays platform-agnostic.
  * - `readReply` gives up after `timeoutMs` (upstream polls forever).
  * - No DES/3DES loading, factory commands, bulk transfers or logging: reading needs none of them.
+ * - An input transfer whose status is not "ok" (stall, babble) is an error; upstream uses its bytes.
  */
 
-import { NetMdTimeoutError } from './errors';
+import { NetMdError, NetMdTimeoutError } from './errors';
 
 interface ControlSetup {
   readonly requestType: 'vendor';
@@ -24,7 +25,13 @@ export interface NetMdUsbDevice {
   open(): Promise<void>;
   selectConfiguration(configurationValue: number): Promise<void>;
   claimInterface(interfaceNumber: number): Promise<void>;
-  controlTransferIn(setup: ControlSetup, length: number): Promise<{ data?: DataView | undefined }>;
+  controlTransferIn(
+    setup: ControlSetup,
+    length: number,
+  ): Promise<{
+    readonly status?: 'ok' | 'stall' | 'babble' | undefined;
+    data?: DataView | undefined;
+  }>;
   controlTransferOut(setup: ControlSetup, data: BufferSource): Promise<unknown>;
 }
 
@@ -92,14 +99,23 @@ export class NetMdTransport {
       waited += delay;
       length = await this.replyLength();
     }
-    const result = await this.device.controlTransferIn(setup(REQUEST_READ), length);
+    const result = await this.transferIn(REQUEST_READ, length);
     await this.replyLength();
     const data = result.data;
     return data ? new Uint8Array(data.buffer, data.byteOffset, data.byteLength) : new Uint8Array();
   }
 
   private async replyLength(): Promise<number> {
-    const result = await this.device.controlTransferIn(setup(REQUEST_REPLY_LENGTH), 4);
+    const result = await this.transferIn(REQUEST_REPLY_LENGTH, 4);
     return result.data?.getUint8(2) ?? 0;
+  }
+
+  /** An input transfer that only counts when WebUSB reports it as "ok" (no status means ok). */
+  private async transferIn(request: number, length: number) {
+    const result = await this.device.controlTransferIn(setup(request), length);
+    if (result.status !== undefined && result.status !== 'ok') {
+      throw new NetMdError(`USB input transfer ${String(request)} ended with ${result.status}`);
+    }
+    return result;
   }
 }
