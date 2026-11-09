@@ -144,11 +144,11 @@ In the web app, a device request SHALL use the browser's own device chooser, fil
 
 ### Requirement: Hi-MD mode is not supported on the web yet
 
-The web app SHALL NOT offer Hi-MD-mode device IDs, which expose only the USB mass-storage class that WebUSB withholds from web pages. Its "no device found" message SHALL say mdconnect does not support Hi-MD mode yet and suggest NetMD mode, without claiming browsers cannot use Hi-MD mode or pointing to the desktop app. Hi-MD devices in NetMD mode SHALL work as NetMD devices.
+The web app SHALL NOT offer device IDs used only in Hi-MD mode, which expose only the USB mass-storage class that WebUSB withholds from web pages. Its "no device found" message SHALL say mdconnect does not support Hi-MD mode yet and suggest NetMD mode, without claiming browsers cannot use Hi-MD mode or pointing to the desktop app. Hi-MD devices in NetMD mode SHALL work as NetMD devices.
 
 #### Scenario: Device in Hi-MD mode
 
-- **WHEN** only a Hi-MD device in Hi-MD mode (for example Sony MZ-RH1, vendor `0x054c`, product `0x0287`) is connected and the user clicks "Connect device" in the web app
+- **WHEN** only a Hi-MD device in Hi-MD mode with an ID used only in Hi-MD mode (for example Sony MZ-RH1, vendor `0x054c`, product `0x0287`) is connected and the user clicks "Connect device" in the web app
 - **THEN** the browser's chooser does not offer it
 - **AND** after the chooser closes, the Connect screen shows the "no device found" message, including the note that mdconnect does not support Hi-MD mode yet
 
