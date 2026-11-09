@@ -1,8 +1,12 @@
 import type { ReactNode } from 'react';
 
+import { AppearanceDialog } from './features/appearance/AppearanceDialog';
 import { SourceFooter } from './SourceFooter';
 
-/** Full-page backdrop shared by every top-level screen, with the GPL source footer below. */
+/**
+ * Full-page backdrop shared by every top-level screen, with the GPL source footer and the
+ * Appearance control below.
+ */
 export function PageShell({
   commit,
   children,
@@ -14,7 +18,10 @@ export function PageShell({
     <main className="grid min-h-screen place-items-center bg-gradient-to-br from-sky-200 via-indigo-200 to-rose-200 p-6 text-slate-900 dark:from-slate-900 dark:via-indigo-950 dark:to-slate-900 dark:text-slate-100">
       <div className="flex w-full max-w-md flex-col gap-4">
         {children}
-        <SourceFooter commit={commit} />
+        <div className="flex items-center justify-between gap-3">
+          <SourceFooter commit={commit} />
+          <AppearanceDialog />
+        </div>
       </div>
     </main>
   );
