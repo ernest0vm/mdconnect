@@ -54,6 +54,13 @@ describe('usbFilters', () => {
     expect(new Set(keys).size).toBe(filters.length);
   });
 
+  it('filters to NetMD IDs for the web, keeping the pair both tables list', () => {
+    const netmd = usbFilters({ kinds: ['netmd'] });
+    expect(netmd).toHaveLength(47);
+    expect(netmd).toContainEqual({ vendorId: SONY, productId: 0x0187 });
+    expect(netmd).not.toContainEqual({ vendorId: SONY, productId: 0x0287 });
+  });
+
   it('includes both NetMD and Hi-MD-mode IDs', () => {
     expect(usbFilters()).toEqual(
       expect.arrayContaining([

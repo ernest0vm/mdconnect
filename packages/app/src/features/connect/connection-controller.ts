@@ -1,4 +1,4 @@
-import { classifyUsbError, usbFilters } from '@mdconnect/core';
+import { classifyUsbError, usbFilters, type DeviceKind, type UsbFilter } from '@mdconnect/core';
 
 import type { PlatformUsb, UsbDeviceHandle } from '../../platform';
 import { describeDevice, type ConnectAction } from './connect-state';
@@ -15,11 +15,21 @@ export class ConnectionController {
   private switchingTo: UsbDeviceHandle | null = null;
   /** Devices unplugged while they were being switched to. */
   private readonly unplugged = new WeakSet<UsbDeviceHandle>();
+  /** The chooser filters for the platform's device kinds; reconnects honour the same set. */
+  private readonly filters: readonly UsbFilter[];
 
   constructor(
     private readonly usb: PlatformUsb,
+    deviceKinds: readonly DeviceKind[],
     private readonly dispatch: (action: ConnectAction) => void,
-  ) {}
+  ) {
+    this.filters = usbFilters({ kinds: deviceKinds });
+  }
+
+  /** The first granted device the platform offers, for reconnecting on launch. */
+  firstOffered(handles: readonly UsbDeviceHandle[]): UsbDeviceHandle | undefined {
+    return handles.find((handle) => this.offers(handle));
+  }
 
   /** The "Connect device" button. Ignored while another open is in progress. */
   async request(chooserWasCancelled: () => boolean): Promise<void> {
@@ -27,7 +37,7 @@ export class ConnectionController {
     try {
       let handle: UsbDeviceHandle;
       try {
-        handle = await this.usb.requestDevice({ filters: usbFilters() });
+        handle = await this.usb.requestDevice({ filters: [...this.filters] });
       } catch (error) {
         this.dispatch({
           type: 'failed',
@@ -43,7 +53,7 @@ export class ConnectionController {
 
   /** Reconnect without prompting (launch and plug-in): only when nothing is open or opening. */
   async autoConnect(handle: UsbDeviceHandle): Promise<void> {
-    if (this.openHandle !== null || describeDevice(handle) === undefined) return;
+    if (this.openHandle !== null || !this.offers(handle)) return;
     if (!this.begin()) return;
     try {
       await this.open(handle);
@@ -65,6 +75,11 @@ export class ConnectionController {
       this.openHandle = null;
       this.dispatch({ type: 'device-disconnected' });
     }
+  }
+
+  /** Whether the chooser would have offered this device (a kind this platform supports). */
+  private offers({ vendorId, productId }: UsbDeviceHandle): boolean {
+    return this.filters.some((f) => f.vendorId === vendorId && f.productId === productId);
   }
 
   /** Claims the busy guard synchronously; false when another open already holds it. */

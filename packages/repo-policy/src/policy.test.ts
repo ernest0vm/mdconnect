@@ -1,3 +1,6 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -6,6 +9,7 @@ import {
   parseYarnrc,
   readRootFile,
   readYarnrc,
+  repoRoot,
   workspaceManifests,
 } from './repo';
 
@@ -102,6 +106,15 @@ describe('package manifests', () => {
   it('pins Yarn 4 as the package manager', () => {
     const root = manifests.find((m) => m.isRoot);
     expect(root?.json.packageManager).toMatch(/^yarn@4\./);
+  });
+
+  it('runs the committed Yarn release that packageManager names, without Corepack', () => {
+    const root = manifests.find((m) => m.isRoot);
+    // Corepack may append a hash: `yarn@4.14.1+sha512.…`.
+    const version = /^yarn@([^+]+)/.exec(root?.json.packageManager ?? '')?.[1];
+    const yarnPath = readYarnrc().get('yarnPath');
+    expect(yarnPath).toBe(`.yarn/releases/yarn-${String(version)}.cjs`);
+    expect(existsSync(join(repoRoot, String(yarnPath)))).toBe(true);
   });
 
   it.each(manifests.map((m) => [m.name, m] as const))(

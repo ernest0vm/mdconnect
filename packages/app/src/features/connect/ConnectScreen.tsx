@@ -7,9 +7,9 @@ import { useEffect, useMemo, useReducer, useRef } from 'react';
 
 import type { Platform, UsbConnectionEventLike } from '../../platform';
 import { ChooserDialog } from './ChooserDialog';
-import { connectReducer, describeDevice, formatUsbId, initialConnectState } from './connect-state';
+import { connectReducer, formatUsbId, initialConnectState } from './connect-state';
 import { ConnectionController } from './connection-controller';
-import { guidanceFor } from './guidance';
+import { connectPrompt, guidanceFor } from './guidance';
 
 /**
  * The walking-skeleton screen: connect a MiniDisc device and show it, or explain why not.
@@ -19,8 +19,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   const [state, dispatch] = useReducer(connectReducer, initialConnectState);
   const chooserCancelled = useRef(false);
   const controller = useMemo(
-    () => new ConnectionController(platform.usb, dispatch),
-    [platform.usb],
+    () => new ConnectionController(platform.usb, platform.deviceKinds, dispatch),
+    [platform.usb, platform.deviceKinds],
   );
 
   const requestDevice = () => {
@@ -34,7 +34,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
     platform.usb
       .getDevices()
       .then((devices) => {
-        const [first] = devices.filter((d) => describeDevice(d) !== undefined);
+        const first = controller.firstOffered(devices);
         if (active && first !== undefined) void controller.autoConnect(first);
       })
       .catch(() => {
@@ -55,7 +55,13 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
     };
   }, [platform.usb, controller]);
 
-  const guidance = state.failure === null ? null : guidanceFor(state.failure, platform.os);
+  const guidance =
+    state.failure === null
+      ? null
+      : guidanceFor(state.failure, platform.os, {
+          platformKind: platform.kind,
+          deviceKinds: platform.deviceKinds,
+        });
 
   return (
     <GlassPanel className="flex w-full max-w-md flex-col gap-4 p-6">
@@ -69,9 +75,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
           </GlassBadge>
         </div>
       ) : (
-        <p className="text-sm opacity-80">
-          Plug in a NetMD or Hi-MD device over USB, then connect to it.
-        </p>
+        <p className="text-sm opacity-80">{connectPrompt(platform.deviceKinds)}</p>
       )}
 
       {guidance && (

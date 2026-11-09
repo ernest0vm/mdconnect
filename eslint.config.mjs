@@ -58,7 +58,12 @@ export default defineConfig(
 
   // UI code runs in a browser (or Electron renderer/preload), not in Node.
   {
-    files: ['packages/ui/**', 'packages/app/**', 'apps/desktop/src/{renderer,preload}/**'],
+    files: [
+      'packages/ui/**',
+      'packages/app/**',
+      'apps/desktop/src/{renderer,preload}/**',
+      'apps/web/src/**',
+    ],
     languageOptions: { globals: { ...globals.browser } },
   },
 

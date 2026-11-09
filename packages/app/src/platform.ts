@@ -1,3 +1,5 @@
+import type { DeviceKind } from '@mdconnect/core';
+
 /**
  * What each shell (desktop, web) provides to the shared app. The app never touches Electron or
  * browser detection directly. USB types are narrowed to what the app uses, so `navigator.usb`
@@ -72,4 +74,8 @@ export interface Platform {
   /** Desktop only: the in-app chooser bridge. On the web, the browser shows its own chooser. */
   readonly deviceChooser?: DeviceChooserBridge | undefined;
   readonly appearance: PlatformAppearance;
+  /** USB device kinds this shell can open: every kind on desktop, NetMD only on the web. */
+  readonly deviceKinds: readonly DeviceKind[];
+  /** Commit the build was made from (empty in development), for the GPL source link. */
+  readonly buildCommit: string;
 }

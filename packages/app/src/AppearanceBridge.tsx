@@ -7,15 +7,25 @@ import type { PlatformAppearance } from './platform';
 const REDUCED_TRANSPARENCY_QUERY = '(prefers-reduced-transparency: reduce)';
 
 /**
- * GlassProvider already follows the OS media queries. This adds the platform's own
- * reduced-transparency signal (desktop) and keeps Tailwind's `dark` class in step.
+ * Keeps Tailwind's `dark` class in step with GlassyUI's theme. Every screen inside a GlassProvider
+ * renders it, so backgrounds styled with `dark:` match the glass surfaces drawn on top of them.
  */
-export function AppearanceBridge({ appearance }: { readonly appearance: PlatformAppearance }) {
-  const { preferences, setPreferences } = usePreferences();
+export function ColorSchemeSync() {
+  const { preferences } = usePreferences();
 
   useEffect(() => {
     syncColorSchemeClass(document.documentElement, preferences.theme);
   }, [preferences.theme]);
+
+  return null;
+}
+
+/**
+ * GlassProvider already follows the OS media queries. This adds the platform's own
+ * reduced-transparency signal (desktop) and syncs the colour scheme class.
+ */
+export function AppearanceBridge({ appearance }: { readonly appearance: PlatformAppearance }) {
+  const { setPreferences } = usePreferences();
 
   useEffect(() => {
     const media = window.matchMedia(REDUCED_TRANSPARENCY_QUERY);
@@ -33,5 +43,5 @@ export function AppearanceBridge({ appearance }: { readonly appearance: Platform
     };
   }, [appearance, setPreferences]);
 
-  return null;
+  return <ColorSchemeSync />;
 }

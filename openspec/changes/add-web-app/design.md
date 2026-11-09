@@ -37,7 +37,7 @@ apps/web/
   src/main.tsx          webPlatform() + <App/> or <UnsupportedBrowser/>
   src/platform.ts       detectOs(), isWebUsbSupported(), webPlatform()
   src/styles.css        @import "@mdconnect/ui/globals.css" + @source for packages/ui and packages/app
-  src/vercel-config.test.ts
+  test/vercel-config.test.ts
 ```
 
 `tsconfig.json` extends `@mdconnect/tsconfig/react.json` with `types: ["w3c-web-usb", "vite/client"]`. Scripts: `dev`, `build` (`vite build` → `dist`), `preview`, and the four check scripts. Root gains `dev:web` (`turbo run dev --filter=@mdconnect/web`).
@@ -82,7 +82,7 @@ apps/web/
 }
 ```
 
-`vercel.json` is static JSON and cannot import TypeScript, so `src/vercel-config.test.ts` parses it and asserts that:
+`vercel.json` is static JSON and cannot import TypeScript, so `test/vercel-config.test.ts` parses it and asserts that:
 
 - the CSP equals `contentSecurityPolicy` from `@mdconnect/core`;
 - COOP/COEP have the values above;
@@ -94,16 +94,15 @@ The desktop and web policies cannot drift without a failing test. Vercel serves 
 
 Done once by the maintainer in the Vercel dashboard. The values are documented in `docs/deployment.md`:
 
-| Setting                            | Value                                     | Why                                                                                                                 |
-| ---------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Root Directory                     | `apps/web`                                | Vercel infers the turbo filter from it                                                                              |
-| Framework preset                   | Vite                                      | Output directory `dist`                                                                                             |
-| Build command                      | `yarn turbo run build` (in `vercel.json`) | Yarn resolves the root-hoisted `turbo` binary from `apps/web`; filter inferred from the Root Directory              |
-| Install command                    | `yarn install --immutable`                | Lockfile must match. The 7-day `npmMinimalAgeGate` from `.yarnrc.yml` applies in the build too                      |
-| Env `ENABLE_EXPERIMENTAL_COREPACK` | `1`                                       | Vercel uses the `packageManager` Yarn 4 only with Corepack enabled                                                  |
-| Node.js version                    | 22.x                                      | Matches `.nvmrc` / `engines`                                                                                        |
-| Skip unaffected deployments        | On                                        | Vercel's built-in monorepo skipping. Fallback: Ignored Build Step `yarn dlx turbo-ignore@2.11.10 --fallback=HEAD^1` |
-| Vercel Toolbar on previews         | Off                                       | Its injected script is blocked by our CSP and COEP                                                                  |
+| Setting                     | Value                                            | Why                                                                                                                            |
+| --------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| Root Directory              | `apps/web`                                       | Vercel infers the turbo filter from it                                                                                         |
+| Framework preset            | Vite                                             | Output directory `dist`                                                                                                        |
+| Build command               | `yarn run -T turbo run build` (in `vercel.json`) | Yarn 4 resolves binaries per workspace, so `-T` takes `turbo` from the root workspace; filter inferred from the Root Directory |
+| Install command             | `yarn install --immutable`                       | Lockfile must match. The 7-day `npmMinimalAgeGate` from `.yarnrc.yml` applies in the build too                                 |
+| Node.js version             | 22.x                                             | Matches `.nvmrc` / `engines`                                                                                                   |
+| Skip unaffected deployments | On                                               | Vercel's built-in monorepo skipping. Fallback: Ignored Build Step `yarn dlx turbo-ignore@2.11.10 --fallback=HEAD^1`            |
+| Vercel Toolbar on previews  | Off                                              | Its injected script is blocked by our CSP and COEP                                                                             |
 
 Previews are created for every pull request by Vercel's GitHub integration, which comments the URL on the PR. The preview check is informative and is not added to the `main` rulesets: the Code quality check already gates merges, and an outage at Vercel should not block them.
 
@@ -130,7 +129,8 @@ No new packages. `apps/web` uses `vite`, `@vitejs/plugin-react`, `tailwindcss`, 
 
 ## Risks / Trade-offs
 
-- [Vercel's Corepack support is labelled experimental] → If it breaks, commit the Yarn release (`yarn set version 4.14.1 --yarn-path`) so Vercel runs `.yarn/releases/yarn-4.14.1.cjs` without Corepack.
+- [Vercel's Corepack support is labelled experimental] → Not used. The Yarn release is committed (`.yarn/releases/yarn-4.14.1.cjs`, `yarnPath` in `.yarnrc.yml`), so Vercel runs Yarn 4.14.1 without Corepack. A repo-policy test keeps `yarnPath` and `packageManager` on the same version. Cost: a 3 MB file in the repository, replaced on each Yarn upgrade.
+- [`054c:0187` is shared by the MZ-NH600D (NetMD) and the MZ-NH600 (Hi-MD)] → The USB ID cannot tell the mode apart, so the NetMD-only web filters still list this ID and the Connect screen names it "Sony MZ-NH600D" even if a Hi-MD-mode MZ-NH600 opens (for example on ChromeOS, where the browser may allow its interface). The connect step does not talk to the device yet. The NetMD integration's handshake is where the mode is detected and a Hi-MD-mode device is rejected with the Hi-MD guidance; task 6.5 records the real behaviour if an MZ-NH600 is available.
 - [COEP `require-corp` blocks any cross-origin resource without CORP/CORS headers] → The app loads nothing cross-origin today. Future integrations (for example song recognition) must use CORS-enabled endpoints, and the CSP `connect-src` must be widened in `@mdconnect/core` for both apps at once.
 - [Vercel Hobby plan terms are for non-commercial use] → mdconnect is a non-commercial open-source project. Revisit if that changes.
 - [Users may not know how to revoke a device grant] → Out of scope for this change. A later settings screen can link to `chrome://settings/content/usbDevices`.

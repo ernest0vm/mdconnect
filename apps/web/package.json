@@ -1,0 +1,38 @@
+{
+  "name": "@mdconnect/web",
+  "version": "0.0.0",
+  "private": true,
+  "license": "GPL-2.0-only",
+  "author": "mdconnect contributors",
+  "homepage": "https://github.com/ernest0vm/mdconnect",
+  "type": "module",
+  "description": "Web shell: a Vite single-page app that renders @mdconnect/app with the browser Platform.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --max-warnings 0",
+    "format:check": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
+    "typecheck": "tsc -p tsconfig.web.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mdconnect/app": "workspace:^",
+    "@mdconnect/core": "workspace:^",
+    "@mdconnect/ui": "workspace:^",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@mdconnect/tsconfig": "workspace:^",
+    "@tailwindcss/vite": "^4",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/w3c-web-usb": "^1.0.14",
+    "@vitejs/plugin-react": "^6",
+    "tailwindcss": "^4",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}
