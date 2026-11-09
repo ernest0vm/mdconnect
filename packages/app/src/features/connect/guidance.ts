@@ -44,6 +44,7 @@ export interface GuidanceContext {
   readonly deviceKinds: readonly DeviceKind[];
 }
 
+/** Whether Hi-MD mode devices are among the kinds the platform offers. */
 const offersHimd = (deviceKinds: readonly DeviceKind[]) => deviceKinds.includes('himd');
 
 /** The connect screen's prompt, naming only the device kinds this platform offers. */
@@ -53,6 +54,7 @@ export function connectPrompt(deviceKinds: readonly DeviceKind[]): string {
     : 'Plug in a NetMD device (or a Hi-MD device in NetMD mode) over USB, then connect to it.';
 }
 
+/** The no-device message: the chooser hint for this platform, then the supported modes. */
 function noDeviceMessage({ platformKind, deviceKinds }: GuidanceContext): string {
   const cable =
     platformKind === 'web'

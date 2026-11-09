@@ -9,6 +9,7 @@ import type {
 
 type ConnectionListener = (event: UsbConnectionEventLike) => void;
 
+/** A supported-looking USB device whose open() and close() resolve immediately. */
 export function fakeDevice(
   vendorId: number,
   productId: number,
@@ -32,25 +33,30 @@ export class FakeUsb implements PlatformUsb {
 
   private readonly listeners = new Map<string, Set<ConnectionListener>>();
 
+  /** Records the filters, then settles as `nextRequest` says (rejects as "no device" by default). */
   requestDevice(options: { filters: USBDeviceFilter[] }): Promise<UsbDeviceHandle> {
     this.requestedFilters.push(options.filters);
     return this.nextRequest();
   }
 
+  /** The devices the test marked as already granted and connected. */
   getDevices(): Promise<UsbDeviceHandle[]> {
     return Promise.resolve([...this.connected]);
   }
 
+  /** Registers a listener that `emit` calls for this event type. */
   addEventListener(type: 'connect' | 'disconnect', listener: ConnectionListener): void {
     const forType = this.listeners.get(type) ?? new Set();
     forType.add(listener);
     this.listeners.set(type, forType);
   }
 
+  /** Unregisters a listener added with `addEventListener`. */
   removeEventListener(type: 'connect' | 'disconnect', listener: ConnectionListener): void {
     this.listeners.get(type)?.delete(listener);
   }
 
+  /** Simulates a plug-in or unplug by calling every listener for that event type. */
   emit(type: 'connect' | 'disconnect', device: UsbDeviceHandle): void {
     for (const listener of this.listeners.get(type) ?? []) listener({ device });
   }
@@ -65,6 +71,7 @@ export interface FakePlatform {
   setAppearance(signals: AppearanceSignals): void;
 }
 
+/** A desktop-like Platform backed by `FakeUsb`, with hooks for the chooser and appearance. */
 export function createFakePlatform(overrides: Partial<Platform> = {}): FakePlatform {
   const usb = new FakeUsb();
   const chooserListeners = new Set<(request: ChooseDeviceRequest) => void>();

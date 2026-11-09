@@ -90,6 +90,7 @@ export function findDevice(vendorId: number, productId: number): SupportedDevice
   return SUPPORTED_DEVICES.find((d) => d.vendorId === vendorId && d.productId === productId);
 }
 
+/** Whether the USB ID pair is in the supported device table (either kind). */
 export function isSupportedDevice(vendorId: number, productId: number): boolean {
   return findDevice(vendorId, productId) !== undefined;
 }
