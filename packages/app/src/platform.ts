@@ -1,3 +1,4 @@
+import type { NetMdUsbDevice } from '@mdconnect/netmd';
 import type { DeviceKind } from '@mdconnect/core';
 
 /**
@@ -10,7 +11,11 @@ export type PlatformKind = 'desktop' | 'web';
 
 export type OperatingSystem = 'macos' | 'windows' | 'linux' | 'chromeos' | 'other';
 
-export interface UsbDeviceHandle {
+/**
+ * A WebUSB device as the app uses it: identity, open and close, plus the control-transfer calls
+ * the NetMD protocol needs. Electron's and the browser's `USBDevice` both satisfy it.
+ */
+export interface UsbDeviceHandle extends NetMdUsbDevice {
   readonly vendorId: number;
   readonly productId: number;
   /** WebUSB reports a missing serial number as null. */

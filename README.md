@@ -13,7 +13,7 @@ Before connecting a device on Windows or Linux, follow [docs/platform-setup.md](
 
 ## Credits and license
 
-mdconnect is derived from Web MiniDisc Pro by asivery and builds on [netmd-js](https://github.com/cybercase/netmd-js) and [himd-js](https://github.com/asivery/himd-js). Like them, it is licensed under the **GNU General Public License v2.0** ([LICENSE](LICENSE)). The UI uses [GlassyUI](https://glassyui.com/) components (MIT).
+mdconnect is derived from Web MiniDisc Pro by asivery and builds on [netmd-js](https://github.com/cybercase/netmd-js) and [himd-js](https://github.com/asivery/himd-js). `packages/netmd` is a TypeScript port of part of netmd-js 4.4.1 by Stefano Brilli and Asivery. Like them, it is licensed under the **GNU General Public License v2.0** ([LICENSE](LICENSE)). The UI uses [GlassyUI](https://glassyui.com/) components (MIT).
 
 ## Getting started
 
@@ -57,6 +57,7 @@ yarn dev
 apps/desktop      Electron shell (main process, preload, renderer entry)
 apps/web          Vite web shell, deployed on Vercel
 packages/core     Platform-agnostic logic: device table, USB filters, error kinds
+packages/netmd    NetMD protocol (read-only port of netmd-js)
 packages/ui       Design system: GlassyUI components, theme
 packages/app      React screens written against a Platform interface
 packages/tsconfig Shared TypeScript configs

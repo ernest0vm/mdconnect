@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { UsbDeviceHandle } from '../../platform';
 import { switchDevice } from './switch-device';
+import { netMdStub } from '../../testing/netmd-stub';
 
 function handle(name: string, log: string[], closeFails = false): UsbDeviceHandle {
   return {
+    ...netMdStub(),
     vendorId: 0x054c,
     productId: 0x00c9,
     open: () => {

@@ -1,0 +1,23 @@
+{
+  "name": "@mdconnect/netmd",
+  "version": "0.0.0",
+  "private": true,
+  "license": "GPL-2.0-only",
+  "type": "module",
+  "description": "Read-only NetMD protocol: a TypeScript port of part of netmd-js 4.4.1 over WebUSB.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint . --max-warnings 0",
+    "format:check": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@mdconnect/tsconfig": "workspace:^",
+    "@types/w3c-web-usb": "^1.0.14",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}
