@@ -208,4 +208,33 @@ describe('ConnectionController', () => {
     expect(usb.requestedFilters[0]).not.toContainEqual(HIMD_MODE_RH1);
     expect(usb.requestedFilters[0]).toHaveLength(47);
   });
+
+  describe('automatic reconnect on the web (usb-device-access: "Web reconnect for granted devices")', () => {
+    const handleFor = (productId: number): UsbDeviceHandle => ({
+      vendorId: 0x054c,
+      productId,
+      open: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+    });
+
+    it('ignores a plugged-in device of a kind the platform does not offer', async () => {
+      const { actions, controller } = setup(['netmd']);
+      await controller.autoConnect(handleFor(HIMD_MODE_RH1.productId));
+      expect(actions).toEqual([]);
+    });
+
+    it('picks the first granted device the platform offers, skipping other kinds', () => {
+      const { controller } = setup(['netmd']);
+      const himd = handleFor(HIMD_MODE_RH1.productId);
+      const netmd = handleFor(MZ_N510);
+      expect(controller.firstOffered([himd, netmd])).toBe(netmd);
+      expect(controller.firstOffered([himd])).toBeUndefined();
+    });
+
+    it('still reconnects Hi-MD mode devices on desktop', async () => {
+      const { actions, controller } = setup();
+      await controller.autoConnect(handleFor(HIMD_MODE_RH1.productId));
+      expect(actions).toEqual(['request-started', 'connected']);
+    });
+  });
 });

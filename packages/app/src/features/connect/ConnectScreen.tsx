@@ -7,7 +7,7 @@ import { useEffect, useMemo, useReducer, useRef } from 'react';
 
 import type { Platform, UsbConnectionEventLike } from '../../platform';
 import { ChooserDialog } from './ChooserDialog';
-import { connectReducer, describeDevice, formatUsbId, initialConnectState } from './connect-state';
+import { connectReducer, formatUsbId, initialConnectState } from './connect-state';
 import { ConnectionController } from './connection-controller';
 import { connectPrompt, guidanceFor } from './guidance';
 
@@ -34,7 +34,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
     platform.usb
       .getDevices()
       .then((devices) => {
-        const [first] = devices.filter((d) => describeDevice(d) !== undefined);
+        const first = controller.firstOffered(devices);
         if (active && first !== undefined) void controller.autoConnect(first);
       })
       .catch(() => {
