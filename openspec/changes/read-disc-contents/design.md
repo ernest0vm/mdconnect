@@ -47,6 +47,7 @@ Every ported file keeps a header naming the upstream project, its authors and th
   - It imports Node's `util`, which needs a polyfill in the web build and in the sandboxed Electron renderer.
   - It is CommonJS only.
   - Reading needs none of the crypto.
+  - Tried on 2026-11-09: `yarn workspace @mdconnect/app add netmd-js@4.4.1` fails. Yarn 4.14 blocks `https://github.com/asivery/crypto-js-wasm.git` because it is not in `approvedGitRepositories`. The npm release `@originjs/crypto-js-wasm` 1.1.1 is not a drop-in replacement: the fork carries 7 commits it lacks, including "Remove dependency on `fs` from built lib", which the browser needs, and a minification-safe `mode._name`. Its license is MulanPSL-2.0, whose compatibility with GPL-2.0-only is unclear. The maintainer chose not to allow the Git dependency.
 - **Alternative: `yarn patch` netmd-js to drop the crypto import.** Rejected: the GitHub dependency stays in the install graph, and the `util` and CommonJS issues remain.
 - **Revisit:** when a later change adds transfers that need DES, decide again between this port plus a vetted crypto package and the upstream library. That decision belongs to that change.
 
