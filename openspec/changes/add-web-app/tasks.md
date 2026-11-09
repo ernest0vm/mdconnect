@@ -27,9 +27,9 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 
 ## 5. Vercel project (maintainer, manual)
 
-- [ ] 5.1 The maintainer creates the Vercel project from the GitHub repository with the settings in `docs/deployment.md`. Record the production URL in the README.
+- [x] 5.1 The maintainer creates the Vercel project from the GitHub repository with the settings in `docs/deployment.md`. Record the production URL in the README.
 - [ ] 5.2 Verify on this change's pull request that a preview deployment is created and its URL is commented. On a test pull request that only touches `apps/desktop`, verify that no web build runs (web-delivery: "Deployments").
-- [ ] 5.3 After merge, verify the production URL serves the new version, then check with `curl -I` that the CSP, COOP and COEP headers are present, and that `/device` returns the app rather than a 404 (web-delivery: "Security and isolation headers", "Routing fallback").
+- [x] 5.3 After merge, verify the production URL serves the new version, then check with `curl -I` that the CSP, COOP and COEP headers are present, and that `/device` returns the app rather than a 404 (web-delivery: "Security and isolation headers", "Routing fallback").
 
 ## 6. Browser and hardware verification
 
