@@ -8,6 +8,7 @@
  * - Track info is kept as bytes instead of a char-code string.
  * - No logging.
  * - `parseGroups` (titles.ts) skips malformed or overlapping group entries instead of failing.
+ * - Descriptor errors other than "rejected" or "not implemented" are passed on; upstream ignores all.
  */
 
 import { NetMdNotImplementedError, NetMdRejectedError } from './errors';
@@ -105,12 +106,16 @@ export class NetMdInterface {
     throw new NetMdRejectedError('Max read attempts for interim status reached');
   }
 
-  /** Opens or closes a descriptor. Like upstream, failures are ignored: some devices reject them. */
+  /**
+   * Opens or closes a descriptor. Like upstream, a device that rejects it or does not implement it
+   * is ignored; any other error, such as a timeout or an unplugged device, is passed on.
+   */
   private async descriptor(descriptor: Descriptor, action: string): Promise<void> {
     try {
       await this.sendQuery(formatQuery(`1808 ${descriptor} ${action} 00`));
-    } catch {
-      // Ignored on purpose.
+    } catch (error) {
+      if (error instanceof NetMdRejectedError || error instanceof NetMdNotImplementedError) return;
+      throw error;
     }
   }
 

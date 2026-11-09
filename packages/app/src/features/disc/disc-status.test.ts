@@ -32,6 +32,12 @@ describe('discStatus', () => {
     expect(status.kind === 'warning' && status.message).toMatch(/NetMD mode/);
   });
 
+  it('explains a device another app or tab is using, with Retry (disc-contents: "Device in use")', () => {
+    const status = discStatus({ kind: 'failed', reason: 'unavailable' });
+    expect(status).toMatchObject({ kind: 'warning', title: 'Device in use', action: 'Retry' });
+    expect(status.kind === 'warning' && status.message).toMatch(/another app or browser tab/);
+  });
+
   it('passes a read disc through', () => {
     const disc = {
       title: null,

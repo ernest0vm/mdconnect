@@ -73,7 +73,9 @@ Both title forms are Shift-JIS, as upstream decodes them. Half-width titles can 
 - Error mapping:
   - a command error or a timeout → "could not read the disc" with Retry;
   - an unplug during a read → the existing `device-disconnected` path, with no error shown;
-  - the Hi-MD mode message only when the USB ID exists only in Hi-MD mode, or when the NetMD session cannot be opened at all (the interface cannot be selected or claimed, because in Hi-MD mode the device exposes USB mass storage instead). A failed or timed-out query, even the first one, is a read failure with Retry, never Hi-MD mode.
+  - the Hi-MD mode message only on positive evidence: a USB ID that exists only in Hi-MD mode, or an interface 0 of the USB mass-storage class (in NetMD mode it is vendor-specific);
+  - a session that cannot be opened (the interface cannot be selected or claimed, for example because another app or tab holds it) → "device in use" with Retry;
+  - a failed or timed-out query, even the first one → a read failure with Retry, never Hi-MD mode.
 
 ### 5. Tests replay recorded replies
 
@@ -91,7 +93,7 @@ A manual task records the request and reply bytes of one full `listContent` on t
 - **Windows:** the WinUSB driver requirement from `docs/platform-setup.md` still applies; without it, opening fails before reading starts, with the existing guidance.
 - **Linux:** the udev rule still applies.
 - **macOS:** another app holding the device stays the existing "device busy" path.
-- **Hi-MD mode:** on the web, Hi-MD-only IDs are never offered. On the desktop, a Hi-MD-only ID gets the Hi-MD mode message without any query. The shared `054c:0187` is treated as NetMD; if it is really in Hi-MD mode, opening the NetMD session fails and the Hi-MD mode message follows.
+- **Hi-MD mode:** on the web, Hi-MD-only IDs are never offered. On the desktop, a Hi-MD-only ID gets the Hi-MD mode message without any query. The shared `054c:0187` is treated as NetMD unless its interface 0 is USB mass storage, which is how a device in Hi-MD mode presents itself.
 
 ### 7. Dependencies
 

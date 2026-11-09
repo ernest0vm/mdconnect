@@ -47,11 +47,11 @@ describe('DiscReader', () => {
     expect(listed).toBe(false);
   });
 
-  it('reports Hi-MD mode when the NetMD session cannot be opened, for example its interface cannot be claimed (disc-contents: "Device in Hi-MD mode")', async () => {
+  it('reports the device as unavailable, not Hi-MD mode, when the NetMD session cannot be opened (disc-contents: "Device in use")', async () => {
     const failingOpen = new DiscReader(() =>
-      Promise.reject(new DOMException('claim', 'SecurityError')),
+      Promise.reject(new DOMException('claim', 'NetworkError')),
     );
-    expect(await failingOpen.read()).toEqual({ kind: 'failed', reason: 'not-netmd' });
+    expect(await failingOpen.read()).toEqual({ kind: 'failed', reason: 'unavailable' });
   });
 
   it('reports Hi-MD mode for a Hi-MD-mode device ID without opening a session', async () => {

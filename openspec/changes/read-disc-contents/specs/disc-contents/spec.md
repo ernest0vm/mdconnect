@@ -67,7 +67,7 @@ When no disc is inserted, the app SHALL say so and offer Refresh. A blank disc S
 
 ### Requirement: Read failures
 
-A failed read SHALL show a readable message with a Retry action, never a raw error. If the device is unplugged while reading, the app SHALL return to the Connect screen as for any unplug. A device in Hi-MD mode SHALL get a message that mdconnect cannot read discs in Hi-MD mode yet, with a suggestion to switch the device to NetMD mode if it offers one. A command that fails or times out SHALL NOT be taken as Hi-MD mode.
+A failed read SHALL show a readable message with a Retry action, never a raw error. If the device is unplugged while reading, the app SHALL return to the Connect screen as for any unplug.
 
 #### Scenario: Command fails
 
@@ -79,7 +79,16 @@ A failed read SHALL show a readable message with a Retry action, never a raw err
 - **WHEN** the device is unplugged while its disc is being read
 - **THEN** the Connect screen returns, as for any unplug, and no read error is shown
 
+### Requirement: Device in use or in Hi-MD mode
+
+A device that cannot be opened SHALL get a message that another app or browser tab may be using it, with Retry. Only on positive evidence of Hi-MD mode SHALL the app say it cannot read discs in Hi-MD mode yet and suggest NetMD mode. A failed or timed-out command and a device that cannot be opened SHALL NOT be taken as Hi-MD mode.
+
 #### Scenario: Device in Hi-MD mode
 
-- **WHEN** a connected device is in Hi-MD mode: its USB ID exists only in Hi-MD mode (a Hi-MD-mode device opened by the desktop app), or its NetMD interface cannot be opened (for example an MZ-NH600 in Hi-MD mode, which shares `054c:0187` with the NetMD MZ-NH600D)
+- **WHEN** a connected device is in Hi-MD mode, shown by a USB ID that exists only in Hi-MD mode (a Hi-MD-mode device opened by the desktop app) or by an interface 0 of the USB mass-storage class (for example an MZ-NH600 in Hi-MD mode, which shares `054c:0187` with the NetMD MZ-NH600D)
 - **THEN** the screen says mdconnect cannot read discs in Hi-MD mode yet and suggests switching the device to NetMD mode if it offers one
+
+#### Scenario: Device in use
+
+- **WHEN** a NetMD device connects but its NetMD interface cannot be opened, for example because another app or browser tab holds it
+- **THEN** the screen says the device could not be opened, that another app or browser tab may be using it, and offers Retry, without mentioning Hi-MD mode

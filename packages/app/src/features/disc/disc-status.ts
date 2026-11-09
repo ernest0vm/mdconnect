@@ -25,12 +25,21 @@ export function discStatus(result: DiscReadResult | 'reading'): DiscStatus {
         action: 'Refresh',
       };
     case 'failed':
+      if (result.reason === 'unavailable') {
+        return {
+          kind: 'warning',
+          title: 'Device in use',
+          message:
+            'mdconnect could not open the device. If another app or browser tab is using it, close that first, then retry.',
+          action: 'Retry',
+        };
+      }
       return result.reason === 'not-netmd'
         ? {
             kind: 'warning',
             title: 'Cannot read this device',
             message:
-              'The device does not answer NetMD. mdconnect cannot read discs in Hi-MD mode yet; switch the device to NetMD mode if it offers one, then retry.',
+              'The device is in Hi-MD mode. mdconnect cannot read discs in Hi-MD mode yet; switch the device to NetMD mode if it offers one, then retry.',
             action: 'Retry',
           }
         : {

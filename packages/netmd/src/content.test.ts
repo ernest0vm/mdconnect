@@ -100,6 +100,29 @@ describe('NetMdInterface.sendQuery', () => {
     expect(await new NetMdInterface(ch, { sleep: noSleep }).getDiscFlags()).toBe(0x10);
   });
 
+  it('ignores a rejected descriptor command, as some devices reject them', async () => {
+    const { ch } = channel({
+      '00 1808 10 1000 01 00': '0a 1808',
+      '00 1806 01101000 ff00 0001000b': '09 1806 01101000 1000 0001000b 10',
+    });
+    expect(await new NetMdInterface(ch, { sleep: noSleep }).getDiscFlags()).toBe(0x10);
+  });
+
+  it('lets a transport error on a descriptor command through, for example an unplugged device', async () => {
+    let last = '';
+    const ch: CommandChannel = {
+      sendCommand: (command) => {
+        last = key(command);
+        return Promise.resolve();
+      },
+      readReply: () =>
+        last.startsWith('001808')
+          ? Promise.reject(new DOMException('gone', 'NotFoundError'))
+          : Promise.resolve(bytes('09 1806 01101000 1000 0001000b 10')),
+    };
+    await expect(new NetMdInterface(ch, { sleep: noSleep }).getDiscFlags()).rejects.toThrow('gone');
+  });
+
   it('retries "interim" replies and gives up after four', async () => {
     const { ch } = channel({ '00 1806 01101000 ff00 0001000b': '0f 1806' });
     await expect(new NetMdInterface(ch, { sleep: noSleep }).getDiscFlags()).rejects.toThrow(

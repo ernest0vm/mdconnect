@@ -13,10 +13,11 @@ export type DiscReadResult =
   | { readonly kind: 'disc'; readonly disc: DiscView }
   | { readonly kind: 'no-disc' }
   /**
-   * `not-netmd`: the device did not answer NetMD at all, for example a Hi-MD device in Hi-MD mode.
-   * `read-failed`: it answered, but reading the disc failed.
+   * `not-netmd`: the device is in Hi-MD mode (positive evidence, see `isHiMdMode`).
+   * `unavailable`: the NetMD session could not be opened, for example another app holds the device.
+   * `read-failed`: the session opened, but reading the disc failed or timed out.
    */
-  | { readonly kind: 'failed'; readonly reason: 'not-netmd' | 'read-failed' };
+  | { readonly kind: 'failed'; readonly reason: 'not-netmd' | 'unavailable' | 'read-failed' };
 
 /** Opens a NetMD session on a connected device: claims its interface and drains stale replies. */
 export async function openNetMdSession(handle: UsbDeviceHandle): Promise<DiscSession> {
@@ -30,7 +31,7 @@ export async function openNetMdSession(handle: UsbDeviceHandle): Promise<DiscSes
 }
 
 export interface DiscReaderOptions {
-  /** The device's USB ID exists only in Hi-MD mode, so NetMD cannot read it. */
+  /** The device is known to be in Hi-MD mode (see `isHiMdMode`), so NetMD cannot read it. */
   readonly hiMdModeOnly?: boolean;
 }
 
@@ -56,9 +57,8 @@ export class DiscReader {
   }
 
   /**
-   * Hi-MD mode is reported only when the ID says so or the NetMD interface cannot be claimed
-   * (in Hi-MD mode the device exposes USB mass storage instead). A failed or timed-out query is a
-   * failed read, which the user can retry.
+   * Hi-MD mode is reported only on positive evidence (`hiMdModeOnly`). A session that cannot be
+   * opened is "unavailable"; a failed or timed-out query is a failed read. Both can be retried.
    */
   private async readOnce(): Promise<DiscReadResult> {
     if (this.options.hiMdModeOnly === true) return { kind: 'failed', reason: 'not-netmd' };
@@ -68,7 +68,7 @@ export class DiscReader {
       session = await this.session;
     } catch {
       this.session = null;
-      return { kind: 'failed', reason: 'not-netmd' };
+      return { kind: 'failed', reason: 'unavailable' };
     }
     try {
       if (!(await session.isDiscPresent())) return { kind: 'no-disc' };

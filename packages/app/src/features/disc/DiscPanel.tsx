@@ -1,4 +1,3 @@
-import { findDevice } from '@mdconnect/core';
 import { GlassAlert } from '@mdconnect/ui/components/glassyui/glass-alert';
 import { GlassBadge } from '@mdconnect/ui/components/glassyui/glass-badge';
 import { GlassButton } from '@mdconnect/ui/components/glassyui/glass-button';
@@ -8,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { UsbDeviceHandle } from '../../platform';
 import { DiscReader, openNetMdSession, type DiscReadResult } from './disc-reader';
 import { discStatus } from './disc-status';
+import { isHiMdMode } from './hi-md-mode';
 import type { DiscView, GroupView } from './disc-view';
 
 function TrackList({ group }: { readonly group: GroupView }) {
@@ -67,7 +67,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   const reader = useMemo(
     () =>
       new DiscReader(() => openNetMdSession(device), {
-        hiMdModeOnly: findDevice(device.vendorId, device.productId)?.kind === 'himd',
+        hiMdModeOnly: isHiMdMode(device),
       }),
     [device],
   );
@@ -101,13 +101,19 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
           <p>{status.message}</p>
         </GlassAlert>
       )}
-      {status.kind !== 'reading' && (
-        <div>
-          <GlassButton variant="soft" size="sm" onClick={refresh}>
-            {status.kind === 'disc' ? 'Refresh' : status.action}
-          </GlassButton>
-        </div>
-      )}
+      {/* The button stays mounted while reading, so keyboard focus is not lost on Refresh. */}
+      <div>
+        <GlassButton
+          variant="soft"
+          size="sm"
+          aria-disabled={status.kind === 'reading'}
+          onClick={() => {
+            if (status.kind !== 'reading') refresh();
+          }}
+        >
+          {status.kind === 'disc' || status.kind === 'reading' ? 'Refresh' : status.action}
+        </GlassButton>
+      </div>
     </div>
   );
 }

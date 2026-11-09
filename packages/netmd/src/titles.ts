@@ -7,6 +7,7 @@
  * - Shift-JIS decodes with the platform's `TextDecoder` instead of `jconv`.
  * - Group parsing is a pure function over the raw titles instead of a method issuing queries.
  * - Malformed or overlapping group entries are skipped instead of failing the read.
+ * - A full-width group name must match the range exactly, up to its `；` (upstream matches a prefix).
  */
 
 const sjis = new TextDecoder('shift_jis');
@@ -74,7 +75,7 @@ export function parseGroups(
       const fullRange = toFullWidthRange(range);
       const fullWidthTitle =
         fullWidthEntries
-          .find((name) => name.startsWith(fullRange))
+          .find((name) => name.startsWith(`${fullRange}；`))
           ?.substring(fullRange.length + 1) ?? null;
 
       const [minText, maxText] = range.includes('-') ? range.split('-') : [range, range];

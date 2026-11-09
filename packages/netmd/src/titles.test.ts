@@ -48,6 +48,14 @@ describe('parseGroups (disc-contents: "Grouped disc")', () => {
     ]);
   });
 
+  it('matches a full-width group name on its exact range, not on a prefix', () => {
+    expect(parseGroups('1;One//10-12;Ten//', '１０－１２；十／／', 12)[1]).toEqual({
+      title: 'One',
+      fullWidthTitle: null,
+      tracks: [0],
+    });
+  });
+
   it('clips a range that runs past the last track', () => {
     expect(parseGroups('1-9;All//', '', 3)).toEqual([
       { title: 'All', fullWidthTitle: null, tracks: [0, 1, 2] },
