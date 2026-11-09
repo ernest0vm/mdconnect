@@ -29,6 +29,8 @@ mac:
 win:
   target: nsis
 linux:
+  # The default comes from package.json's name (@mdconnect/desktop), which is not a valid file name.
+  executableName: mdconnect
   target:
     - AppImage
     - deb
@@ -37,3 +39,7 @@ linux:
   extraResources:
     - from: resources/linux/60-mdconnect.rules
       to: linux/60-mdconnect.rules
+deb:
+  # Debian package and file names cannot contain the scoped npm name's '@' or '/'.
+  packageName: mdconnect
+  artifactName: ${productName}_${version}_${arch}.${ext}

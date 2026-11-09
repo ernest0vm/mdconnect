@@ -4,6 +4,7 @@
   "private": true,
   "license": "GPL-2.0-only",
   "author": "mdconnect contributors",
+  "homepage": "https://github.com/ernest0vm/mdconnect",
   "type": "module",
   "description": "Electron shell: main process, preload bridge and renderer entry for @mdconnect/app.",
   "main": "out/main/index.js",
