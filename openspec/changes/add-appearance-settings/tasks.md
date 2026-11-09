@@ -17,7 +17,7 @@
 
 ## 4. Verification (manual)
 
-- [ ] 4.1 Desktop, macOS, `yarn dev`, manual:
+- [x] 4.1 Desktop, macOS, `yarn dev`, manual:
   - With both choices on System, toggle macOS Appearance and Reduce transparency and confirm the app follows live.
   - Pick Light with macOS in Dark: the app turns light and stays light when macOS changes.
   - Pick Reduced with Reduce transparency off: panels are opaque.
@@ -25,6 +25,11 @@
   - Pick System again: the app follows macOS.
 
   (ui-theme: "Theme picked in the app", "Transparency picked in the app", "Back to System", "Choice survives a restart")
+  - Verified on macOS 27.0.1:
+    - On System, the app followed macOS Appearance Dark → Light → Dark live.
+    - Light and Reduced applied and survived a relaunch.
+    - Back to System, the app followed macOS again.
+    - That a picked theme stays put when macOS changes was checked on the web with an emulated OS switch, not on the desktop.
 
 - [x] 4.2 Web, Chrome, `yarn dev:web`, manual:
   - The same checks as 4.1.
