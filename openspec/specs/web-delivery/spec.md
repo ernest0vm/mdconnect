@@ -8,17 +8,17 @@ Defines how the mdconnect web app reaches users: which browsers it supports, the
 
 ### Requirement: Supported browsers
 
-The web app SHALL run its device features only where WebUSB is available in a secure context. Elsewhere it SHALL show an "unsupported browser" screen that names supported browsers (Chrome, Edge, Opera and other Chromium-based browsers) and links to the desktop app, and SHALL NOT attempt any USB call.
+The web app SHALL run its device features only where WebUSB is available in a secure context. That means Chromium-based browsers (Chrome, Edge, Opera and others) on Windows, macOS, Linux, ChromeOS and Android, but not on iOS or iPadOS, where no browser provides WebUSB. Elsewhere it SHALL show an "unsupported browser" screen that names the supported browsers and platforms and links to the desktop app, and SHALL NOT attempt any USB call.
 
 #### Scenario: Chromium browser
 
-- **WHEN** a user opens the web app in a current version of Chrome or Edge over HTTPS
+- **WHEN** a user opens the web app over HTTPS in a current version of Chrome or Edge on Windows, macOS, Linux, ChromeOS or Android
 - **THEN** the Connect screen is shown
 
 #### Scenario: Browser without WebUSB
 
-- **WHEN** a user opens the web app in Firefox or Safari
-- **THEN** the unsupported-browser screen is shown with the list of supported browsers and a link to the desktop app
+- **WHEN** a user opens the web app in Firefox, in Safari, or in any browser on iOS or iPadOS
+- **THEN** the unsupported-browser screen is shown with the supported browsers and platforms and a link to the desktop app
 - **AND** no USB API is called
 
 ### Requirement: Security and isolation headers
@@ -60,7 +60,7 @@ The web app SHALL show a link to its source code repository and state that it is
 
 ### Requirement: Deployments
 
-Changes merged to `main` SHALL be deployed to production. Every pull request that affects the web app or a package it depends on SHALL get its own preview deployment. A pull request that affects neither SHALL NOT trigger a web build.
+Changes merged to `main` SHALL be deployed to production. Every pull request that affects the web app or a package it depends on SHALL get its own preview deployment. A pull request whose changes all fall inside other workspaces (for example only `apps/desktop`) SHALL NOT trigger a web build. Changes outside any workspace, such as root files, `docs/` or `openspec/`, count as global for Vercel's monorepo skipping and MAY trigger a preview build.
 
 #### Scenario: Pull request preview
 
@@ -71,6 +71,11 @@ Changes merged to `main` SHALL be deployed to production. Every pull request tha
 
 - **WHEN** a pull request only changes `apps/desktop`
 - **THEN** no web build runs for it
+
+#### Scenario: Change outside any workspace
+
+- **WHEN** a pull request only changes `docs/` or `openspec/`
+- **THEN** a preview build may run, and no rule requires skipping it
 
 #### Scenario: Production
 
