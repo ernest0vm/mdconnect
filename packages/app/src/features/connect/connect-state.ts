@@ -7,38 +7,41 @@ export interface ConnectedDevice {
   readonly serialNumber?: string | undefined;
 }
 
-export type ConnectState =
-  | { readonly status: 'idle' }
-  | { readonly status: 'requesting' }
-  | { readonly status: 'connected'; readonly device: ConnectedDevice }
-  | { readonly status: 'failed'; readonly failure: UsbFailureKind };
+/**
+ * The connected device and the last failure are tracked separately: a failed attempt to switch to
+ * another device keeps the previous one (still open) visible next to the failure message.
+ */
+export interface ConnectState {
+  readonly device: ConnectedDevice | null;
+  readonly requesting: boolean;
+  readonly failure: UsbFailureKind | null;
+}
 
 export type ConnectAction =
   | { readonly type: 'request-started' }
   | { readonly type: 'connected'; readonly device: ConnectedDevice }
   | { readonly type: 'failed'; readonly failure: UsbFailureKind }
-  | {
-      readonly type: 'device-disconnected';
-      readonly vendorId: number;
-      readonly productId: number;
-      readonly serialNumber?: string | undefined;
-    };
+  /** Dispatched only when the open device itself is unplugged. */
+  | { readonly type: 'device-disconnected' };
 
-export const initialConnectState: ConnectState = { status: 'idle' };
+export const initialConnectState: ConnectState = { device: null, requesting: false, failure: null };
 
 export function connectReducer(state: ConnectState, action: ConnectAction): ConnectState {
   switch (action.type) {
     case 'request-started':
-      return { status: 'requesting' };
+      return { ...state, requesting: true, failure: null };
     case 'connected':
-      return { status: 'connected', device: action.device };
+      return { device: action.device, requesting: false, failure: null };
     case 'failed':
-      return { status: 'failed', failure: action.failure };
+      return { ...state, requesting: false, failure: action.failure };
     case 'device-disconnected':
-      return state.status === 'connected' && isSameDevice(state.device, action)
-        ? initialConnectState
-        : state;
+      return initialConnectState;
   }
+}
+
+/** Plug-in events may connect automatically only when nothing is connected or being requested. */
+export function isIdle(state: ConnectState): boolean {
+  return state.device === null && !state.requesting;
 }
 
 /** Formats USB IDs the way device lists show them, for example `054c:00c9`. */
@@ -61,10 +64,4 @@ export function describeDevice(handle: {
     productId: handle.productId,
     serialNumber: handle.serialNumber ?? undefined,
   };
-}
-
-function isSameDevice(a: Omit<ConnectedDevice, 'name'>, b: Omit<ConnectedDevice, 'name'>): boolean {
-  return (
-    a.vendorId === b.vendorId && a.productId === b.productId && a.serialNumber === b.serialNumber
-  );
 }

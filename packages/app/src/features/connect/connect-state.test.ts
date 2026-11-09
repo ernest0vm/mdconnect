@@ -5,10 +5,20 @@ import {
   describeDevice,
   formatUsbId,
   initialConnectState,
+  isIdle,
+  type ConnectedDevice,
   type ConnectState,
 } from './connect-state';
 
-const mzN510 = describeDevice({ vendorId: 0x054c, productId: 0x00c9, serialNumber: 'A1' });
+function supported(vendorId: number, productId: number, serialNumber?: string): ConnectedDevice {
+  const device = describeDevice({ vendorId, productId, serialNumber });
+  if (device === undefined) throw new Error('fixture device is not in the supported table');
+  return device;
+}
+
+const mzN510 = supported(0x054c, 0x00c9, 'A1');
+const mzRh1 = supported(0x054c, 0x0286);
+const connected: ConnectState = { device: mzN510, requesting: false, failure: null };
 
 describe('formatUsbId', () => {
   it('formats vendor and product as lowercase four-digit hex', () => {
@@ -26,60 +36,82 @@ describe('describeDevice', () => {
     });
   });
 
+  it('normalises a null serial number to undefined', () => {
+    expect(
+      describeDevice({ vendorId: 0x054c, productId: 0x0286, serialNumber: null })?.serialNumber,
+    ).toBeUndefined();
+  });
+
   it('returns undefined for an unsupported device', () => {
     expect(describeDevice({ vendorId: 0x046d, productId: 0xc52b })).toBeUndefined();
   });
 });
 
 describe('connectReducer', () => {
-  const connected: ConnectState = mzN510
-    ? { status: 'connected', device: mzN510 }
-    : initialConnectState;
-
-  it('starts idle', () => {
-    expect(initialConnectState).toEqual({ status: 'idle' });
+  it('starts with no device, no request and no failure', () => {
+    expect(initialConnectState).toEqual({ device: null, requesting: false, failure: null });
   });
 
-  it('moves to requesting when a request starts', () => {
-    expect(connectReducer(initialConnectState, { type: 'request-started' })).toEqual({
-      status: 'requesting',
+  it('marks a request in progress and clears the previous failure', () => {
+    const failed: ConnectState = { device: null, requesting: false, failure: 'no-device' };
+    expect(connectReducer(failed, { type: 'request-started' })).toEqual({
+      device: null,
+      requesting: true,
+      failure: null,
     });
   });
 
-  it('shows the connected device', () => {
-    expect(connected).toMatchObject({ status: 'connected' });
-    expect(
-      mzN510 && connectReducer({ status: 'requesting' }, { type: 'connected', device: mzN510 }),
-    ).toEqual(connected);
+  it('keeps showing the connected device while another request runs', () => {
+    expect(connectReducer(connected, { type: 'request-started' }).device).toBe(mzN510);
+  });
+
+  it('shows the newly connected device', () => {
+    const requesting = connectReducer(connected, { type: 'request-started' });
+    expect(connectReducer(requesting, { type: 'connected', device: mzRh1 })).toEqual({
+      device: mzRh1,
+      requesting: false,
+      failure: null,
+    });
   });
 
   it.each(['no-device', 'cancelled', 'access-denied', 'unknown'] as const)(
     'records a %s failure',
     (failure) => {
-      expect(connectReducer({ status: 'requesting' }, { type: 'failed', failure })).toEqual({
-        status: 'failed',
+      const requesting: ConnectState = { device: null, requesting: true, failure: null };
+      expect(connectReducer(requesting, { type: 'failed', failure })).toEqual({
+        device: null,
+        requesting: false,
         failure,
       });
     },
   );
 
-  it('returns to idle when the connected device is unplugged', () => {
-    const next = connectReducer(connected, {
-      type: 'device-disconnected',
-      vendorId: 0x054c,
-      productId: 0x00c9,
-      serialNumber: 'A1',
+  it('keeps the previous device visible when switching to another one fails', () => {
+    const requesting = connectReducer(connected, { type: 'request-started' });
+    expect(connectReducer(requesting, { type: 'failed', failure: 'access-denied' })).toEqual({
+      device: mzN510,
+      requesting: false,
+      failure: 'access-denied',
     });
-    expect(next).toEqual({ status: 'idle' });
   });
 
-  it('ignores the unplugging of a different device', () => {
-    const next = connectReducer(connected, {
-      type: 'device-disconnected',
-      vendorId: 0x054c,
-      productId: 0x00c9,
-      serialNumber: 'B2',
-    });
-    expect(next).toBe(connected);
+  it('clears the device when the open device is unplugged', () => {
+    expect(connectReducer(connected, { type: 'device-disconnected' })).toEqual(initialConnectState);
+  });
+});
+
+describe('isIdle', () => {
+  it('is idle with no device and no request, even after a failure', () => {
+    expect(isIdle(initialConnectState)).toBe(true);
+    expect(isIdle({ device: null, requesting: false, failure: 'no-device' })).toBe(true);
+  });
+
+  it('is not idle while a device is connected, so a plug-in event cannot replace it', () => {
+    expect(isIdle(connected)).toBe(false);
+    expect(isIdle({ device: mzN510, requesting: false, failure: 'access-denied' })).toBe(false);
+  });
+
+  it('is not idle while a request is running', () => {
+    expect(isIdle({ device: null, requesting: true, failure: null })).toBe(false);
   });
 });

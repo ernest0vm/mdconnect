@@ -8,19 +8,25 @@ import { useCallback, useEffect, useReducer, useRef } from 'react';
 
 import type { Platform, UsbConnectionEventLike, UsbDeviceHandle } from '../../platform';
 import { ChooserDialog } from './ChooserDialog';
-import { connectReducer, describeDevice, formatUsbId, initialConnectState } from './connect-state';
+import {
+  connectReducer,
+  describeDevice,
+  formatUsbId,
+  initialConnectState,
+  isIdle,
+} from './connect-state';
 import { guidanceFor } from './guidance';
 import { switchDevice } from './switch-device';
 
 export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   const [state, dispatch] = useReducer(connectReducer, initialConnectState);
   const chooserCancelled = useRef(false);
-  const isIdle = useRef(true);
+  const idle = useRef(true);
   const openHandle = useRef<UsbDeviceHandle | null>(null);
 
   useEffect(() => {
-    isIdle.current = state.status === 'idle' || state.status === 'failed';
-  }, [state.status]);
+    idle.current = isIdle(state);
+  }, [state]);
 
   const openDevice = useCallback(async (handle: UsbDeviceHandle) => {
     const device = describeDevice(handle);
@@ -58,7 +64,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   useEffect(() => {
     let active = true;
     const connectIfIdle = (handle: UsbDeviceHandle) => {
-      if (active && isIdle.current && describeDevice(handle) !== undefined) {
+      if (active && idle.current && describeDevice(handle) !== undefined) {
         void openDevice(handle);
       }
     };
@@ -78,12 +84,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
       // Identical devices can share IDs and lack serials, so match the open handle itself.
       if (device !== openHandle.current) return;
       openHandle.current = null;
-      dispatch({
-        type: 'device-disconnected',
-        vendorId: device.vendorId,
-        productId: device.productId,
-        serialNumber: device.serialNumber ?? undefined,
-      });
+      dispatch({ type: 'device-disconnected' });
     };
     platform.usb.addEventListener('connect', onConnect);
     platform.usb.addEventListener('disconnect', onDisconnect);
@@ -94,13 +95,13 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
     };
   }, [platform, openDevice]);
 
-  const guidance = state.status === 'failed' ? guidanceFor(state.failure, platform.os) : null;
+  const guidance = state.failure === null ? null : guidanceFor(state.failure, platform.os);
 
   return (
     <GlassPanel className="flex w-full max-w-md flex-col gap-4 p-6">
       <h1 className="text-xl font-semibold">Connect your MiniDisc</h1>
 
-      {state.status === 'connected' ? (
+      {state.device ? (
         <div className="flex items-center justify-between gap-3">
           <span className="text-base font-medium">{state.device.name}</span>
           <GlassBadge tone="green" className="font-mono">
@@ -127,14 +128,14 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
       <div className="flex items-center gap-3">
         <GlassButton
           variant="primary"
-          disabled={state.status === 'requesting'}
+          disabled={state.requesting}
           onClick={() => {
             void requestDevice();
           }}
         >
-          {state.status === 'connected' ? 'Connect another device' : 'Connect device'}
+          {state.device ? 'Connect another device' : 'Connect device'}
         </GlassButton>
-        {state.status === 'requesting' && <GlassSpinner label="Connecting" size="sm" />}
+        {state.requesting && <GlassSpinner label="Connecting" size="sm" />}
       </div>
 
       {platform.deviceChooser && (
