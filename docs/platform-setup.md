@@ -69,6 +69,6 @@ The rule file is generated from the supported device table (`packages/core/src/d
 
 ## Verified hardware
 
-| OS                           | Device                                    | Result | Notes                                                                                                                                                 |
-| ---------------------------- | ----------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| macOS 27.0.1 (Apple Silicon) | Sony MZ-NE410/NF520D (NetMD, `054c:00ca`) | Works  | Desktop app (development build): connect shows name and IDs; unplug returns to the Connect prompt; replug and relaunch reconnect without the chooser. |
+| OS                           | Device                                    | Result | Notes                                                                                                                                                                                                                                           |
+| ---------------------------- | ----------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS 27.0.1 (Apple Silicon) | Sony MZ-NE410/NF520D (NetMD, `054c:00ca`) | Works  | Desktop app, development build: connect shows name and IDs; unplug returns to the Connect prompt; replug and relaunch reconnect without the chooser. Packaged `.app`: reconnects on launch, and a Connect request returns and opens the device. |
