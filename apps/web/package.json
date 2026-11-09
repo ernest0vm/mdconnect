@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0",
     "format:check": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.web.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "test": "vitest run"
   },
   "dependencies": {

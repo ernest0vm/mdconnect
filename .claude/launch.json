@@ -12,20 +12,6 @@
       "runtimeExecutable": "yarn",
       "runtimeArgs": ["workspace", "@mdconnect/web", "dev", "--port", "5173", "--strictPort"],
       "port": 5173
-    },
-    {
-      "name": "web-preview-lan",
-      "runtimeExecutable": "yarn",
-      "runtimeArgs": [
-        "workspace",
-        "@mdconnect/web",
-        "preview",
-        "--host",
-        "--port",
-        "4175",
-        "--strictPort"
-      ],
-      "port": 4175
     }
   ]
 }

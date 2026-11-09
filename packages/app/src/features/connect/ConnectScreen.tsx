@@ -9,7 +9,7 @@ import type { Platform, UsbConnectionEventLike } from '../../platform';
 import { ChooserDialog } from './ChooserDialog';
 import { connectReducer, describeDevice, formatUsbId, initialConnectState } from './connect-state';
 import { ConnectionController } from './connection-controller';
-import { guidanceFor } from './guidance';
+import { connectPrompt, guidanceFor } from './guidance';
 
 /**
  * The walking-skeleton screen: connect a MiniDisc device and show it, or explain why not.
@@ -56,7 +56,12 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   }, [platform.usb, controller]);
 
   const guidance =
-    state.failure === null ? null : guidanceFor(state.failure, platform.os, platform.kind);
+    state.failure === null
+      ? null
+      : guidanceFor(state.failure, platform.os, {
+          platformKind: platform.kind,
+          deviceKinds: platform.deviceKinds,
+        });
 
   return (
     <GlassPanel className="flex w-full max-w-md flex-col gap-4 p-6">
@@ -70,9 +75,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
           </GlassBadge>
         </div>
       ) : (
-        <p className="text-sm opacity-80">
-          Plug in a NetMD or Hi-MD device over USB, then connect to it.
-        </p>
+        <p className="text-sm opacity-80">{connectPrompt(platform.deviceKinds)}</p>
       )}
 
       {guidance && (

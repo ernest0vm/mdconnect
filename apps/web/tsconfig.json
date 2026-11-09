@@ -1,8 +1,5 @@
 {
-  "extends": "@mdconnect/tsconfig/react.json",
-  "compilerOptions": {
-    "noEmit": true,
-    "types": ["w3c-web-usb", "vite/client", "node"]
-  },
-  "include": ["src", "vite.config.ts"]
+  "//": "Solution file for editors and typescript-eslint. `typecheck` runs tsconfig.web.json and tsconfig.node.json explicitly; `tsc -p` on this file checks nothing.",
+  "files": [],
+  "references": [{ "path": "./tsconfig.web.json" }, { "path": "./tsconfig.node.json" }]
 }

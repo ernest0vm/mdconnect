@@ -1,4 +1,4 @@
-import type { UsbFailureKind } from '@mdconnect/core';
+import type { DeviceKind, UsbFailureKind } from '@mdconnect/core';
 
 import type { OperatingSystem, PlatformKind } from '../../platform';
 
@@ -38,24 +38,44 @@ const ACCESS_DENIED: Record<OperatingSystem, Guidance> = {
 
 const NO_DEVICE = 'No supported MiniDisc device was found.';
 
+/** What the failed attempt offered: which chooser the user saw and which device kinds it listed. */
+export interface GuidanceContext {
+  readonly platformKind: PlatformKind;
+  readonly deviceKinds: readonly DeviceKind[];
+}
+
+const offersHimd = (deviceKinds: readonly DeviceKind[]) => deviceKinds.includes('himd');
+
+/** The connect screen's prompt, naming only the device kinds this platform offers. */
+export function connectPrompt(deviceKinds: readonly DeviceKind[]): string {
+  return offersHimd(deviceKinds)
+    ? 'Plug in a NetMD or Hi-MD device over USB, then connect to it.'
+    : 'Plug in a NetMD device (or a Hi-MD device in NetMD mode) over USB, then connect to it.';
+}
+
+function noDeviceMessage({ platformKind, deviceKinds }: GuidanceContext): string {
+  const cable =
+    platformKind === 'web'
+      ? "Check the USB cable, and pick the device in the browser's list."
+      : 'Check the USB cable.';
+  const mode = offersHimd(deviceKinds)
+    ? 'Make sure the device is in NetMD or Hi-MD mode.'
+    : 'mdconnect does not support Hi-MD mode yet; switch the device to NetMD mode if it offers one.';
+  return `${NO_DEVICE} ${cable} ${mode}`;
+}
+
 /**
- * Readable guidance for a failed connection attempt; never a raw error. On the web the browser's
- * own chooser is used and only NetMD devices are offered, so `no-device` explains both.
+ * Readable guidance for a failed connection attempt; never a raw error. The `no-device` message
+ * names the chooser the user saw and only the device kinds the platform offered.
  */
 export function guidanceFor(
   kind: UsbFailureKind,
   os: OperatingSystem,
-  platformKind: PlatformKind = 'desktop',
+  context: GuidanceContext,
 ): Guidance {
   switch (kind) {
     case 'no-device':
-      return {
-        title: 'No device found',
-        message:
-          platformKind === 'web'
-            ? `${NO_DEVICE} Check the USB cable, and pick the device in the browser's list. mdconnect does not support Hi-MD mode yet; switch the device to NetMD mode if it offers one.`
-            : `${NO_DEVICE} Check the USB cable and that the device is in NetMD or Hi-MD mode.`,
-      };
+      return { title: 'No device found', message: noDeviceMessage(context) };
     case 'cancelled':
       return { title: 'Cancelled', message: 'No device was chosen.' };
     case 'access-denied':

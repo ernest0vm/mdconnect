@@ -37,7 +37,7 @@ apps/web/
   src/main.tsx          webPlatform() + <App/> or <UnsupportedBrowser/>
   src/platform.ts       detectOs(), isWebUsbSupported(), webPlatform()
   src/styles.css        @import "@mdconnect/ui/globals.css" + @source for packages/ui and packages/app
-  src/vercel-config.test.ts
+  test/vercel-config.test.ts
 ```
 
 `tsconfig.json` extends `@mdconnect/tsconfig/react.json` with `types: ["w3c-web-usb", "vite/client"]`. Scripts: `dev`, `build` (`vite build` → `dist`), `preview`, and the four check scripts. Root gains `dev:web` (`turbo run dev --filter=@mdconnect/web`).
@@ -82,7 +82,7 @@ apps/web/
 }
 ```
 
-`vercel.json` is static JSON and cannot import TypeScript, so `src/vercel-config.test.ts` parses it and asserts that:
+`vercel.json` is static JSON and cannot import TypeScript, so `test/vercel-config.test.ts` parses it and asserts that:
 
 - the CSP equals `contentSecurityPolicy` from `@mdconnect/core`;
 - COOP/COEP have the values above;
