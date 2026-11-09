@@ -48,6 +48,8 @@ describe('installUsbHandlers (usb-device-access: "Connect screen")', () => {
     const { check } = install();
     expect(check(null, 'hid', 'app://mdconnect/')).toBe(false);
     expect(check(null, 'usb', 'https://evil.example/')).toBe(false);
+    expect(check(null, 'usb', 'app://mdconnect//')).toBe(false);
+    expect(check(null, 'usb', 'app://mdconnect.evil/')).toBe(false);
   });
 
   it('grants supported devices to the app origin as the device handler receives it', () => {
@@ -63,5 +65,8 @@ describe('installUsbHandlers (usb-device-access: "Connect screen")', () => {
     expect(device({ deviceType: 'usb', origin: 'https://evil.example', device: MZ_NE410 })).toBe(
       false,
     );
+    for (const origin of ['app://mdconnect//', 'app://mdconnect.evil/']) {
+      expect(device({ deviceType: 'usb', origin, device: MZ_NE410 })).toBe(false);
+    }
   });
 });
