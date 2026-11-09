@@ -42,4 +42,11 @@ describe('vercel.json (web-delivery: "Security and isolation headers")', () => {
     expect(config.buildCommand).toBe('yarn run -T turbo run build');
     expect(config.outputDirectory).toBe('dist');
   });
+
+  it('finds turbo in the root workspace, where `yarn run -T` looks for it', () => {
+    const rootManifest = JSON.parse(
+      readFileSync(join(import.meta.dirname, '../../../package.json'), 'utf8'),
+    ) as { readonly devDependencies?: Readonly<Record<string, string>> };
+    expect(rootManifest.devDependencies).toHaveProperty('turbo');
+  });
 });
