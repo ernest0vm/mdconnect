@@ -1,8 +1,7 @@
 import { sourceRepositoryUrl } from '@mdconnect/core';
-import { GlassProvider } from '@mdconnect/ui/components/glassyui/glass-provider';
 import { GlassPanel } from '@mdconnect/ui/components/glassyui/glass-panel';
 
-import { ColorSchemeSync } from './AppearanceBridge';
+import { AppearanceRoot } from './AppearanceBridge';
 import { PageShell } from './PageShell';
 
 const SUPPORTED_BROWSERS = [
@@ -18,8 +17,7 @@ const SUPPORTED_BROWSERS = [
  */
 export function UnsupportedBrowser({ commit }: { readonly commit: string }) {
   return (
-    <GlassProvider>
-      <ColorSchemeSync />
+    <AppearanceRoot>
       <PageShell commit={commit}>
         <GlassPanel className="flex flex-col gap-4 p-6">
           <h1 className="text-xl font-semibold">This browser cannot reach USB devices</h1>
@@ -47,6 +45,6 @@ export function UnsupportedBrowser({ commit }: { readonly commit: string }) {
           </p>
         </GlassPanel>
       </PageShell>
-    </GlassProvider>
+    </AppearanceRoot>
   );
 }
