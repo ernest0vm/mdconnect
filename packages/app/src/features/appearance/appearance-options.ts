@@ -1,4 +1,10 @@
-import type { AppearanceChoice, ThemeOption, TransparencyOption } from './appearance-choice';
+import {
+  THEME_OPTIONS,
+  TRANSPARENCY_OPTIONS,
+  type AppearanceChoice,
+  type ThemeOption,
+  type TransparencyOption,
+} from './appearance-choice';
 
 export interface AppearanceOption<V extends string> {
   readonly value: V;
@@ -48,4 +54,19 @@ const labelOf = <V extends string>(options: readonly AppearanceOption<V>[], valu
 /** Accessible name of the Appearance trigger, naming the current choice of each group. */
 export function appearanceTriggerLabel(choice: AppearanceChoice): string {
   return `Appearance: theme ${labelOf(THEME, choice.theme)}, transparency ${labelOf(TRANSPARENCY, choice.transparency)}`;
+}
+
+const isOneOf = <T extends string>(options: readonly T[], value: string): value is T =>
+  (options as readonly string[]).includes(value);
+
+/** The choice with `value` set on the group's own field; unchanged if the value is not one of its options. */
+export function withOption(
+  choice: AppearanceChoice,
+  group: AppearanceGroup,
+  value: string,
+): AppearanceChoice {
+  if (group.field === 'theme') {
+    return isOneOf(THEME_OPTIONS, value) ? { ...choice, theme: value } : choice;
+  }
+  return isOneOf(TRANSPARENCY_OPTIONS, value) ? { ...choice, transparency: value } : choice;
 }

@@ -1,16 +1,17 @@
 import { GlassProvider, usePreferences } from '@mdconnect/ui/components/glassyui/glass-provider';
 import { syncColorSchemeClass } from '@mdconnect/ui/theme';
-import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { resolveAppearance, type SystemAppearance } from './features/appearance/appearance-choice';
 import {
   AppearanceChoiceProvider,
   useAppearanceChoice,
 } from './features/appearance/AppearanceChoiceContext';
+import {
+  readSystemAppearance,
+  watchSystemAppearance,
+} from './features/appearance/system-appearance';
 import type { PlatformAppearance } from './platform';
-
-const LIGHT_QUERY = '(prefers-color-scheme: light)';
-const REDUCED_TRANSPARENCY_QUERY = '(prefers-reduced-transparency: reduce)';
 
 /**
  * Keeps Tailwind's `dark` class in step with GlassyUI's theme. Every screen inside a GlassProvider
@@ -26,35 +27,12 @@ export function ColorSchemeSync() {
   return null;
 }
 
-/** The OS signals, kept current: media queries everywhere, plus the desktop shell's own signal. */
+/** The OS signals, kept current. */
 function useSystemAppearance(appearance: PlatformAppearance | undefined): SystemAppearance {
-  const read = useCallback(
-    (): SystemAppearance => ({
-      prefersLight: window.matchMedia(LIGHT_QUERY).matches,
-      mediaReducedTransparency: window.matchMedia(REDUCED_TRANSPARENCY_QUERY).matches,
-      platformReducedTransparency: appearance?.get().prefersReducedTransparency,
-    }),
-    [appearance],
-  );
-  const [system, setSystem] = useState(read);
+  const [system, setSystem] = useState(() => readSystemAppearance(window, appearance));
 
-  useEffect(() => {
-    const update = () => {
-      setSystem(read());
-    };
-    update();
-    const queries = [LIGHT_QUERY, REDUCED_TRANSPARENCY_QUERY].map((q) => window.matchMedia(q));
-    queries.forEach((query) => {
-      query.addEventListener('change', update);
-    });
-    const unsubscribe = appearance?.onChange(update);
-    return () => {
-      queries.forEach((query) => {
-        query.removeEventListener('change', update);
-      });
-      unsubscribe?.();
-    };
-  }, [appearance, read]);
+  // The platform's `appearance` object is created once per shell, so the initial read stays valid.
+  useEffect(() => watchSystemAppearance(window, appearance, setSystem), [appearance]);
 
   return system;
 }

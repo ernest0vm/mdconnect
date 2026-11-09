@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
-import { DEFAULT_APPEARANCE_CHOICE, type AppearanceChoice } from './appearance-choice';
+import type { AppearanceChoice } from './appearance-choice';
 import { createAppearanceStore, type AppearanceStore } from './appearance-store';
 
 interface AppearanceChoiceValue {
@@ -8,10 +8,7 @@ interface AppearanceChoiceValue {
   readonly setChoice: (choice: AppearanceChoice) => void;
 }
 
-const AppearanceChoiceContext = createContext<AppearanceChoiceValue>({
-  choice: DEFAULT_APPEARANCE_CHOICE,
-  setChoice: () => undefined,
-});
+const AppearanceChoiceContext = createContext<AppearanceChoiceValue | null>(null);
 
 /** `window.localStorage` itself throws when a profile blocks storage. */
 function browserStore(): AppearanceStore {
@@ -47,6 +44,11 @@ export function AppearanceChoiceProvider({ children }: { readonly children: Reac
   );
 }
 
+/** The Appearance choice; render inside `AppearanceRoot` (or `AppearanceChoiceProvider`). */
 export function useAppearanceChoice(): AppearanceChoiceValue {
-  return useContext(AppearanceChoiceContext);
+  const value = useContext(AppearanceChoiceContext);
+  if (value === null) {
+    throw new Error('useAppearanceChoice needs an AppearanceChoiceProvider above it');
+  }
+  return value;
 }

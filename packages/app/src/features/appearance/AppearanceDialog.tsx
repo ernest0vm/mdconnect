@@ -10,6 +10,7 @@ import type { AppearanceChoice } from './appearance-choice';
 import {
   appearanceGroups,
   appearanceTriggerLabel,
+  withOption,
   type AppearanceGroup,
 } from './appearance-options';
 import { useAppearanceChoice } from './AppearanceChoiceContext';
@@ -36,7 +37,7 @@ function ChoiceGroup({
             value={option.value}
             checked={current === option.value}
             onChange={() => {
-              onPick({ ...choice, [group.field]: option.value });
+              onPick(withOption(choice, group, option.value));
             }}
             className="mt-0.5 size-4 accent-indigo-600 dark:accent-indigo-300"
           />
@@ -62,7 +63,19 @@ export function AppearanceDialog() {
           Appearance
         </GlassButton>
       </GlassDialogTrigger>
-      <GlassDialogContent closeLabel="Close">
+      <GlassDialogContent
+        closeLabel="Close"
+        onOpenAutoFocus={(event) => {
+          // Start on the checked option, as a radio group does, not on the first one.
+          const checked = (
+            event.currentTarget as HTMLElement | null
+          )?.querySelector<HTMLInputElement>('input[type="radio"]:checked');
+          if (checked) {
+            event.preventDefault();
+            checked.focus();
+          }
+        }}
+      >
         <GlassDialogTitle className="text-lg font-semibold">Appearance</GlassDialogTitle>
         <GlassDialogDescription className="mt-1 text-sm opacity-80">
           Changes apply right away and are remembered on this device.
