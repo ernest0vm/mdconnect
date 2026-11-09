@@ -54,8 +54,18 @@ describe('parseGroups (disc-contents: "Grouped disc")', () => {
     ]);
   });
 
-  it('rejects a track that is in two groups', () => {
-    expect(() => parseGroups('1-2;A//2-3;B//', '', 3)).toThrow(/in 2 groups/);
+  it('keeps a track in its first group when a later group claims it too', () => {
+    expect(parseGroups('1-2;A//2-3;B//', '', 3)).toEqual([
+      { title: 'A', fullWidthTitle: null, tracks: [0, 1] },
+      { title: 'B', fullWidthTitle: null, tracks: [2] },
+    ]);
+  });
+
+  it('ignores a malformed group entry instead of failing the read', () => {
+    expect(parseGroups('3-;Broken//x-y;Bad//1;Good//', '', 2)).toEqual([
+      { title: null, fullWidthTitle: null, tracks: [1] },
+      { title: 'Good', fullWidthTitle: null, tracks: [0] },
+    ]);
   });
 
   it('returns no groups for a blank disc', () => {

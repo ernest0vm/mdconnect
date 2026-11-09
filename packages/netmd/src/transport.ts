@@ -83,10 +83,11 @@ export class NetMdTransport {
     let length = await this.replyLength();
     let waited = 0;
     for (let attempt = 0; length === 0; attempt++) {
-      const delay = FIRST_RETRY_MS * 2 ** attempt;
-      if (waited + delay > this.timeoutMs) {
+      if (waited >= this.timeoutMs) {
         throw new NetMdTimeoutError(`No reply after ${String(waited)} ms`);
       }
+      // Double the wait each time, but never past the time limit.
+      const delay = Math.min(FIRST_RETRY_MS * 2 ** attempt, this.timeoutMs - waited);
       await this.sleep(delay);
       waited += delay;
       length = await this.replyLength();

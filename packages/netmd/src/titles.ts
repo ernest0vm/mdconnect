@@ -6,6 +6,7 @@
  * Changes from upstream:
  * - Shift-JIS decodes with the platform's `TextDecoder` instead of `jconv`.
  * - Group parsing is a pure function over the raw titles instead of a method issuing queries.
+ * - Malformed or overlapping group entries are skipped instead of failing the read.
  */
 
 const sjis = new TextDecoder('shift_jis');
@@ -60,7 +61,7 @@ export function parseGroups(
   rawFullWidthTitle: string,
   trackCount: number,
 ): TrackGroup[] {
-  const owner = new Map<number, string>();
+  const owner = new Set<number>();
   const groups: TrackGroup[] = [];
   const fullWidthEntries = rawFullWidthTitle.split('／／');
 
@@ -80,16 +81,17 @@ export function parseGroups(
       const min = Number.parseInt(minText ?? '', 10);
       // A deleted track can leave a group's range past the end of the disc.
       const max = Math.min(Number.parseInt(maxText ?? '', 10), trackCount);
-      if (!(min >= 0 && min <= max)) throw new Error(`Invalid group range ${range}`);
+      // A malformed entry is skipped: it should not make the whole disc unreadable.
+      if (!(min >= 1 && min <= max)) continue;
 
       const tracks: number[] = [];
       for (let track = min - 1; track < max; track++) {
-        const existing = owner.get(track);
-        if (existing !== undefined)
-          throw new Error(`Track ${String(track)} is in 2 groups: ${existing}`);
-        owner.set(track, title);
+        // Upstream throws when two groups claim a track; the first group keeps it instead.
+        if (owner.has(track)) continue;
+        owner.add(track);
         tracks.push(track);
       }
+      if (tracks.length === 0) continue;
       groups.push({ title, fullWidthTitle, tracks });
     }
   }

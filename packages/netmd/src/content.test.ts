@@ -93,6 +93,13 @@ describe('NetMdInterface.sendQuery', () => {
     ).rejects.toBeInstanceOf(NetMdRejectedError);
   });
 
+  it('accepts other non-error statuses, as upstream does (for example "changed")', async () => {
+    const { ch } = channel({
+      '00 1806 01101000 ff00 0001000b': '0d 1806 01101000 1000 0001000b 10',
+    });
+    expect(await new NetMdInterface(ch, { sleep: noSleep }).getDiscFlags()).toBe(0x10);
+  });
+
   it('retries "interim" replies and gives up after four', async () => {
     const { ch } = channel({ '00 1806 01101000 ff00 0001000b': '0f 1806' });
     await expect(new NetMdInterface(ch, { sleep: noSleep }).getDiscFlags()).rejects.toThrow(

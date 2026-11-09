@@ -35,22 +35,24 @@ export interface DiscReaderOptions {
 }
 
 /**
- * Reads the disc in one connected device. Reads run one at a time: a Refresh waits for the read
- * in progress. The NetMD session is opened on the first read and reused.
+ * Reads the disc in one connected device. The NetMD session is opened on the first read and
+ * reused, except after a failed read.
  */
 export class DiscReader {
   private session: Promise<DiscSession> | null = null;
-  private queue: Promise<unknown> = Promise.resolve();
+  private inFlight: Promise<DiscReadResult> | null = null;
 
   constructor(
     private readonly openSession: () => Promise<DiscSession>,
     private readonly options: DiscReaderOptions = {},
   ) {}
 
+  /** A read requested while another is in progress shares it, so reads never overlap. */
   read(): Promise<DiscReadResult> {
-    const next = this.queue.then(() => this.readOnce());
-    this.queue = next.catch(() => undefined);
-    return next;
+    this.inFlight ??= this.readOnce().finally(() => {
+      this.inFlight = null;
+    });
+    return this.inFlight;
   }
 
   /**
@@ -72,6 +74,8 @@ export class DiscReader {
       if (!(await session.isDiscPresent())) return { kind: 'no-disc' };
       return { kind: 'disc', disc: toDiscView(await session.listContent()) };
     } catch {
+      // Reopen on Retry: initialising the transport drains a reply a failed command left behind.
+      this.session = null;
       return { kind: 'failed', reason: 'read-failed' };
     }
   }

@@ -7,6 +7,7 @@
  * - Native `BigInt` results from `scanQuery` are converted with `Number`.
  * - Track info is kept as bytes instead of a char-code string.
  * - No logging.
+ * - `parseGroups` (titles.ts) skips malformed or overlapping group entries instead of failing.
  */
 
 import { NetMdNotImplementedError, NetMdRejectedError } from './errors';
@@ -22,9 +23,7 @@ export interface CommandChannel {
 enum Status {
   control = 0x00,
   notImplemented = 0x08,
-  accepted = 0x09,
   rejected = 0x0a,
-  implemented = 0x0c,
   interim = 0x0f,
 }
 
@@ -99,9 +98,8 @@ export class NetMdInterface {
         await this.sleep(INTERIM_RETRY_MS * (2 ** attempt - 1));
         continue;
       }
-      if (status !== Status.accepted && status !== Status.implemented) {
-        throw new NetMdNotImplementedError(`Unknown return status: ${String(status)}`);
-      }
+      // Upstream's unknown-status check never fires (`indexOf(status) < -1`), so any other status,
+      // such as accepted, implemented or changed, is treated as a reply.
       return reply.slice(1);
     }
     throw new NetMdRejectedError('Max read attempts for interim status reached');

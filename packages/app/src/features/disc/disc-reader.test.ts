@@ -104,22 +104,18 @@ describe('DiscReader', () => {
     expect((await reader.read()).kind).toBe('disc');
   });
 
-  it('runs a Refresh after the read in progress, never alongside it', async () => {
-    const log: string[] = [];
+  it('shares the read in progress with a second request instead of reading twice', async () => {
+    let reads = 0;
     let release: () => void = () => undefined;
     const gate = new Promise<void>((resolve) => {
       release = resolve;
     });
-    let call = 0;
     const reader = new DiscReader(() =>
       Promise.resolve(
         session({
           listContent: async () => {
-            call += 1;
-            const n = call;
-            log.push(`start ${String(n)}`);
-            if (n === 1) await gate;
-            log.push(`end ${String(n)}`);
+            reads += 1;
+            await gate;
             return blank;
           },
         }),
@@ -127,9 +123,28 @@ describe('DiscReader', () => {
     );
     const first = reader.read();
     const second = reader.read();
-    await Promise.resolve();
     release();
-    await Promise.all([first, second]);
-    expect(log).toEqual(['start 1', 'end 1', 'start 2', 'end 2']);
+    expect(await second).toEqual(await first);
+    expect(reads).toBe(1);
+    await reader.read();
+    expect(reads).toBe(2);
+  });
+
+  it('reopens the NetMD session on Retry after a failed read, to drain stale replies', async () => {
+    let opened = 0;
+    let fail = true;
+    const reader = new DiscReader(() => {
+      opened += 1;
+      return Promise.resolve(
+        session({
+          listContent: () =>
+            fail ? Promise.reject(new Error('mismatch')) : Promise.resolve(blank),
+        }),
+      );
+    });
+    expect((await reader.read()).kind).toBe('failed');
+    fail = false;
+    expect((await reader.read()).kind).toBe('disc');
+    expect(opened).toBe(2);
   });
 });

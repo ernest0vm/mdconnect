@@ -84,7 +84,16 @@ describe('NetMdTransport', () => {
 
   it('gives up with a timeout error when no reply arrives in time (disc-contents: "Command fails")', async () => {
     const { device } = scriptedDevice(new Array<number>(100).fill(0), []);
-    const transport = new NetMdTransport(device, { sleep: noSleep, timeoutMs: 1000 });
+    let waited = 0;
+    const transport = new NetMdTransport(device, {
+      sleep: (ms) => {
+        waited += ms;
+        return Promise.resolve();
+      },
+      timeoutMs: 1000,
+    });
     await expect(transport.readReply()).rejects.toBeInstanceOf(NetMdTimeoutError);
+    // The whole budget is used, not just the doublings that fit under it.
+    expect(waited).toBe(1000);
   });
 });
