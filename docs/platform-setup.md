@@ -54,7 +54,7 @@ Then reload the rules, and unplug the device and plug it back in:
 sudo udevadm control --reload && sudo udevadm trigger
 ```
 
-These paths follow electron-builder's defaults; they are confirmed on a real Linux install as part of scaffold-desktop-app task 11.4.
+The `.deb` path was verified by inspecting a built package (`/opt/mdconnect/resources/linux/60-mdconnect.rules`). The AppImage extraction command matches the packaged layout but has not yet been run against a built AppImage; that, and installing and connecting on a real Linux machine, is still open as scaffold-desktop-app task 11.4.
 
 The rule file is generated from the supported device table (`packages/core/src/devices.ts`); a unit test fails if the two drift apart.
 
