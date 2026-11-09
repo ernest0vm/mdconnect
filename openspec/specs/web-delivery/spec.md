@@ -60,7 +60,7 @@ The web app SHALL show a link to its source code repository and state that it is
 
 ### Requirement: Deployments
 
-Changes merged to `main` SHALL be deployed to production. Every pull request that affects the web app or a package it depends on SHALL get its own preview deployment. A pull request whose changes all fall inside other workspaces (for example only `apps/desktop`) SHALL NOT trigger a web build. Changes outside any workspace, such as root files, `docs/` or `openspec/`, count as global for Vercel's monorepo skipping and MAY trigger a preview build.
+Changes merged to `main` SHALL be deployed to production. Every pull request that affects the web app or a package it depends on SHALL get its own preview deployment. A pull request whose changes all fall inside workspaces the web app does not depend on (for example only `apps/desktop`) SHALL NOT trigger a web build. Changes outside any workspace, such as root files, `docs/` or `openspec/`, count as global for Vercel's monorepo skipping and MAY trigger a preview build.
 
 #### Scenario: Pull request preview
 
