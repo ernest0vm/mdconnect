@@ -69,7 +69,8 @@
         "$TURBO_ROOT$/packages/*/package.json",
         "$TURBO_ROOT$/apps/*/tsconfig.json",
         "$TURBO_ROOT$/packages/*/tsconfig.json",
-        "$TURBO_ROOT$/lint-staged.config.mjs"
+        "$TURBO_ROOT$/lint-staged.config.mjs",
+        "$TURBO_ROOT$/.yarn/releases/**"
       ]
     }
   }

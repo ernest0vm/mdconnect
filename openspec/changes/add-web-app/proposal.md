@@ -33,6 +33,6 @@ Upstream webminidisc is used mostly as a website: people open a URL in Chrome an
 ## Impact
 
 - New workspace `apps/web` (`@mdconnect/web`) depending on `@mdconnect/app`, `@mdconnect/core` and `@mdconnect/ui`. No new runtime dependencies; dev dependencies (`vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite`) are already in the repo from `scaffold-desktop-app`.
-- New `apps/web/vercel.json`. A Vercel project must be created and connected to the GitHub repository by the maintainer (Root Directory `apps/web`, `ENABLE_EXPERIMENTAL_COREPACK=1` for Yarn 4).
+- New `apps/web/vercel.json`. A Vercel project must be created and connected to the GitHub repository by the maintainer (Root Directory `apps/web`; Yarn 4 runs from the committed release, without Corepack).
 - Root `dev` script gains a web variant (`dev:web`).
 - Depends on `scaffold-desktop-app` being applied first.

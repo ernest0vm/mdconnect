@@ -18,26 +18,25 @@ The web app (`apps/web`) is a static Vite build served by Vercel. Vercel's GitHu
 
 Create the project in the Vercel dashboard from the GitHub repository `ernest0vm/mdconnect`, then set:
 
-| Dashboard setting                                                                                                                           | Value                  | Why                                                                        |
-| ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------- |
-| Settings → Build and Deployment → **Root Directory**                                                                                        | `apps/web`             | Vercel infers the turbo filter from it and reads `apps/web/vercel.json`    |
-| Settings → Build and Deployment → **Framework Preset**                                                                                      | Vite                   | Matches the `dist` output                                                  |
-| Settings → Build and Deployment → **Node.js Version**                                                                                       | 22.x                   | Matches `.nvmrc` and `engines`                                             |
-| Settings → Build and Deployment → Root Directory → **Skip deployments when there are no changes to the root directory or its dependencies** | On                     | Pull requests that only touch `apps/desktop` do not build the web app      |
-| Settings → Environment Variables → `ENABLE_EXPERIMENTAL_COREPACK`                                                                           | `1` (all environments) | Vercel uses the `packageManager` field (Yarn 4) only with Corepack enabled |
-| Settings → General → **Vercel Toolbar**                                                                                                     | Off for previews       | Its injected script is blocked by the app's CSP and COEP                   |
+| Dashboard setting                                                                                                                           | Value            | Why                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- | ----------------------------------------------------------------------- |
+| Settings → Build and Deployment → **Root Directory**                                                                                        | `apps/web`       | Vercel infers the turbo filter from it and reads `apps/web/vercel.json` |
+| Settings → Build and Deployment → **Framework Preset**                                                                                      | Vite             | Matches the `dist` output                                               |
+| Settings → Build and Deployment → **Node.js Version**                                                                                       | 22.x             | Matches `.nvmrc` and `engines`                                          |
+| Settings → Build and Deployment → Root Directory → **Skip deployments when there are no changes to the root directory or its dependencies** | On               | Pull requests that only touch `apps/desktop` do not build the web app   |
+| Settings → General → **Vercel Toolbar**                                                                                                     | Off for previews | Its injected script is blocked by the app's CSP and COEP                |
 
 The preview check Vercel adds to pull requests is informative only; it is not a required check on `main`, so a Vercel outage cannot block merges.
 
-## If Corepack on Vercel stops working
+## Yarn without Corepack
 
-Vercel labels Corepack support experimental. If installs fail because Yarn 4 is not picked up, commit the Yarn release into the repository so Vercel runs it without Corepack:
+Vercel's Corepack support is experimental, so the project does not use it. The Yarn release is committed at `.yarn/releases/yarn-4.14.1.cjs` and `.yarnrc.yml` points to it with `yarnPath`. Whatever Yarn Vercel starts with hands over to that file, so the build runs the same Yarn 4.14.1 as local machines and CI, with the 7-day age gate. Do not set `ENABLE_EXPERIMENTAL_COREPACK`.
+
+To update Yarn, run the command below, restore the comments it strips from `.yarnrc.yml`, and check that `packageManager` in `package.json` names the same version (a repo-policy test fails otherwise):
 
 ```bash
-yarn set version 4.14.1 --yarn-path
+yarn set version <x.y.z> --yarn-path
 ```
-
-That writes `.yarn/releases/yarn-4.14.1.cjs` and a `yarnPath` entry in `.yarnrc.yml`. Remove the `ENABLE_EXPERIMENTAL_COREPACK` variable afterwards.
 
 ## After the first production deploy
 

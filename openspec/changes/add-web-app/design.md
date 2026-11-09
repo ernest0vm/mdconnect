@@ -94,16 +94,15 @@ The desktop and web policies cannot drift without a failing test. Vercel serves 
 
 Done once by the maintainer in the Vercel dashboard. The values are documented in `docs/deployment.md`:
 
-| Setting                            | Value                                     | Why                                                                                                                 |
-| ---------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Root Directory                     | `apps/web`                                | Vercel infers the turbo filter from it                                                                              |
-| Framework preset                   | Vite                                      | Output directory `dist`                                                                                             |
-| Build command                      | `yarn turbo run build` (in `vercel.json`) | Yarn resolves the root-hoisted `turbo` binary from `apps/web`; filter inferred from the Root Directory              |
-| Install command                    | `yarn install --immutable`                | Lockfile must match. The 7-day `npmMinimalAgeGate` from `.yarnrc.yml` applies in the build too                      |
-| Env `ENABLE_EXPERIMENTAL_COREPACK` | `1`                                       | Vercel uses the `packageManager` Yarn 4 only with Corepack enabled                                                  |
-| Node.js version                    | 22.x                                      | Matches `.nvmrc` / `engines`                                                                                        |
-| Skip unaffected deployments        | On                                        | Vercel's built-in monorepo skipping. Fallback: Ignored Build Step `yarn dlx turbo-ignore@2.11.10 --fallback=HEAD^1` |
-| Vercel Toolbar on previews         | Off                                       | Its injected script is blocked by our CSP and COEP                                                                  |
+| Setting                     | Value                                     | Why                                                                                                                 |
+| --------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Root Directory              | `apps/web`                                | Vercel infers the turbo filter from it                                                                              |
+| Framework preset            | Vite                                      | Output directory `dist`                                                                                             |
+| Build command               | `yarn turbo run build` (in `vercel.json`) | Yarn resolves the root-hoisted `turbo` binary from `apps/web`; filter inferred from the Root Directory              |
+| Install command             | `yarn install --immutable`                | Lockfile must match. The 7-day `npmMinimalAgeGate` from `.yarnrc.yml` applies in the build too                      |
+| Node.js version             | 22.x                                      | Matches `.nvmrc` / `engines`                                                                                        |
+| Skip unaffected deployments | On                                        | Vercel's built-in monorepo skipping. Fallback: Ignored Build Step `yarn dlx turbo-ignore@2.11.10 --fallback=HEAD^1` |
+| Vercel Toolbar on previews  | Off                                       | Its injected script is blocked by our CSP and COEP                                                                  |
 
 Previews are created for every pull request by Vercel's GitHub integration, which comments the URL on the PR. The preview check is informative and is not added to the `main` rulesets: the Code quality check already gates merges, and an outage at Vercel should not block them.
 
@@ -130,7 +129,7 @@ No new packages. `apps/web` uses `vite`, `@vitejs/plugin-react`, `tailwindcss`, 
 
 ## Risks / Trade-offs
 
-- [Vercel's Corepack support is labelled experimental] → If it breaks, commit the Yarn release (`yarn set version 4.14.1 --yarn-path`) so Vercel runs `.yarn/releases/yarn-4.14.1.cjs` without Corepack.
+- [Vercel's Corepack support is labelled experimental] → Not used. The Yarn release is committed (`.yarn/releases/yarn-4.14.1.cjs`, `yarnPath` in `.yarnrc.yml`), so Vercel runs Yarn 4.14.1 without Corepack. A repo-policy test keeps `yarnPath` and `packageManager` on the same version. Cost: a 3 MB file in the repository, replaced on each Yarn upgrade.
 - [COEP `require-corp` blocks any cross-origin resource without CORP/CORS headers] → The app loads nothing cross-origin today. Future integrations (for example song recognition) must use CORS-enabled endpoints, and the CSP `connect-src` must be widened in `@mdconnect/core` for both apps at once.
 - [Vercel Hobby plan terms are for non-commercial use] → mdconnect is a non-commercial open-source project. Revisit if that changes.
 - [Users may not know how to revoke a device grant] → Out of scope for this change. A later settings screen can link to `chrome://settings/content/usbDevices`.

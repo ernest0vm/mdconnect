@@ -23,7 +23,7 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 ## 4. Headers, routing and Vercel config
 
 - [x] 4.1 Add `apps/web/vercel.json` with the headers and rewrite from design.md decision 4, `installCommand: "yarn install --immutable"`, `buildCommand: "yarn turbo run build"` and `outputDirectory: "dist"`. Tests first in `test/vercel-config.test.ts`: CSP equals `contentSecurityPolicy` from `@mdconnect/core`; COOP is `same-origin`; COEP is `require-corp`; the `/(.*)` → `/index.html` rewrite exists. Verify the test fails when the CSP in `vercel.json` is edited by one character.
-- [ ] 4.2 Write `docs/deployment.md` with the Vercel project settings table from design.md decision 5 and the Corepack fallback. Verify every setting name matches the current Vercel dashboard.
+- [ ] 4.2 Write `docs/deployment.md` with the Vercel project settings table from design.md decision 5 and how Yarn runs without Corepack (committed release, `yarnPath`). Verify every setting name matches the current Vercel dashboard.
 
 ## 5. Vercel project (maintainer, manual)
 
