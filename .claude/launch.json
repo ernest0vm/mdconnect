@@ -1,0 +1,31 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web-preview",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "@mdconnect/web", "preview", "--port", "4173", "--strictPort"],
+      "port": 4173
+    },
+    {
+      "name": "web-dev",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": ["workspace", "@mdconnect/web", "dev", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "web-preview-lan",
+      "runtimeExecutable": "yarn",
+      "runtimeArgs": [
+        "workspace",
+        "@mdconnect/web",
+        "preview",
+        "--host",
+        "--port",
+        "4175",
+        "--strictPort"
+      ],
+      "port": 4175
+    }
+  ]
+}

@@ -1,8 +1,15 @@
 # mdconnect
 
-Keep Sony NetMD and Hi-MD MiniDisc devices usable. mdconnect is a port of [Web MiniDisc Pro](https://github.com/asivery/webminidisc) that ships as a **desktop app** (Electron, macOS / Windows / Linux) and, soon, a **web app** for Chromium-based browsers, from one TypeScript codebase.
+Keep Sony NetMD and Hi-MD MiniDisc devices usable. mdconnect is a port of [Web MiniDisc Pro](https://github.com/asivery/webminidisc) that ships as a **desktop app** (Electron, macOS / Windows / Linux) and a **web app** for Chromium-based browsers, from one TypeScript codebase.
 
 Current status: the walking skeleton. The app connects to a supported MiniDisc device over WebUSB and shows its name and USB IDs. Disc management is being ported next.
+
+## Download
+
+- **Web app:** open it in Google Chrome, Microsoft Edge, Opera or another Chromium-based browser. Firefox and Safari do not support WebUSB. The production URL is added here once the Vercel project is live (see [docs/deployment.md](docs/deployment.md)). The web app supports NetMD devices, including Hi-MD devices switched to NetMD mode.
+- **Desktop app:** there are no published installers yet. Build one for your OS from source with `yarn package` (see [Getting started](#getting-started)); the installer is written to `apps/desktop/release/`. Once a release workflow exists, installers will be on the [GitHub Releases](https://github.com/ernest0vm/mdconnect/releases) page.
+
+Before connecting a device on Windows or Linux, follow [docs/platform-setup.md](docs/platform-setup.md).
 
 ## Credits and license
 
@@ -32,13 +39,14 @@ yarn install
 yarn dev
 ```
 
-`yarn dev` starts the desktop app with hot reload. Before connecting a device on Windows or Linux, follow [docs/platform-setup.md](docs/platform-setup.md).
+`yarn dev` starts the desktop app with hot reload; `yarn dev:web` starts the web app at <http://localhost:5173>. Before connecting a device on Windows or Linux, follow [docs/platform-setup.md](docs/platform-setup.md).
 
 ## Commands
 
 | Command               | What it does                                                                |
 | --------------------- | --------------------------------------------------------------------------- |
 | `yarn dev`            | Run the desktop app in development                                          |
+| `yarn dev:web`        | Run the web app in development                                              |
 | `yarn check`          | Format, lint, type-check, test and validate OpenSpec for the whole repo     |
 | `yarn check:affected` | The same, only for what changed relative to `main`                          |
 | `yarn package`        | Build an unsigned installer for the current OS into `apps/desktop/release/` |
@@ -47,6 +55,7 @@ yarn dev
 
 ```
 apps/desktop      Electron shell (main process, preload, renderer entry)
+apps/web          Vite web shell, deployed on Vercel
 packages/core     Platform-agnostic logic: device table, USB filters, error kinds
 packages/ui       Design system: GlassyUI components, theme
 packages/app      React screens written against a Platform interface

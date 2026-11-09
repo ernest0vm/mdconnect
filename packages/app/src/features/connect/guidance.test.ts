@@ -40,6 +40,29 @@ describe('guidanceFor', () => {
     });
   });
 
+  describe('no-device on the web (usb-device-access: "Web device selection")', () => {
+    it.each(ALL_OS)('on %s adds the browser-list hint and the Hi-MD note', (os) => {
+      const { message } = guidanceFor('no-device', os, 'web');
+      expect(message).toMatch(/browser's list/i);
+      expect(message).toMatch(/does not support Hi-MD mode yet/i);
+      expect(message).toMatch(/NetMD mode/);
+      expect(message).not.toMatch(/desktop app/i);
+      expect(message).not.toMatch(/cannot be used in a browser/i);
+    });
+
+    it('leaves the desktop message without the web hints', () => {
+      expect(guidanceFor('no-device', 'macos', 'desktop').message).not.toMatch(/browser/i);
+    });
+
+    it('keeps every other kind identical between web and desktop', () => {
+      for (const os of ALL_OS) {
+        for (const kind of ['cancelled', 'access-denied', 'unknown'] as const) {
+          expect(guidanceFor(kind, os, 'web')).toEqual(guidanceFor(kind, os, 'desktop'));
+        }
+      }
+    });
+  });
+
   it.each(ALL_OS)('cancelled on %s says no device was chosen', (os) => {
     expect(guidanceFor('cancelled', os).message).toMatch(/no device was chosen/i);
   });

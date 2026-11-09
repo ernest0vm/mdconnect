@@ -1,6 +1,6 @@
 import type { UsbFailureKind } from '@mdconnect/core';
 
-import type { OperatingSystem } from '../../platform';
+import type { OperatingSystem, PlatformKind } from '../../platform';
 
 /** Community setup guide that upstream webminidisc also points to. */
 const SETUP_GUIDE_URL = 'https://www.minidisc.wiki/guides/webminidisc/requirements';
@@ -36,14 +36,25 @@ const ACCESS_DENIED: Record<OperatingSystem, Guidance> = {
   other: { title: 'Could not open the device', message: RECONNECT },
 };
 
-/** Readable guidance for a failed connection attempt; never a raw error. */
-export function guidanceFor(kind: UsbFailureKind, os: OperatingSystem): Guidance {
+const NO_DEVICE = 'No supported MiniDisc device was found.';
+
+/**
+ * Readable guidance for a failed connection attempt; never a raw error. On the web the browser's
+ * own chooser is used and only NetMD devices are offered, so `no-device` explains both.
+ */
+export function guidanceFor(
+  kind: UsbFailureKind,
+  os: OperatingSystem,
+  platformKind: PlatformKind = 'desktop',
+): Guidance {
   switch (kind) {
     case 'no-device':
       return {
         title: 'No device found',
         message:
-          'No supported MiniDisc device was found. Check the USB cable and that the device is in NetMD or Hi-MD mode.',
+          platformKind === 'web'
+            ? `${NO_DEVICE} Check the USB cable, and pick the device in the browser's list. mdconnect does not support Hi-MD mode yet; switch the device to NetMD mode if it offers one.`
+            : `${NO_DEVICE} Check the USB cable and that the device is in NetMD or Hi-MD mode.`,
       };
     case 'cancelled':
       return { title: 'Cancelled', message: 'No device was chosen.' };

@@ -76,6 +76,8 @@ export function createFakePlatform(overrides: Partial<Platform> = {}): FakePlatf
     kind: 'desktop',
     os: 'macos',
     usb,
+    deviceKinds: ['netmd', 'himd'],
+    buildCommit: '',
     deviceChooser: {
       onChooseDevice: (callback) => {
         chooserListeners.add(callback);

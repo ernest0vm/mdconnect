@@ -100,11 +100,18 @@ export interface UsbFilter {
   readonly productId: number;
 }
 
-/** WebUSB request filters: one per unique vendor/product pair in the table. */
-export function usbFilters(): UsbFilter[] {
+export interface UsbFilterOptions {
+  /** Device kinds to include; defaults to every kind. The web app requests NetMD only. */
+  readonly kinds?: readonly DeviceKind[];
+}
+
+/** WebUSB request filters: one per unique vendor/product pair among the selected kinds. */
+export function usbFilters(options: UsbFilterOptions = {}): UsbFilter[] {
+  const kinds = new Set<DeviceKind>(options.kinds ?? ['netmd', 'himd']);
   const seen = new Set<string>();
   const filters: UsbFilter[] = [];
-  for (const { vendorId, productId } of SUPPORTED_DEVICES) {
+  for (const { vendorId, productId, kind } of SUPPORTED_DEVICES) {
+    if (!kinds.has(kind)) continue;
     const key = `${String(vendorId)}:${String(productId)}`;
     if (seen.has(key)) continue;
     seen.add(key);

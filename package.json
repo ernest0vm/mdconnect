@@ -15,6 +15,7 @@
     "postinstall": "husky",
     "build": "turbo run build",
     "dev": "turbo run dev --filter=@mdconnect/desktop",
+    "dev:web": "turbo run dev --filter=@mdconnect/web",
     "package": "turbo run package --filter=@mdconnect/desktop",
     "check": "turbo run root:format root:lint root:typecheck root:specs format:check lint typecheck test",
     "check:affected": "turbo run root:format root:lint root:typecheck root:specs format:check lint typecheck test --affected",

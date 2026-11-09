@@ -1,3 +1,4 @@
+import type { DeviceKind } from '@mdconnect/core';
 import { describe, expect, it } from 'vitest';
 
 import type { UsbDeviceHandle } from '../../platform';
@@ -47,12 +48,14 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 const MZ_N510 = 0x00c9;
 const MZ_RH1 = 0x0286;
 
-function setup() {
+function setup(kinds: readonly DeviceKind[] = ['netmd', 'himd']) {
   const usb = new FakeUsb();
   const actions: ConnectAction['type'][] = [];
-  const controller = new ConnectionController(usb, (action) => actions.push(action.type));
+  const controller = new ConnectionController(usb, kinds, (action) => actions.push(action.type));
   return { usb, actions, controller };
 }
+
+const HIMD_MODE_RH1 = { vendorId: 0x054c, productId: 0x0287 };
 
 describe('ConnectionController', () => {
   it('connects the device the user picks', async () => {
@@ -191,5 +194,18 @@ describe('ConnectionController', () => {
     await first;
     controller.handleDisconnect(b.handle);
     expect(actions).toEqual(['request-started', 'connected']);
+  });
+
+  it('requests every supported device kind on desktop', async () => {
+    const { usb, controller } = setup();
+    await controller.request(() => false);
+    expect(usb.requestedFilters[0]).toContainEqual(HIMD_MODE_RH1);
+  });
+
+  it('requests NetMD devices only on the web', async () => {
+    const { usb, controller } = setup(['netmd']);
+    await controller.request(() => false);
+    expect(usb.requestedFilters[0]).not.toContainEqual(HIMD_MODE_RH1);
+    expect(usb.requestedFilters[0]).toHaveLength(47);
   });
 });

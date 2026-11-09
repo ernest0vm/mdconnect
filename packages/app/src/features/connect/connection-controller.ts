@@ -1,4 +1,4 @@
-import { classifyUsbError, usbFilters } from '@mdconnect/core';
+import { classifyUsbError, usbFilters, type DeviceKind } from '@mdconnect/core';
 
 import type { PlatformUsb, UsbDeviceHandle } from '../../platform';
 import { describeDevice, type ConnectAction } from './connect-state';
@@ -18,6 +18,7 @@ export class ConnectionController {
 
   constructor(
     private readonly usb: PlatformUsb,
+    private readonly deviceKinds: readonly DeviceKind[],
     private readonly dispatch: (action: ConnectAction) => void,
   ) {}
 
@@ -27,7 +28,7 @@ export class ConnectionController {
     try {
       let handle: UsbDeviceHandle;
       try {
-        handle = await this.usb.requestDevice({ filters: usbFilters() });
+        handle = await this.usb.requestDevice({ filters: usbFilters({ kinds: this.deviceKinds }) });
       } catch (error) {
         this.dispatch({
           type: 'failed',

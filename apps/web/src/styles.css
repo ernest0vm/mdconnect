@@ -1,0 +1,5 @@
+@import '@mdconnect/ui/globals.css';
+
+/* Tailwind 4 skips workspace packages resolved through node_modules; scan their sources. */
+@source '../../../packages/ui/src';
+@source '../../../packages/app/src';

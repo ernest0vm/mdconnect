@@ -58,6 +58,15 @@ The `.deb` path was verified by inspecting a built package (`/opt/mdconnect/reso
 
 The rule file is generated from the supported device table (`packages/core/src/devices.ts`); a unit test fails if the two drift apart.
 
+## Web app (browsers)
+
+- **Supported browsers:** Google Chrome, Microsoft Edge, Opera and other Chromium-based browsers. Firefox and Safari do not implement WebUSB; the web app shows an explanation and a link to the desktop app instead.
+- **Secure context:** WebUSB only works over HTTPS (or on `localhost`). Opening the app over plain HTTP from another machine shows the unsupported-browser screen.
+- **Device permissions:** the browser asks you to pick the device the first time and remembers the grant for this site. Revoke it in the browser's site settings (in Chrome: `chrome://settings/content/usbDevices`).
+- **Hi-MD mode:** the web app offers NetMD devices only. Hi-MD devices work when switched to NetMD mode; mdconnect does not support Hi-MD mode yet.
+- **The OS setup above still applies:** the WinUSB driver on Windows and the udev rule on Linux are needed in the browser too.
+- **Linux Snap or Flatpak browsers** run sandboxed and may not see USB devices even with the udev rule. Use a browser installed from your distribution's packages, or the desktop app.
+
 ## Verified hardware
 
 | OS         | Device | Result | Notes                                                                     |

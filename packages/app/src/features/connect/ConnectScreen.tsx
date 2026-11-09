@@ -19,8 +19,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   const [state, dispatch] = useReducer(connectReducer, initialConnectState);
   const chooserCancelled = useRef(false);
   const controller = useMemo(
-    () => new ConnectionController(platform.usb, dispatch),
-    [platform.usb],
+    () => new ConnectionController(platform.usb, platform.deviceKinds, dispatch),
+    [platform.usb, platform.deviceKinds],
   );
 
   const requestDevice = () => {
@@ -55,7 +55,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
     };
   }, [platform.usb, controller]);
 
-  const guidance = state.failure === null ? null : guidanceFor(state.failure, platform.os);
+  const guidance =
+    state.failure === null ? null : guidanceFor(state.failure, platform.os, platform.kind);
 
   return (
     <GlassPanel className="flex w-full max-w-md flex-col gap-4 p-6">
