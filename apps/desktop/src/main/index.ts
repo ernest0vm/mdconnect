@@ -65,6 +65,10 @@ function showMainWindow(): void {
   mainWindow.focus();
 }
 
+/**
+ * Creates the hardened main window. Reloads and closing cancel a pending chooser request so
+ * Electron's `select-usb-device` callback is always answered.
+ */
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 960,

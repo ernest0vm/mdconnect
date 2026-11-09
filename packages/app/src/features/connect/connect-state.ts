@@ -26,6 +26,10 @@ export type ConnectAction =
 
 export const initialConnectState: ConnectState = { device: null, requesting: false, failure: null };
 
+/**
+ * State transitions of the Connect screen. Failures never clear the connected device: a failed
+ * switch leaves the previous device open, and only its own unplug resets the screen.
+ */
 export function connectReducer(state: ConnectState, action: ConnectAction): ConnectState {
   switch (action.type) {
     case 'request-started':

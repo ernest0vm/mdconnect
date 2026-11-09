@@ -52,6 +52,10 @@ export class ConnectionController {
     }
   }
 
+  /**
+   * Forwards a USB `disconnect`. An unplug of the device being switched to is remembered and
+   * applied when the switch settles; only the open device itself resets the screen.
+   */
   handleDisconnect(handle: UsbDeviceHandle): void {
     if (handle === this.switchingTo) {
       this.unplugged.add(handle);
@@ -63,6 +67,7 @@ export class ConnectionController {
     }
   }
 
+  /** Claims the busy guard synchronously; false when another open already holds it. */
   private begin(): boolean {
     if (this.busy) return false;
     this.busy = true;
@@ -70,6 +75,10 @@ export class ConnectionController {
     return true;
   }
 
+  /**
+   * Switches to `handle` and reports the outcome: connected, failed (previous device stays open),
+   * or disconnected when the new device was unplugged before the switch finished.
+   */
   private async open(handle: UsbDeviceHandle): Promise<void> {
     const device = describeDevice(handle);
     if (device === undefined) {

@@ -47,6 +47,7 @@ function modelKey(device: ChooserDevice): string {
   return `${device.name}|${formatUsbId(device.vendorId, device.productId)}`;
 }
 
+/** Serials tell identical devices apart only when every device reports one and none repeat. */
 function hasDistinctSerials(group: readonly ChooserDevice[]): boolean {
   if (group.length < 2) return true;
   const serials = group.map((d) => d.serialNumber);

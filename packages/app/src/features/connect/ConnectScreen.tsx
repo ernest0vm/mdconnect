@@ -11,6 +11,10 @@ import { connectReducer, describeDevice, formatUsbId, initialConnectState } from
 import { ConnectionController } from './connection-controller';
 import { guidanceFor } from './guidance';
 
+/**
+ * The walking-skeleton screen: connect a MiniDisc device and show it, or explain why not.
+ * Connection logic lives in ConnectionController; this component renders its state.
+ */
 export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   const [state, dispatch] = useReducer(connectReducer, initialConnectState);
   const chooserCancelled = useRef(false);

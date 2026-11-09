@@ -10,6 +10,11 @@ export interface ClassifyOptions {
 
 const ACCESS_DENIED_NAMES = new Set(['SecurityError', 'NetworkError']);
 
+/**
+ * Maps a WebUSB failure to the kind the UI explains. A `NotFoundError` from `requestDevice()`
+ * means no device was chosen; it is `cancelled` only when the in-app chooser says so, because
+ * the browser reports an empty list and a dismissed chooser identically.
+ */
 export function classifyUsbError(
   error: unknown,
   phase: UsbPhase,
@@ -25,6 +30,7 @@ export function classifyUsbError(
   return 'unknown';
 }
 
+/** Reads `name` from a thrown value without assuming it is an Error or DOMException. */
 function errorName(error: unknown): string | undefined {
   if (typeof error !== 'object' || error === null || !('name' in error)) return undefined;
   return typeof error.name === 'string' ? error.name : undefined;

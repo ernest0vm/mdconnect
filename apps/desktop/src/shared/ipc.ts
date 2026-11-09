@@ -30,6 +30,7 @@ export interface AppearancePayload {
 
 export type DesktopOs = 'macos' | 'windows' | 'linux';
 
+/** Maps `process.platform` to the OS names the app uses; any other Unix is treated as Linux. */
 export function desktopOsFrom(platform: string): DesktopOs {
   if (platform === 'darwin') return 'macos';
   if (platform === 'win32') return 'windows';

@@ -34,6 +34,7 @@ export class ChooserBridge {
     private readonly newRequestId: () => string = randomUUID,
   ) {}
 
+  /** Sends a chooser request to the renderer, cancelling any request still pending. */
   ask(devices: readonly ChooserDevicePayload[], callback: SelectionCallback): void {
     this.cancelPending();
     const requestId = this.newRequestId();
@@ -41,6 +42,10 @@ export class ChooserBridge {
     if (!this.send({ requestId, devices })) this.cancelPending();
   }
 
+  /**
+   * Applies the renderer's answer. Untrusted input: a stale request id is ignored, and a device id
+   * that was not offered cancels the request instead of selecting it.
+   */
   respond(requestId: unknown, deviceId: unknown): void {
     const pending = this.pending;
     if (pending === null || requestId !== pending.requestId) return;

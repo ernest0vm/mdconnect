@@ -15,6 +15,7 @@ export interface OriginContext {
   readonly devServerUrl: string | undefined;
 }
 
+/** True for the app's own origin; the dev-server origin counts only in unpackaged development. */
 export function isAppOrigin(origin: string, context: OriginContext): boolean {
   if (origin === APP_ORIGIN) return true;
   if (context.packaged || context.devServerUrl === undefined) return false;

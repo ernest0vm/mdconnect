@@ -18,6 +18,7 @@ export const CSP_DIRECTIVES: CspDirectives = {
   'frame-ancestors': ["'none'"],
 };
 
+/** Serialises directives in insertion order, so shells can extend the shared policy safely. */
 export function buildCsp(directives: CspDirectives): string {
   return Object.entries(directives)
     .map(([name, sources]) => [name, ...sources].join(' '))
