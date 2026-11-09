@@ -67,11 +67,11 @@ When no disc is inserted, the app SHALL say so and offer Refresh. A blank disc S
 
 ### Requirement: Read failures
 
-A failed read SHALL show a readable message with a Retry action, never a raw error. If the device is unplugged while reading, the app SHALL return to the Connect screen as for any unplug. A device that does not answer NetMD commands SHALL get a message that mdconnect cannot read discs in Hi-MD mode yet, with a suggestion to switch the device to NetMD mode if it offers one.
+A failed read SHALL show a readable message with a Retry action, never a raw error. If the device is unplugged while reading, the app SHALL return to the Connect screen as for any unplug. A device in Hi-MD mode SHALL get a message that mdconnect cannot read discs in Hi-MD mode yet, with a suggestion to switch the device to NetMD mode if it offers one. A command that fails or times out SHALL NOT be taken as Hi-MD mode.
 
 #### Scenario: Command fails
 
-- **WHEN** a NetMD command fails or times out while reading
+- **WHEN** a NetMD command fails or times out while reading, including the first query after connecting
 - **THEN** the screen explains that the disc could not be read and offers Retry
 
 #### Scenario: Unplugged while reading
@@ -81,5 +81,5 @@ A failed read SHALL show a readable message with a Retry action, never a raw err
 
 #### Scenario: Device in Hi-MD mode
 
-- **WHEN** a connected device does not answer NetMD commands (for example an MZ-NH600 in Hi-MD mode, which shares `054c:0187` with the NetMD MZ-NH600D, or a Hi-MD-mode device opened by the desktop app)
+- **WHEN** a connected device is in Hi-MD mode: its USB ID exists only in Hi-MD mode (a Hi-MD-mode device opened by the desktop app), or its NetMD interface cannot be opened (for example an MZ-NH600 in Hi-MD mode, which shares `054c:0187` with the NetMD MZ-NH600D)
 - **THEN** the screen says mdconnect cannot read discs in Hi-MD mode yet and suggests switching the device to NetMD mode if it offers one

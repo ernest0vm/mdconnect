@@ -8,6 +8,11 @@ describe('decodeSjis (disc-contents: "Japanese titles")', () => {
     // "テスト" in Shift-JIS.
     expect(decodeSjis(new Uint8Array([0x83, 0x65, 0x83, 0x58, 0x83, 0x67]))).toBe('テスト');
   });
+
+  it('decodes half-width kana in half-width titles, which are Shift-JIS too', () => {
+    // "ｱｲｳ" (half-width katakana) in Shift-JIS.
+    expect(decodeSjis(new Uint8Array([0xb1, 0xb2, 0xb3]))).toBe('ｱｲｳ');
+  });
 });
 
 describe('discDisplayTitle', () => {

@@ -1,3 +1,4 @@
+import { findDevice } from '@mdconnect/core';
 import { GlassAlert } from '@mdconnect/ui/components/glassyui/glass-alert';
 import { GlassBadge } from '@mdconnect/ui/components/glassyui/glass-badge';
 import { GlassButton } from '@mdconnect/ui/components/glassyui/glass-button';
@@ -63,7 +64,13 @@ function DiscContents({ disc }: { readonly disc: DiscView }) {
 
 /** Reads the disc in the open device and shows it, with Refresh and the empty and error states. */
 export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
-  const reader = useMemo(() => new DiscReader(() => openNetMdSession(device)), [device]);
+  const reader = useMemo(
+    () =>
+      new DiscReader(() => openNetMdSession(device), {
+        hiMdModeOnly: findDevice(device.vendorId, device.productId)?.kind === 'himd',
+      }),
+    [device],
+  );
   const [result, setResult] = useState<DiscReadResult | 'reading'>('reading');
   const [generation, setGeneration] = useState(0);
 

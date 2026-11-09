@@ -47,17 +47,33 @@ describe('DiscReader', () => {
     expect(listed).toBe(false);
   });
 
-  it('reports a device that does not answer NetMD when opening or the first query fails (disc-contents: "Device in Hi-MD mode")', async () => {
+  it('reports Hi-MD mode when the NetMD session cannot be opened, for example its interface cannot be claimed (disc-contents: "Device in Hi-MD mode")', async () => {
     const failingOpen = new DiscReader(() =>
-      Promise.reject(new DOMException('claim', 'NetworkError')),
+      Promise.reject(new DOMException('claim', 'SecurityError')),
     );
     expect(await failingOpen.read()).toEqual({ kind: 'failed', reason: 'not-netmd' });
+  });
+
+  it('reports Hi-MD mode for a Hi-MD-mode device ID without opening a session', async () => {
+    let opened = false;
+    const reader = new DiscReader(
+      () => {
+        opened = true;
+        return Promise.resolve(session());
+      },
+      { hiMdModeOnly: true },
+    );
+    expect(await reader.read()).toEqual({ kind: 'failed', reason: 'not-netmd' });
+    expect(opened).toBe(false);
+  });
+
+  it('treats a timeout on the first query as a failed read with Retry, not as Hi-MD mode (disc-contents: "Command fails")', async () => {
     const silent = new DiscReader(() =>
       Promise.resolve(
         session({ isDiscPresent: () => Promise.reject(new NetMdTimeoutError('no reply')) }),
       ),
     );
-    expect(await silent.read()).toEqual({ kind: 'failed', reason: 'not-netmd' });
+    expect(await silent.read()).toEqual({ kind: 'failed', reason: 'read-failed' });
   });
 
   it('reports a failed read when listing fails (disc-contents: "Command fails")', async () => {

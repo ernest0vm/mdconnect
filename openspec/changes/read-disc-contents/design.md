@@ -59,11 +59,12 @@ Every ported file keeps a header naming the upstream project, its authors and th
 
 ### 3. Titles decode without dependencies
 
-Half-width titles are ASCII or Latin-1. Full-width titles are Shift-JIS, decoded with the platform's `TextDecoder('shift_jis')`, available in Chromium and Electron. Reading does not sanitise titles, so `diacritics` is not needed.
+Both title forms are Shift-JIS, as upstream decodes them. Half-width titles can hold half-width katakana, and full-width titles hold full-width characters. Both decode with the platform's `TextDecoder('shift_jis')`, available in Chromium and Electron. Reading does not sanitise titles, so `diacritics` is not needed.
 
 ### 4. Reading lives in a disc feature in `packages/app`
 
 - A `DiscReader` takes a connected handle and returns a `Disc` view model: the title, the groups with their tracks, and for each track its number, title, duration in seconds and mode label, plus capacity in seconds and `writeProtected`. It serialises USB access, so a Refresh never overlaps a running read.
+- Upstream lists every ungrouped track before the groups (`getTrackGroupList` unshifts them). The view model rebuilds disc order instead: it walks the tracks by their global number and starts a new section whenever the group changes, so tracks 1–2 in a group and track 3 in none show as 1, 2, 3.
 - The Connect screen hands over to a Disc screen once connected. The Disc screen shows:
   - the device name and USB ID line;
   - the disc panel with its title, capacity and protection;
@@ -72,7 +73,7 @@ Half-width titles are ASCII or Latin-1. Full-width titles are Shift-JIS, decoded
 - Error mapping:
   - a command error or a timeout → "could not read the disc" with Retry;
   - an unplug during a read → the existing `device-disconnected` path, with no error shown;
-  - no reply to the first NetMD query → the Hi-MD mode message.
+  - the Hi-MD mode message only when the USB ID exists only in Hi-MD mode, or when the NetMD session cannot be opened at all (the interface cannot be selected or claimed, because in Hi-MD mode the device exposes USB mass storage instead). A failed or timed-out query, even the first one, is a read failure with Retry, never Hi-MD mode.
 
 ### 5. Tests replay recorded replies
 
@@ -90,7 +91,7 @@ A manual task records the request and reply bytes of one full `listContent` on t
 - **Windows:** the WinUSB driver requirement from `docs/platform-setup.md` still applies; without it, opening fails before reading starts, with the existing guidance.
 - **Linux:** the udev rule still applies.
 - **macOS:** another app holding the device stays the existing "device busy" path.
-- **Hi-MD mode:** on the web, Hi-MD-only IDs are never offered. The shared `054c:0187` and, on desktop, Hi-MD-kind devices reach the Hi-MD mode message when NetMD queries get no reply.
+- **Hi-MD mode:** on the web, Hi-MD-only IDs are never offered. On the desktop, a Hi-MD-only ID gets the Hi-MD mode message without any query. The shared `054c:0187` is treated as NetMD; if it is really in Hi-MD mode, opening the NetMD session fails and the Hi-MD mode message follows.
 
 ### 7. Dependencies
 

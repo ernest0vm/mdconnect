@@ -29,6 +29,11 @@ export async function openNetMdSession(handle: UsbDeviceHandle): Promise<DiscSes
   };
 }
 
+export interface DiscReaderOptions {
+  /** The device's USB ID exists only in Hi-MD mode, so NetMD cannot read it. */
+  readonly hiMdModeOnly?: boolean;
+}
+
 /**
  * Reads the disc in one connected device. Reads run one at a time: a Refresh waits for the read
  * in progress. The NetMD session is opened on the first read and reused.
@@ -37,7 +42,10 @@ export class DiscReader {
   private session: Promise<DiscSession> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
 
-  constructor(private readonly openSession: () => Promise<DiscSession>) {}
+  constructor(
+    private readonly openSession: () => Promise<DiscSession>,
+    private readonly options: DiscReaderOptions = {},
+  ) {}
 
   read(): Promise<DiscReadResult> {
     const next = this.queue.then(() => this.readOnce());
@@ -45,19 +53,23 @@ export class DiscReader {
     return next;
   }
 
+  /**
+   * Hi-MD mode is reported only when the ID says so or the NetMD interface cannot be claimed
+   * (in Hi-MD mode the device exposes USB mass storage instead). A failed or timed-out query is a
+   * failed read, which the user can retry.
+   */
   private async readOnce(): Promise<DiscReadResult> {
+    if (this.options.hiMdModeOnly === true) return { kind: 'failed', reason: 'not-netmd' };
     let session: DiscSession;
-    let present: boolean;
     try {
       this.session ??= this.openSession();
       session = await this.session;
-      present = await session.isDiscPresent();
     } catch {
       this.session = null;
       return { kind: 'failed', reason: 'not-netmd' };
     }
-    if (!present) return { kind: 'no-disc' };
     try {
+      if (!(await session.isDiscPresent())) return { kind: 'no-disc' };
       return { kind: 'disc', disc: toDiscView(await session.listContent()) };
     } catch {
       return { kind: 'failed', reason: 'read-failed' };
