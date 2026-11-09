@@ -1,0 +1,195 @@
+import { describe, expect, it } from 'vitest';
+
+import type { UsbDeviceHandle } from '../../platform';
+import { FakeUsb } from '../../testing/fake-platform';
+import type { ConnectAction } from './connect-state';
+import { ConnectionController } from './connection-controller';
+
+/** A device whose open() and close() resolve only when the test says so. */
+function controllableDevice(productId: number) {
+  let resolveOpen: () => void = () => undefined;
+  let rejectOpen: (error: unknown) => void = () => undefined;
+  let resolveClose: () => void = () => undefined;
+  const calls: string[] = [];
+  const handle: UsbDeviceHandle = {
+    vendorId: 0x054c,
+    productId,
+    open: () => {
+      calls.push('open');
+      return new Promise<void>((resolve, reject) => {
+        resolveOpen = resolve;
+        rejectOpen = reject;
+      });
+    },
+    close: () => {
+      calls.push('close');
+      return new Promise<void>((resolve) => {
+        resolveClose = resolve;
+      });
+    },
+  };
+  return {
+    handle,
+    calls,
+    finishOpen: () => {
+      resolveOpen();
+    },
+    failOpen: (error: unknown) => {
+      rejectOpen(error);
+    },
+    finishClose: () => {
+      resolveClose();
+    },
+  };
+}
+
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+const MZ_N510 = 0x00c9;
+const MZ_RH1 = 0x0286;
+
+function setup() {
+  const usb = new FakeUsb();
+  const actions: ConnectAction['type'][] = [];
+  const controller = new ConnectionController(usb, (action) => actions.push(action.type));
+  return { usb, actions, controller };
+}
+
+describe('ConnectionController', () => {
+  it('connects the device the user picks', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const done = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await done;
+    expect(actions).toEqual(['request-started', 'connected']);
+  });
+
+  it('classifies a cancelled in-app chooser', async () => {
+    const { actions, controller } = setup();
+    await controller.request(() => true);
+    expect(actions).toEqual(['request-started', 'failed']);
+  });
+
+  it('ignores a plug-in event while a manual request is running', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const manual = controller.request(() => false);
+    await controller.autoConnect(b.handle);
+    await flush();
+    a.finishOpen();
+    await manual;
+    expect(b.calls).toEqual([]);
+    expect(actions).toEqual(['request-started', 'connected']);
+  });
+
+  it('ignores a manual request while an automatic open is running', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const auto = controller.autoConnect(a.handle);
+    await controller.request(() => false);
+    a.finishOpen();
+    await auto;
+    expect(usb.requestedFilters).toEqual([]);
+    expect(actions).toEqual(['request-started', 'connected']);
+  });
+
+  it('does not replace a connected device on a plug-in event', async () => {
+    const { actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    const first = controller.autoConnect(a.handle);
+    a.finishOpen();
+    await first;
+    await controller.autoConnect(b.handle);
+    expect(b.calls).toEqual([]);
+    expect(actions).toEqual(['request-started', 'connected']);
+  });
+
+  it('ignores unsupported devices on plug-in', async () => {
+    const { actions, controller } = setup();
+    const keyboard: UsbDeviceHandle = {
+      vendorId: 0x046d,
+      productId: 0xc52b,
+      open: () => Promise.resolve(),
+      close: () => Promise.resolve(),
+    };
+    await controller.autoConnect(keyboard);
+    expect(actions).toEqual([]);
+  });
+
+  it('switches devices: opens the new one, closes the previous one', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    const first = controller.autoConnect(a.handle);
+    a.finishOpen();
+    await first;
+    usb.nextRequest = () => Promise.resolve(b.handle);
+    const second = controller.request(() => false);
+    await flush();
+    b.finishOpen();
+    await flush();
+    a.finishClose();
+    await second;
+    expect(a.calls).toEqual(['open', 'close']);
+    expect(actions).toEqual(['request-started', 'connected', 'request-started', 'connected']);
+  });
+
+  it('keeps the previous device when the new one fails to open', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    const first = controller.autoConnect(a.handle);
+    a.finishOpen();
+    await first;
+    usb.nextRequest = () => Promise.resolve(b.handle);
+    const second = controller.request(() => false);
+    await flush();
+    b.failOpen(new DOMException('denied', 'SecurityError'));
+    await second;
+    expect(a.calls).toEqual(['open']);
+    controller.handleDisconnect(a.handle);
+    expect(actions).toEqual([
+      'request-started',
+      'connected',
+      'request-started',
+      'failed',
+      'device-disconnected',
+    ]);
+  });
+
+  it('does not report a device that was unplugged while the switch finished', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    const first = controller.autoConnect(a.handle);
+    a.finishOpen();
+    await first;
+    usb.nextRequest = () => Promise.resolve(b.handle);
+    const second = controller.request(() => false);
+    await flush();
+    b.finishOpen();
+    await flush();
+    controller.handleDisconnect(b.handle);
+    a.finishClose();
+    await second;
+    expect(actions.at(-1)).toBe('device-disconnected');
+    expect(actions).not.toContain('failed');
+    expect(actions.filter((type) => type === 'connected')).toHaveLength(1);
+  });
+
+  it('ignores the unplugging of a device it never opened', async () => {
+    const { actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    const first = controller.autoConnect(a.handle);
+    a.finishOpen();
+    await first;
+    controller.handleDisconnect(b.handle);
+    expect(actions).toEqual(['request-started', 'connected']);
+  });
+});

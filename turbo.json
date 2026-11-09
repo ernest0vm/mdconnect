@@ -20,6 +20,11 @@
       "dependsOn": ["^build"],
       "outputs": ["dist/**", "out/**"]
     },
+    "package": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "outputs": ["release/**"]
+    },
     "typecheck": {
       "dependsOn": ["^build"],
       "outputs": []

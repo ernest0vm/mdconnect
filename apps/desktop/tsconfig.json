@@ -1,0 +1,5 @@
+{
+  "//": "Solution file for editors and typescript-eslint. `typecheck` runs tsconfig.node.json and tsconfig.web.json explicitly; `tsc -p` on this file checks nothing.",
+  "files": [],
+  "references": [{ "path": "./tsconfig.node.json" }, { "path": "./tsconfig.web.json" }]
+}

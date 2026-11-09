@@ -1,0 +1,5 @@
+/* Tailwind 4 + GlassyUI. Apps import this file and declare @source for packages/ui and packages/app. */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));

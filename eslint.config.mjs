@@ -1,5 +1,6 @@
 // @ts-check
 import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import prettier from 'eslint-config-prettier/flat';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import globals from 'globals';
@@ -47,6 +48,50 @@ export default defineConfig(
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       eqeqeq: ['error', 'always'],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
+    },
+  },
+
+  {
+    files: ['**/*.tsx'],
+    extends: [reactHooks.configs.flat.recommended],
+  },
+
+  // UI code runs in a browser (or Electron renderer/preload), not in Node.
+  {
+    files: ['packages/ui/**', 'packages/app/**', 'apps/desktop/src/{renderer,preload}/**'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
+
+  // Dependency direction: apps -> app -> ui, core. See CLAUDE.md "Layout".
+  {
+    files: ['packages/core/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: ['react', 'react-dom'],
+          patterns: [
+            { group: ['node:*'], message: 'core is platform-agnostic: no Node.js modules.' },
+            { group: ['@mdconnect/*'], message: 'core depends on no other workspace.' },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['packages/ui/**'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@mdconnect/app', '@mdconnect/core'],
+              message: 'ui is a leaf design system: it may not import app or core.',
+            },
+          ],
+        },
+      ],
     },
   },
 

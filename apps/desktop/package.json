@@ -1,0 +1,39 @@
+{
+  "name": "@mdconnect/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "license": "GPL-2.0-only",
+  "author": "mdconnect contributors",
+  "homepage": "https://github.com/ernest0vm/mdconnect",
+  "type": "module",
+  "description": "Electron shell: main process, preload bridge and renderer entry for @mdconnect/app.",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "node scripts/ensure-electron.mjs && electron-vite dev",
+    "build": "electron-vite build",
+    "package": "electron-vite build && electron-builder",
+    "lint": "eslint . --max-warnings 0",
+    "format:check": "prettier --check . --ignore-path ../../.gitignore --ignore-path ../../.prettierignore",
+    "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@mdconnect/app": "workspace:^",
+    "@mdconnect/core": "workspace:^",
+    "@mdconnect/tsconfig": "workspace:^",
+    "@tailwindcss/vite": "^4",
+    "@types/node": "^22.20.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/w3c-web-usb": "^1.0.14",
+    "@vitejs/plugin-react": "^6",
+    "electron": "44.10.1",
+    "electron-builder": "^26",
+    "electron-vite": "^6",
+    "react": "^19",
+    "react-dom": "^19",
+    "tailwindcss": "^4",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  }
+}

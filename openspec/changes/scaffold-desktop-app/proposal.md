@@ -43,6 +43,6 @@ None. There are no existing specs.
 
 - New workspaces: `packages/core`, `packages/ui`, `packages/app`, `apps/desktop`. Shared packages are consumed as TypeScript source (no build step), and `@mdconnect/repo-policy` applies to all of them.
 - New runtime dependencies: `react`, `react-dom`, and the shadcn/GlassyUI dependency set (Radix primitives, `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`, `tw-animate-css`). New dev dependencies: `electron`, `electron-vite`, `vite`, `@vitejs/plugin-react`, `tailwindcss`, `@tailwindcss/vite`, `electron-builder`, `@types/react`, `@types/react-dom`, `@types/w3c-web-usb`, `eslint-plugin-react-hooks`. Details and justification are in design.md.
-- `electron` needs its install script to download the binary, so it is opted in via root `dependenciesMeta`. This is the first exception to the "no install scripts" default.
+- No exception to the "no install scripts" default: Electron 44 has no install script and downloads its binary on first run, verified against its `checksums.json`.
 - The root ESLint config gains React rules for `.tsx` files and browser globals for UI code.
 - The root README gains the workspace layout and platform setup notes (Linux udev, Windows driver).

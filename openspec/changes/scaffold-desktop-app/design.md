@@ -92,15 +92,15 @@ packages/ui/
   components.json         shadcn (monorepo: aliases @mdconnect/ui/components, .../lib/utils)
   src/components/         shadcn + GlassyUI generated source
   src/lib/utils.ts
-  src/styles/globals.css  Tailwind 4, theme tokens, reduced-transparency overrides
-  src/theme.ts            resolveAppearance(signals, media) + applyAppearance(root, state)
+  src/styles/globals.css  Tailwind 4 + GlassyUI liquid.css (reduced motion and transparency)
+  src/theme.ts            resolveReducedTransparency + syncColorSchemeClass
 packages/app/src/
   platform.ts             Platform interface + shared types
   App.tsx                 root: theme wiring, screen routing
   features/connect/       Connect screen, chooser dialog, guidanceFor(kind, os)
   testing/fake-platform.ts
 apps/desktop/
-  electron.vite.config.ts, electron-builder.yml, components.json
+  electron.vite.config.ts, electron-builder.yml
   resources/linux/60-mdconnect.rules
   src/shared/ipc.ts       channel names + payload types (main <-> preload only)
   src/main/               index.ts, security.ts, app-protocol.ts, usb.ts
@@ -123,7 +123,7 @@ Hardening:
 - `will-navigate` and `will-redirect` are prevented. `setWindowOpenHandler` returns `deny` and calls `shell.openExternal` only for `http:` / `https:` URLs.
 - `setPermissionRequestHandler` denies everything (USB uses the device-permission path in decision 7, not this one).
 - CSP is sent as a response header by the `app://` handler: `default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'`. `style-src 'unsafe-inline'` is needed because Radix and GlassyUI set inline `style` attributes. In development a relaxed CSP is applied through `session.webRequest.onHeadersReceived`, allowing the Vite client and React Refresh preamble. The CSP string lives in `@mdconnect/core` (`contentSecurityPolicy`) so the web app sends exactly the same policy.
-- Electron fuses are set at package time: `RunAsNode` off, `EnableNodeOptionsEnvironmentVariable` off, `EnableNodeCliInspectArguments` off, `EnableEmbeddedAsarIntegrityValidation` on, `OnlyLoadAppFromAsar` on.
+- Electron fuses are set at package time: `RunAsNode` off, `EnableNodeOptionsEnvironmentVariable` off, `EnableNodeCliInspectArguments` off, `EnableEmbeddedAsarIntegrityValidation` on, `OnlyLoadAppFromAsar` on, `GrantFileProtocolExtraPrivileges` off (the renderer never uses `file://`).
 - `app.requestSingleInstanceLock()`. A second instance quits. The first restores and focuses its main window, or creates one if none exists (macOS after the window was closed). This also prevents two processes from fighting over the same USB device.
 
 ### 7. Desktop USB access is decided in the main process
@@ -169,38 +169,38 @@ window.mdconnect = {
 
 ### 10. UI foundation (`@mdconnect/ui`)
 
-- React 19, Tailwind CSS 4. shadcn/ui is set up in monorepo mode: `packages/ui/components.json` owns the components (aliases `@mdconnect/ui/components`, `@mdconnect/ui/lib/utils`, `tailwind.css: src/styles/globals.css`, empty `tailwind.config` for v4). Each app has its own `components.json` with the same `style`, `iconLibrary` and `baseColor`, pointing `ui`/`utils` at `@mdconnect/ui`. Running `shadcn add` inside an app installs into `packages/ui`.
-- The shadcn CLI runs through `yarn dlx shadcn@4.23.0` (pinned, older than 7 days) and is not a project dependency. GlassyUI components come from its registry (`@glassyui/<component>`). Initial set: Surface, Panel, Button, Dialog, Spinner, Alert, Badge.
+- React 19, Tailwind CSS 4. shadcn/ui follows its monorepo layout: `packages/ui/components.json` owns the components (aliases `@mdconnect/ui/components`, `@mdconnect/ui/lib/utils`, `tailwind.css: src/styles/globals.css`, empty `tailwind.config` for v4), with a `@mdconnect/ui/*` path alias so the CLI resolves them. `shadcn init` needs a framework to detect and `--monorepo` scaffolds a new repository, so the config is written by hand with the same shape.
+- GlassyUI components come from its registry through `yarn dlx shadcn@4.23.0 add @glassyui/<component>` (pinned, older than 7 days; the CLI is not a project dependency). They land in `src/components/glassyui/` with their own `lib/` and `styles/liquid.css`. The generated source is reviewed (no network access or `eval`; it only uses `localStorage` for its own preferences) and fixed to pass strict TypeScript and lint without disabling rules.
 - Each app's stylesheet does `@import "@mdconnect/ui/globals.css"` and declares `@source` for `packages/ui/src` and `packages/app/src`. Tailwind 4 skips workspace packages that resolve through `node_modules`, so their classes would be missing without these declarations.
-- Theme: `resolveAppearance(signals, media)` combines the OS colour scheme (`prefers-color-scheme`) with reduced transparency. Reduced transparency is on when either `signals.prefersReducedTransparency` (desktop: Electron's `nativeTheme`, via `Platform.appearance`) or Chromium's `prefers-reduced-transparency: reduce` reports it. Neither is reliable on every platform, so they are ORed. `applyAppearance` sets `data-lg-theme` (GlassyUI), the `dark` class (shadcn) and `data-reduced-transparency` on `<html>`. `watchAppearance(platform.appearance, matchMedia, onChange)` re-resolves whenever the platform signal changes or the `prefers-color-scheme` / `prefers-reduced-transparency` media queries fire `change`, so OS switches apply live in both apps (the web has no platform signal at all). CSS overrides in `globals.css` make glass surfaces opaque and remove `backdrop-filter` when that attribute is set. Reduced motion uses `prefers-reduced-motion`. On Linux desktops that expose no reduced-transparency preference, the default glass look is used, as the ui-theme spec states. Desktop main sets `nativeTheme.themeSource = 'system'` and forwards `nativeTheme` `updated` events.
+- Theme and accessibility reuse GlassyUI: `GlassProvider` follows `prefers-color-scheme`, `prefers-reduced-motion` and `prefers-reduced-transparency` live, and its `liquid.css` makes glass opaque under `data-lg-reduce-transparency` and stops animations under `data-lg-reduce-motion`. `@mdconnect/ui/theme` adds only what GlassyUI cannot know: `resolveReducedTransparency(platformSignal, mediaQuery)` ORs the desktop's `nativeTheme` signal with the media query, and `syncColorSchemeClass` keeps Tailwind's `dark` class in step with the active theme. `AppearanceBridge` in `@mdconnect/app` feeds the platform signal to GlassyUI with `setPreferences`. On Linux desktops that expose no reduced-transparency preference, the default glass look is used, as the ui-theme spec states. Desktop main sets `nativeTheme.themeSource = 'system'` and forwards `nativeTheme` `updated` events.
 
 ### 11. Lint and monorepo wiring
 
 - Root `eslint.config.mjs` gains `eslint-plugin-react-hooks` (recommended) for `**/*.tsx`, `globals.browser` for `packages/{ui,app}/**` and `apps/desktop/src/{renderer,preload}/**`, and the `no-restricted-imports` boundaries from decision 1. Generated `components/**` stays linted. Generated code that violates strict rules is fixed when it is added, not ignored.
+- `apps/desktop` lists every package as a `devDependency` and pins `electron` exactly (`44.10.1`): main, preload and renderer are fully bundled, so the installer ships no `node_modules`, and electron-builder needs an exact Electron version. `electron-builder.yml` sets `publish: null` (no update feeds yet) and `resetAdHocDarwinSignature: true`, because flipping fuses invalidates Electron's ad-hoc signature and macOS on Apple Silicon kills an unsigned binary on launch. For Linux it sets `executableName`, the deb `packageName` and `artifactName` to `mdconnect`, and the app manifest has a `homepage`: the scoped npm name `@mdconnect/desktop` is not a valid file or Debian package name, and Debian requires a homepage (found by cross-building the `.deb` on macOS).
 - Scripts: shared packages define `lint`, `format:check`, `typecheck`, `test`. `apps/desktop` adds `dev` (electron-vite dev), `build` (electron-vite build) and `package` (build + electron-builder for the current OS). Root forwards `dev` and `package` to the desktop app with `turbo run <task> --filter=@mdconnect/desktop`. Turbo gains an uncached `package` task with `release/**` outputs.
-- `dependenciesMeta.electron.built: true` in the **root** `package.json` (Yarn ignores `dependenciesMeta` in workspace manifests, and `@mdconnect/repo-policy` rejects it there) lets Electron's postinstall download its binary. No other package is opted in. If `esbuild` or another tool fails without its script, the task records it and opts that package in explicitly.
+- No package is opted in to install scripts. Electron 44 has no `postinstall`: `require('electron')` downloads the binary on first use and verifies it against `checksums.json`. electron-vite looks for the binary without triggering that download, so the desktop `dev` script runs `scripts/ensure-electron.mjs` first (found when `yarn dev` failed with "Electron uninstall" on a clean clone). If a tool ever fails without its script, the task opts that package in via root `dependenciesMeta` (Yarn ignores it in workspace manifests, and `@mdconnect/repo-policy` rejects it there) and records the reason in the policy test allowlist.
 
 ### Dependencies
 
 All versions are the newest that pass the 7-day gate at implementation time. Majors as of 2026-11-08:
 
-| Package                                                              | Where                    | Kind    | Purpose                                       | License                | Status                                                        |
-| -------------------------------------------------------------------- | ------------------------ | ------- | --------------------------------------------- | ---------------------- | ------------------------------------------------------------- |
-| `react`, `react-dom` 19.x                                            | app, ui (peer); desktop  | runtime | UI                                            | MIT                    | Active                                                        |
-| `radix-ui` 1.x (or per-primitive `@radix-ui/*` as GlassyUI requests) | ui                       | runtime | Accessible primitives under shadcn/GlassyUI   | MIT                    | Active (Oct 2026)                                             |
-| `class-variance-authority` 0.7, `clsx` 2.x, `tailwind-merge` 3.x     | ui                       | runtime | shadcn variant/class helpers                  | Apache-2.0 / MIT / MIT | Stable; cva has no release since 2024 but is feature-complete |
-| `lucide-react` 1.x                                                   | ui                       | runtime | Icons                                         | ISC                    | Active                                                        |
-| `tw-animate-css` 1.x                                                 | ui                       | runtime | shadcn animation utilities                    | MIT                    | Stable                                                        |
-| `tailwindcss` 4.x, `@tailwindcss/vite` 4.x                           | ui (peer); desktop       | dev     | Styling                                       | MIT                    | Active                                                        |
-| `electron` 44.x                                                      | desktop                  | dev     | Runtime (45.x is still inside the 7-day gate) | MIT                    | Active, release every 8 weeks                                 |
-| `electron-vite` 6.x                                                  | desktop                  | dev     | Build main/preload/renderer, HMR              | MIT                    | Active (6.0.0, Oct 2026)                                      |
-| `vite` 8.x, `@vitejs/plugin-react` 6.x                               | desktop                  | dev     | Renderer bundler, React transform             | MIT                    | Active                                                        |
-| `electron-builder` 26.x                                              | desktop                  | dev     | Installers, fuses                             | MIT                    | Active (Oct 2026)                                             |
-| `vitest` 5.x                                                         | every package with tests | dev     | Unit tests (already used by repo-policy)      | MIT                    | Active                                                        |
-| `@types/react`, `@types/react-dom` 19.x, `@types/w3c-web-usb` 1.x    | ui, app, core, desktop   | dev     | Types                                         | MIT                    | Active                                                        |
-| `eslint-plugin-react-hooks` 7.x                                      | root                     | dev     | Hooks lint rules                              | MIT                    | Active (React team)                                           |
+| Package                                                           | Where                    | Kind    | Purpose                                       | License   | Status                        |
+| ----------------------------------------------------------------- | ------------------------ | ------- | --------------------------------------------- | --------- | ----------------------------- |
+| `react`, `react-dom` 19.x                                         | app, ui (peer); desktop  | runtime | UI                                            | MIT       | Active                        |
+| `@radix-ui/react-slot` 1.x, `@radix-ui/react-dialog` 1.x          | ui                       | runtime | Primitives under GlassyUI's button and dialog | MIT       | Active                        |
+| `clsx` 2.x, `tailwind-merge` 3.x                                  | ui                       | runtime | Class helpers (`cn`)                          | MIT / MIT | Stable / active               |
+| `tw-animate-css` 1.x                                              | ui                       | dev     | shadcn animation utilities (CSS only)         | MIT       | Stable                        |
+| `tailwindcss` 4.x, `@tailwindcss/vite` 4.x                        | ui (peer); desktop       | dev     | Styling                                       | MIT       | Active                        |
+| `electron` 44.x                                                   | desktop                  | dev     | Runtime (45.x is still inside the 7-day gate) | MIT       | Active, release every 8 weeks |
+| `electron-vite` 6.x                                               | desktop                  | dev     | Build main/preload/renderer, HMR              | MIT       | Active (6.0.0, Oct 2026)      |
+| `vite` 8.x, `@vitejs/plugin-react` 6.x                            | desktop                  | dev     | Renderer bundler, React transform             | MIT       | Active                        |
+| `electron-builder` 26.x                                           | desktop                  | dev     | Installers, fuses                             | MIT       | Active (Oct 2026)             |
+| `vitest` 5.x                                                      | every package with tests | dev     | Unit tests (already used by repo-policy)      | MIT       | Active                        |
+| `@types/react`, `@types/react-dom` 19.x, `@types/w3c-web-usb` 1.x | ui, app, core, desktop   | dev     | Types                                         | MIT       | Active                        |
+| `eslint-plugin-react-hooks` 7.x                                   | root                     | dev     | Hooks lint rules                              | MIT       | Active (React team)           |
 
-Every runtime dependency in `ui` is required by the shadcn/GlassyUI generated code. Anything else GlassyUI's CLI tries to add is reviewed before it is accepted. `core` has no runtime dependencies.
+Every runtime dependency in `ui` is required by the GlassyUI components in use. `class-variance-authority` and `lucide-react`, planned earlier, are not needed by them and were not added; add them only with a component that uses them. `core` has no runtime dependencies.
 
 ### Platform behaviour (USB, packaging)
 
@@ -217,7 +217,7 @@ The same OS requirements apply to the web app in Chromium-based browsers. `add-w
 - [Windows needs a manual driver install, so the desktop app is not plug-and-play there yet] → Document it, show guidance in-app, verify behaviour on real hardware in this change, and plan a follow-up change for installer-driven driver setup (libwdi) or the node `usb` fallback.
 - [Source-consumed packages couple every consumer to the same TS and bundler settings] → All consumers already share `@mdconnect/tsconfig` and Vite. If a package must ever be published or run unbundled, add a build step to that package only.
 - [Package boundaries erode over time] → `no-restricted-imports` rules fail lint on wrong-direction imports, and `CLAUDE.md` plus `openspec/config.yaml` state where code belongs.
-- [`electron` postinstall downloads a binary from GitHub, outside the npm age gate] → Electron's download is checksum-verified against the npm package's `checksums.json`. It is the only package opted in to install scripts.
+- [Electron downloads its binary from GitHub on first run, outside the npm age gate] → The download is checksum-verified against the npm package's `checksums.json`, which did pass the age gate. No package runs install scripts.
 - [electron-builder downloads NSIS/AppImage tooling from GitHub at package time, also outside the age gate] → Acceptable for unsigned local builds. Revisit pinning or caching when release CI is set up.
 - [GlassyUI is a young, single-maintainer registry] → Its components are copied into the repo as source, so there is no runtime dependency on the project continuing. We own and can edit the code.
 - [`style-src 'unsafe-inline'` weakens the CSP] → Scripts stay strictly `'self'` and the renderer has no Node access, so inline styles cannot escalate to code execution.
