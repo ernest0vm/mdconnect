@@ -160,7 +160,9 @@ The web app SHALL NOT offer device IDs used only in Hi-MD mode, which expose onl
 #### Scenario: ID shared by NetMD and Hi-MD models
 
 - **WHEN** a device with ID `054c:0187` is connected (shared by the NetMD Sony MZ-NH600D and the Hi-MD Sony MZ-NH600)
-- **THEN** the web app still offers it and names it "Sony MZ-NH600D", because the ID alone cannot tell the modes apart; detecting the mode needs the NetMD handshake
+- **THEN** the web app's filters still include the ID, because the ID alone cannot tell the modes apart
+- **AND** the browser may still hide a device in Hi-MD mode; if the browser offers it and the connection succeeds, the Connect screen names it "Sony MZ-NH600D"
+- **AND** the app does not yet detect the mode during connection; that needs the NetMD handshake, which a later change adds
 
 ### Requirement: Web reconnect for granted devices
 
