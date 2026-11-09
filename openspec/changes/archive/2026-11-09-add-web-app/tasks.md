@@ -23,21 +23,21 @@ Prerequisite: `scaffold-desktop-app` is applied and archived.
 ## 4. Headers, routing and Vercel config
 
 - [x] 4.1 Add `apps/web/vercel.json` with the headers and rewrite from design.md decision 4, `installCommand: "yarn install --immutable"`, `buildCommand: "yarn run -T turbo run build"` and `outputDirectory: "dist"`. Tests first in `test/vercel-config.test.ts`: CSP equals `contentSecurityPolicy` from `@mdconnect/core`; COOP is `same-origin`; COEP is `require-corp`; the `/(.*)` → `/index.html` rewrite exists. Verify the test fails when the CSP in `vercel.json` is edited by one character.
-- [ ] 4.2 Write `docs/deployment.md` with the Vercel project settings table from design.md decision 5 and how Yarn runs without Corepack (committed release, `yarnPath`). Verify every setting name matches the current Vercel dashboard.
+- [ ] 4.2 Write `docs/deployment.md` with the Vercel project settings table from design.md decision 5 and how Yarn runs without Corepack (committed release, `yarnPath`). Verify every setting name matches the current Vercel dashboard. **Moved to #8:** the project was created through the Vercel API; the dashboard names were not compared.
 
 ## 5. Vercel project (maintainer, manual)
 
 - [x] 5.1 The maintainer creates the Vercel project from the GitHub repository with the settings in `docs/deployment.md`. Record the production URL in the README.
-- [ ] 5.2 Verify on this change's pull request that a preview deployment is created and its URL is commented. On a test pull request that only touches `apps/desktop`, verify that no web build runs (web-delivery: "Deployments").
+- [ ] 5.2 Verify on this change's pull request that a preview deployment is created and its URL is commented. On a test pull request that only touches `apps/desktop`, verify that no web build runs (web-delivery: "Deployments"). **Moved to #8:** the preview deployment and its PR comment are verified; the desktop-only skip needs a PR that touches only `apps/desktop`.
 - [x] 5.3 After merge, verify the production URL serves the new version, then check with `curl -I` that the CSP, COOP and COEP headers are present, and that `/device` returns the app rather than a 404 (web-delivery: "Security and isolation headers", "Routing fallback").
 
 ## 6. Browser and hardware verification
 
 - [x] 6.1 Chrome on macOS with a real NetMD device and one non-MiniDisc USB device connected: the chooser lists only the MiniDisc device; choosing it shows name and IDs; closing the chooser (with and without a device listed) shows the "no device found" message with the browser-list hint; reloading shows the device without the chooser; unplugging shows "no device connected" (usb-device-access: "Web device selection", "Web reconnect for granted devices"). In DevTools, `crossOriginIsolated` is `true`.
-- [ ] 6.2 Chrome or Edge on Windows: record the behaviour before and after installing the WinUSB driver, and confirm the guidance shown matches the desktop app.
-- [ ] 6.3 Chrome on Linux (non-Snap): confirm the udev guidance appears without the rule and the connect succeeds with it.
-- [ ] 6.4 Firefox and Safari: the unsupported-browser screen appears with the source footer, and DevTools shows no USB calls.
-- [ ] 6.5 Chrome with a Hi-MD device (for example MZ-RH1): in Hi-MD mode the chooser does not offer it and the Connect screen shows the "Hi-MD mode not supported yet" note; switched to NetMD mode, it connects. Record the observed chooser behaviour in `docs/platform-setup.md`. If an MZ-NH600 is available, record what happens in Hi-MD mode: it shares `054c:0187` with the NetMD MZ-NH600D (see design.md, Risks).
+- [ ] 6.2 Chrome or Edge on Windows: record the behaviour before and after installing the WinUSB driver, and confirm the guidance shown matches the desktop app. **Moved to #8:** needs Windows.
+- [ ] 6.3 Chrome on Linux (non-Snap): confirm the udev guidance appears without the rule and the connect succeeds with it. **Moved to #8:** needs Linux.
+- [ ] 6.4 Firefox and Safari: the unsupported-browser screen appears with the source footer, and DevTools shows no USB calls. **Moved to #8:** Safari shows the unsupported-browser screen with the source footer; Firefox is not installed here.
+- [ ] 6.5 Chrome with a Hi-MD device (for example MZ-RH1): in Hi-MD mode the chooser does not offer it and the Connect screen shows the "Hi-MD mode not supported yet" note; switched to NetMD mode, it connects. Record the observed chooser behaviour in `docs/platform-setup.md`. If an MZ-NH600 is available, record what happens in Hi-MD mode: it shares `054c:0187` with the NetMD MZ-NH600D (see design.md, Risks). **Moved to #8:** needs a Hi-MD device.
 
 ## 7. Documentation
 
