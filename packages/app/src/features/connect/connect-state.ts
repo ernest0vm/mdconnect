@@ -23,8 +23,11 @@ export type ConnectAction =
   | { readonly type: 'request-started' }
   | { readonly type: 'connected'; readonly device: ConnectedDevice }
   | { readonly type: 'failed'; readonly failure: UsbFailureKind }
-  /** Dispatched only when the open device itself is unplugged. */
-  | { readonly type: 'device-disconnected' };
+  /**
+   * Dispatched when the open device, or the one being switched to, is unplugged. `device` names
+   * the device that left (null when it is not in the supported table).
+   */
+  | { readonly type: 'device-disconnected'; readonly device: ConnectedDevice | null };
 
 export const initialConnectState: ConnectState = {
   device: null,
@@ -46,7 +49,7 @@ export function connectReducer(state: ConnectState, action: ConnectAction): Conn
     case 'failed':
       return { ...state, requesting: false, failure: action.failure };
     case 'device-disconnected':
-      return { ...initialConnectState, unplugged: state.device };
+      return { ...initialConnectState, unplugged: action.device };
   }
 }
 
@@ -68,6 +71,8 @@ export function describeDevice(handle: {
     name: entry.name,
     vendorId: handle.vendorId,
     productId: handle.productId,
-    serialNumber: handle.serialNumber ?? undefined,
+    // Chrome reports a missing serial number as an empty string; WebUSB allows null.
+    serialNumber:
+      handle.serialNumber === null || handle.serialNumber === '' ? undefined : handle.serialNumber,
   };
 }

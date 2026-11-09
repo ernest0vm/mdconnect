@@ -63,7 +63,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
           deviceKinds: platform.deviceKinds,
         });
 
-  const hint = state.device === null ? replugHint(state.unplugged, platform.kind) : null;
+  const hint = replugHint(state, platform.kind);
 
   return (
     <GlassPanel className="flex w-full max-w-md flex-col gap-4 p-6">

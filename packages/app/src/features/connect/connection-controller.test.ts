@@ -51,8 +51,12 @@ const MZ_RH1 = 0x0286;
 function setup(kinds: readonly DeviceKind[] = ['netmd', 'himd']) {
   const usb = new FakeUsb();
   const actions: ConnectAction['type'][] = [];
-  const controller = new ConnectionController(usb, kinds, (action) => actions.push(action.type));
-  return { usb, actions, controller };
+  const log: ConnectAction[] = [];
+  const controller = new ConnectionController(usb, kinds, (action) => {
+    actions.push(action.type);
+    log.push(action);
+  });
+  return { usb, actions, log, controller };
 }
 
 const HIMD_MODE_RH1 = { vendorId: 0x054c, productId: 0x0287 };
@@ -166,7 +170,7 @@ describe('ConnectionController', () => {
   });
 
   it('does not report a device that was unplugged while the switch finished', async () => {
-    const { usb, actions, controller } = setup();
+    const { usb, actions, log, controller } = setup();
     const a = controllableDevice(MZ_N510);
     const b = controllableDevice(MZ_RH1);
     const first = controller.autoConnect(a.handle);
@@ -183,6 +187,24 @@ describe('ConnectionController', () => {
     expect(actions.at(-1)).toBe('device-disconnected');
     expect(actions).not.toContain('failed');
     expect(actions.filter((type) => type === 'connected')).toHaveLength(1);
+    // The device that left is the one being switched to, not the previous one.
+    expect(log.at(-1)).toMatchObject({
+      type: 'device-disconnected',
+      device: { productId: MZ_RH1 },
+    });
+  });
+
+  it('reports which open device was unplugged', async () => {
+    const { log, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const opening = controller.autoConnect(a.handle);
+    a.finishOpen();
+    await opening;
+    controller.handleDisconnect(a.handle);
+    expect(log.at(-1)).toMatchObject({
+      type: 'device-disconnected',
+      device: { productId: MZ_N510 },
+    });
   });
 
   it('ignores the unplugging of a device it never opened', async () => {

@@ -35,6 +35,12 @@ describe('describeDevice', () => {
     });
   });
 
+  it('normalises the empty serial number Chrome reports for serial-less devices to undefined', () => {
+    expect(
+      describeDevice({ vendorId: 0x054c, productId: 0x00ca, serialNumber: '' })?.serialNumber,
+    ).toBeUndefined();
+  });
+
   it('normalises a null serial number to undefined', () => {
     expect(
       describeDevice({ vendorId: 0x054c, productId: 0x0286, serialNumber: null })?.serialNumber,
@@ -103,15 +109,15 @@ describe('connectReducer', () => {
     });
   });
 
-  it('clears the device when the open device is unplugged, remembering which one it was', () => {
-    expect(connectReducer(connected, { type: 'device-disconnected' })).toEqual({
+  it('clears the device when a device is unplugged, remembering the one the action names', () => {
+    expect(connectReducer(connected, { type: 'device-disconnected', device: mzRh1 })).toEqual({
       ...initialConnectState,
-      unplugged: mzN510,
+      unplugged: mzRh1,
     });
   });
 
   it('forgets the unplugged device once a device connects again', () => {
-    const unplugged = connectReducer(connected, { type: 'device-disconnected' });
+    const unplugged = connectReducer(connected, { type: 'device-disconnected', device: mzN510 });
     const requesting = connectReducer(unplugged, { type: 'request-started' });
     expect(requesting.unplugged).toBe(mzN510);
     expect(connectReducer(requesting, { type: 'connected', device: mzN510 }).unplugged).toBeNull();

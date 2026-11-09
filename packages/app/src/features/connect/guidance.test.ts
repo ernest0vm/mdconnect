@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { OperatingSystem } from '../../platform';
+import { initialConnectState, type ConnectedDevice } from './connect-state';
 import {
   connectPrompt,
   guidanceFor,
@@ -112,32 +113,34 @@ describe('connectPrompt (usb-device-access: "Connect screen")', () => {
 });
 
 describe('replugHint (usb-device-access: "Replug of a device without a USB serial number")', () => {
-  const device = (serialNumber?: string) => ({
+  const device = (serialNumber?: string): ConnectedDevice => ({
     name: 'Sony MZ-NE410/NF520D',
     vendorId: 0x054c,
     productId: 0x00ca,
     serialNumber,
   });
+  const afterUnplug = (unplugged: ConnectedDevice) => ({ ...initialConnectState, unplugged });
 
-  it.each([undefined, ''])(
-    'on the web, for a device without a serial number (%j), names it and asks to pick it again',
-    (serial) => {
-      const hint = replugHint(device(serial), 'web');
-      expect(hint).toMatch(/Sony MZ-NE410\/NF520D/);
-      expect(hint).toMatch(/Connect device/);
-      expect(hint).toMatch(/browser's list again/);
-    },
-  );
+  it('on the web, for a device without a serial number, names it and asks to pick it again', () => {
+    const hint = replugHint(afterUnplug(device()), 'web');
+    expect(hint).toMatch(/Sony MZ-NE410\/NF520D/);
+    expect(hint).toMatch(/Connect device/);
+    expect(hint).toMatch(/browser's list again/);
+  });
 
   it('shows nothing when the device has a serial number, since the browser keeps the grant', () => {
-    expect(replugHint(device('A1'), 'web')).toBeNull();
+    expect(replugHint(afterUnplug(device('A1')), 'web')).toBeNull();
   });
 
   it('shows nothing on desktop, which reconnects on its own', () => {
-    expect(replugHint(device(), 'desktop')).toBeNull();
+    expect(replugHint(afterUnplug(device()), 'desktop')).toBeNull();
   });
 
   it('shows nothing when no device was unplugged', () => {
-    expect(replugHint(null, 'web')).toBeNull();
+    expect(replugHint(initialConnectState, 'web')).toBeNull();
+  });
+
+  it('shows nothing once a device is connected again, even before the unplug is forgotten', () => {
+    expect(replugHint({ ...afterUnplug(device()), device: device() }, 'web')).toBeNull();
   });
 });

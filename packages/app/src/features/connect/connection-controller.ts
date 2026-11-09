@@ -73,7 +73,7 @@ export class ConnectionController {
     }
     if (handle === this.openHandle) {
       this.openHandle = null;
-      this.dispatch({ type: 'device-disconnected' });
+      this.dispatch({ type: 'device-disconnected', device: describeDevice(handle) ?? null });
     }
   }
 
@@ -113,7 +113,7 @@ export class ConnectionController {
     if (this.unplugged.has(handle)) {
       // switchDevice already closed the previous device; the new one is gone too.
       this.openHandle = null;
-      this.dispatch({ type: 'device-disconnected' });
+      this.dispatch({ type: 'device-disconnected', device });
       return;
     }
     this.openHandle = handle;
