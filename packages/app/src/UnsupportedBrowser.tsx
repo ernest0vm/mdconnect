@@ -25,7 +25,8 @@ export function UnsupportedBrowser({ commit }: { readonly commit: string }) {
           <h1 className="text-xl font-semibold">This browser cannot reach USB devices</h1>
           <p className="text-sm opacity-80">
             mdconnect talks to MiniDisc devices over WebUSB, which this browser does not provide.
-            Open this page over HTTPS in one of these browsers:
+            Open this page over HTTPS in one of these browsers, on a computer or an Android device
+            (browsers on iPhone and iPad do not provide WebUSB):
           </p>
           <ul className="list-inside list-disc text-sm">
             {SUPPORTED_BROWSERS.map((browser) => (

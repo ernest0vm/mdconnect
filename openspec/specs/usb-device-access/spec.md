@@ -100,8 +100,9 @@ Both apps SHALL show the same "Connect device" screen. After a successful reques
 
 #### Scenario: Failure message
 
-- **WHEN** a request fails as "no device found"
+- **WHEN** a request fails as "no device found" in the desktop app
 - **THEN** the screen explains that no supported MiniDisc device was found and suggests checking the cable and that the device is in NetMD or Hi-MD mode
+- **AND** the web app shows its own message instead (see "Hi-MD mode is not supported on the web yet")
 
 ### Requirement: OS-specific access guidance
 
@@ -155,6 +156,11 @@ The web app SHALL NOT offer Hi-MD-mode device IDs, which expose only the USB mas
 
 - **WHEN** a Sony MZ-RH1 connected in NetMD mode (product `0x0286`) is connected and the user picks it in the browser's chooser
 - **THEN** the Connect screen shows "Sony MZ-RH1" and `054c:0286`
+
+#### Scenario: ID shared by NetMD and Hi-MD models
+
+- **WHEN** a device with ID `054c:0187` is connected (shared by the NetMD Sony MZ-NH600D and the Hi-MD Sony MZ-NH600)
+- **THEN** the web app still offers it and names it "Sony MZ-NH600D", because the ID alone cannot tell the modes apart; detecting the mode needs the NetMD handshake
 
 ### Requirement: Web reconnect for granted devices
 
