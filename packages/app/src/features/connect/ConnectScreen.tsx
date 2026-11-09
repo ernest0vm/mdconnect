@@ -75,7 +75,9 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
       connectIfIdle(event.device);
     };
     const onDisconnect = ({ device }: UsbConnectionEventLike) => {
-      if (device === openHandle.current) openHandle.current = null;
+      // Identical devices can share IDs and lack serials, so match the open handle itself.
+      if (device !== openHandle.current) return;
+      openHandle.current = null;
       dispatch({
         type: 'device-disconnected',
         vendorId: device.vendorId,

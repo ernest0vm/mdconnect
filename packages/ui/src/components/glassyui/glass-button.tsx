@@ -138,7 +138,11 @@ export const GlassButton = forwardRef<HTMLButtonElement, ButtonProps>(
     const handlePointerLeave = useCallback(
       (event: React.PointerEvent<HTMLButtonElement>) => {
         onPointerLeave?.(event);
-        event.currentTarget.releasePointerCapture(event.pointerId);
+        // Chromium throws NotFoundError when the pointer is no longer active (touch: pointerleave
+        // fires after pointerup), so release only a capture this button still holds.
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
         releasePress(event.currentTarget);
       },
       [onPointerLeave, releasePress],
@@ -147,7 +151,11 @@ export const GlassButton = forwardRef<HTMLButtonElement, ButtonProps>(
     const handlePointerCancel = useCallback(
       (event: React.PointerEvent<HTMLButtonElement>) => {
         onPointerCancel?.(event);
-        event.currentTarget.releasePointerCapture(event.pointerId);
+        // Chromium throws NotFoundError when the pointer is no longer active (touch: pointerleave
+        // fires after pointerup), so release only a capture this button still holds.
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
         releasePress(event.currentTarget);
       },
       [onPointerCancel, releasePress],
@@ -174,7 +182,11 @@ export const GlassButton = forwardRef<HTMLButtonElement, ButtonProps>(
     const handlePointerUp = useCallback(
       (event: React.PointerEvent<HTMLButtonElement>) => {
         onPointerUp?.(event);
-        event.currentTarget.releasePointerCapture(event.pointerId);
+        // Chromium throws NotFoundError when the pointer is no longer active (touch: pointerleave
+        // fires after pointerup), so release only a capture this button still holds.
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+          event.currentTarget.releasePointerCapture(event.pointerId);
+        }
         event.currentTarget.style.setProperty('--lg-press', '0');
         event.currentTarget.dataset.pressed = 'false';
       },

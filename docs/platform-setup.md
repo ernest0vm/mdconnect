@@ -24,17 +24,37 @@ The installer is unsigned for now, so Windows SmartScreen shows a warning; choos
 
 ## Linux
 
-Your user needs read/write access to the USB device node. mdconnect ships a udev rule that grants it to the logged-in user for every supported device (`uaccess`):
+Your user needs read/write access to the USB device node. mdconnect ships a udev rule (`60-mdconnect.rules`) that grants it to the logged-in user for every supported device (`uaccess`). Copy it into `/etc/udev/rules.d/` from wherever you have mdconnect:
 
-```bash
-sudo cp apps/desktop/resources/linux/60-mdconnect.rules /etc/udev/rules.d/
-```
+- **`.deb` package** (installs to `/opt/mdconnect`):
+
+  ```bash
+  sudo cp /opt/mdconnect/resources/linux/60-mdconnect.rules /etc/udev/rules.d/
+  ```
+
+- **AppImage**: extract just the rule next to the AppImage, then copy it:
+
+  ```bash
+  ./mdconnect-*.AppImage --appimage-extract 'resources/linux/60-mdconnect.rules'
+  ```
+
+  ```bash
+  sudo cp squashfs-root/resources/linux/60-mdconnect.rules /etc/udev/rules.d/
+  ```
+
+- **Source checkout**:
+
+  ```bash
+  sudo cp apps/desktop/resources/linux/60-mdconnect.rules /etc/udev/rules.d/
+  ```
+
+Then reload the rules, and unplug the device and plug it back in:
 
 ```bash
 sudo udevadm control --reload && sudo udevadm trigger
 ```
 
-Then unplug the device and plug it back in. From an installed AppImage or `.deb`, the same file is in the app's `resources/linux/` folder.
+These paths follow electron-builder's defaults; they are confirmed on a real Linux install as part of scaffold-desktop-app task 11.4.
 
 The rule file is generated from the supported device table (`packages/core/src/devices.ts`); a unit test fails if the two drift apart.
 

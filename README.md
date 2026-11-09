@@ -10,7 +10,7 @@ mdconnect is derived from Web MiniDisc Pro by asivery and builds on [netmd-js](h
 
 ## Getting started
 
-Requirements: Node.js 22 (see `.nvmrc`) and Yarn 4 through Corepack.
+Requirements: Node.js 22.12 or later (the root `engines` field and Vite 8 require it; see `.nvmrc`) and Yarn 4 through Corepack.
 
 ```bash
 corepack enable
