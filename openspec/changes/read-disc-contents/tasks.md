@@ -27,7 +27,7 @@
 
   (disc-contents: "Untitled track", "Capacity")
 
-- [x] 3.3 Tests first for `DiscReader`. It serialises reads, so a Refresh during a read waits instead of overlapping. It maps errors: a command error or timeout → "could not read" with Retry; an unplug → no error; no reply to NetMD → the Hi-MD mode message (disc-contents: "Command fails", "Unplugged while reading", "Device in Hi-MD mode", "Refresh after changing discs").
+- [x] 3.3 Tests first for `DiscReader`. It serialises reads, so a Refresh during a read waits instead of overlapping. It maps errors: a command error or timeout, including the first query → "could not read" with Retry; a session that cannot be opened → "Device in use" with Retry; an unplug → no error; Hi-MD mode only on positive evidence (a Hi-MD-only ID or a mass-storage interface 0) → the Hi-MD mode message (disc-contents: "Command fails", "Unplugged while reading", "Device in Hi-MD mode", "Device in use", "Refresh after changing discs").
 - [x] 3.4 Disc screen: the device line; the disc title, capacity and write-protected badge; the grouped track list; the reading, no-disc, error and Hi-MD states; and the Refresh, Retry and "Connect another device" actions. The connect flow hands over to it after `connected` and returns to the Connect screen on unplug. Keep every control keyboard-operable, and keep text at 4.5:1 contrast or more in light and dark.
 
 ## 4. Verification (manual)
