@@ -41,6 +41,7 @@ describe('discStatus', () => {
   it('passes a read disc through', () => {
     const disc = {
       title: null,
+      subtitle: null,
       writeProtected: false,
       capacity: { used: '0:00', free: '80:00', total: '80:00' },
       groups: [],

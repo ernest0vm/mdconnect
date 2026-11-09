@@ -22,6 +22,9 @@ function TrackList({ group }: { readonly group: GroupView }) {
             </span>
             <span className={track.untitled ? 'grow italic opacity-80' : 'grow'}>
               {track.title}
+              {track.subtitle !== null && (
+                <span className="block text-xs opacity-80">{track.subtitle}</span>
+              )}
             </span>
             <span className="font-mono text-xs tabular-nums">{track.duration}</span>
             <span className="w-14 shrink-0 text-right text-xs opacity-80">{track.mode}</span>
@@ -41,6 +44,7 @@ function DiscContents({ disc }: { readonly disc: DiscView }) {
         </h2>
         {disc.writeProtected && <GlassBadge tone="orange">Write-protected</GlassBadge>}
       </div>
+      {disc.subtitle !== null && <p className="-mt-2 text-sm opacity-80">{disc.subtitle}</p>}
       <p className="text-sm">
         {disc.capacity.used} used · {disc.capacity.free} free · {disc.capacity.total} total
       </p>
@@ -67,7 +71,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   const reader = useMemo(
     () =>
       new DiscReader(() => openNetMdSession(device), {
-        hiMdModeOnly: isHiMdMode(device),
+        hiMdMode: () => isHiMdMode(device),
       }),
     [device],
   );

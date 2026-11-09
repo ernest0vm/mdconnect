@@ -61,10 +61,22 @@ describe('DiscReader', () => {
         opened = true;
         return Promise.resolve(session());
       },
-      { hiMdModeOnly: true },
+      { hiMdMode: () => true },
     );
     expect(await reader.read()).toEqual({ kind: 'failed', reason: 'not-netmd' });
     expect(opened).toBe(false);
+  });
+
+  it('checks for Hi-MD mode again after opening fails, once the configuration is known', async () => {
+    let configured = false;
+    const reader = new DiscReader(
+      () => {
+        configured = true; // Opening selected the configuration, which shows mass storage.
+        return Promise.reject(new DOMException('claim', 'SecurityError'));
+      },
+      { hiMdMode: () => configured },
+    );
+    expect(await reader.read()).toEqual({ kind: 'failed', reason: 'not-netmd' });
   });
 
   it('treats a timeout on the first query as a failed read with Retry, not as Hi-MD mode (disc-contents: "Command fails")', async () => {

@@ -4,6 +4,8 @@ export interface TrackView {
   /** 1-based position on the disc, as on the device's display. */
   readonly number: number;
   readonly title: string;
+  /** The half-width title when a different full-width title is shown first. */
+  readonly subtitle: string | null;
   readonly untitled: boolean;
   readonly duration: string;
   readonly mode: string;
@@ -18,6 +20,8 @@ export interface GroupView {
 export interface DiscView {
   /** Null when the disc has no title. */
   readonly title: string | null;
+  /** The half-width title when a different full-width title is shown first. */
+  readonly subtitle: string | null;
   readonly writeProtected: boolean;
   readonly capacity: { readonly used: string; readonly free: string; readonly total: string };
   readonly groups: readonly GroupView[];
@@ -44,16 +48,24 @@ function modeLabel(track: Track): string {
   return track.channel === MONO ? `${base} mono` : base;
 }
 
-/** Half-width title first; a disc written with only full-width (Japanese) titles uses those. */
-const pickTitle = (halfWidth: string, fullWidth: string | null): string =>
-  halfWidth !== '' ? halfWidth : (fullWidth ?? '');
+/**
+ * The title to show first and an optional second line. A full-width (Japanese) title is shown
+ * first, since it carries the characters a half-width title cannot; a different half-width title
+ * stays visible below it.
+ */
+function titles(halfWidth: string, fullWidth: string | null): { main: string; sub: string | null } {
+  const full = fullWidth ?? '';
+  if (full === '') return { main: halfWidth, sub: null };
+  return { main: full, sub: halfWidth !== '' && halfWidth !== full ? halfWidth : null };
+}
 
 function trackView(track: Track): TrackView {
-  const title = pickTitle(track.title, track.fullWidthTitle);
+  const { main, sub } = titles(track.title, track.fullWidthTitle);
   return {
     number: track.index + 1,
-    title: title === '' ? 'Untitled' : title,
-    untitled: title === '',
+    title: main === '' ? 'Untitled' : main,
+    subtitle: sub,
+    untitled: main === '',
     duration: formatDuration(track.duration),
     mode: modeLabel(track),
   };
@@ -64,27 +76,33 @@ function trackView(track: Track): TrackView {
  * group form one section, so tracks outside any group appear where they are on the disc.
  */
 export function toDiscView(disc: Disc): DiscView {
-  const owned = disc.groups.flatMap((group) =>
+  // Remember which group each track came from, so two adjacent groups with the same title stay
+  // separate sections.
+  const owned = disc.groups.flatMap((group, owner) =>
     group.tracks.map((track) => ({
-      group: pickTitle(group.title ?? '', group.fullWidthTitle) || null,
+      owner,
+      title: titles(group.title ?? '', group.fullWidthTitle).main || null,
       track,
     })),
   );
   owned.sort((a, b) => a.track.index - b.track.index);
 
   const groups: { title: string | null; tracks: TrackView[] }[] = [];
-  for (const { group, track } of owned) {
+  let lastOwner: number | undefined;
+  for (const { owner, title, track } of owned) {
     const last = groups.at(-1);
-    if (last?.title === group) {
+    if (last !== undefined && owner === lastOwner) {
       last.tracks.push(trackView(track));
     } else {
-      groups.push({ title: group, tracks: [trackView(track)] });
+      groups.push({ title, tracks: [trackView(track)] });
     }
+    lastOwner = owner;
   }
 
-  const title = pickTitle(disc.title, disc.fullWidthTitle);
+  const { main, sub } = titles(disc.title, disc.fullWidthTitle);
   return {
-    title: title === '' ? null : title,
+    title: main === '' ? null : main,
+    subtitle: sub,
     writeProtected: disc.writeProtected,
     capacity: {
       // Devices report used time as playback time, which exceeds the SP total on long-play discs.

@@ -79,6 +79,46 @@ describe('toDiscView', () => {
     ]);
   });
 
+  it('keeps two adjacent groups apart even when their titles match', () => {
+    const view = toDiscView(
+      disc({
+        groups: [
+          { title: 'Live', fullWidthTitle: null, tracks: [track(0, 'a', 60)] },
+          { title: 'Live', fullWidthTitle: null, tracks: [track(1, 'b', 60)] },
+        ],
+      }),
+    );
+    expect(view.groups.map((g) => [g.title, g.tracks.map((t) => t.number)])).toEqual([
+      ['Live', [1]],
+      ['Live', [2]],
+    ]);
+  });
+
+  it('shows the full-width title first and keeps a different half-width title as secondary (disc-contents: "Japanese titles")', () => {
+    const view = toDiscView(
+      disc({
+        title: 'Disc',
+        fullWidthTitle: 'ディスク',
+        groups: [
+          {
+            title: 'A',
+            fullWidthTitle: 'Ａ面',
+            tracks: [
+              { ...track(0, 'Test', 60), fullWidthTitle: 'テスト' },
+              { ...track(1, 'Same', 60), fullWidthTitle: '' },
+            ],
+          },
+        ],
+      }),
+    );
+    expect([view.title, view.subtitle]).toEqual(['ディスク', 'Disc']);
+    expect(view.groups[0]?.title).toBe('Ａ面');
+    expect(view.groups[0]?.tracks.map((t) => [t.title, t.subtitle])).toEqual([
+      ['テスト', 'Test'],
+      ['Same', null],
+    ]);
+  });
+
   it('labels the recording mode, adding mono where it applies', () => {
     const view = toDiscView(
       disc({

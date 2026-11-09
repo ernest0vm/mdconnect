@@ -31,8 +31,11 @@ export async function openNetMdSession(handle: UsbDeviceHandle): Promise<DiscSes
 }
 
 export interface DiscReaderOptions {
-  /** The device is known to be in Hi-MD mode (see `isHiMdMode`), so NetMD cannot read it. */
-  readonly hiMdModeOnly?: boolean;
+  /**
+   * Whether the device shows positive evidence of Hi-MD mode (see `isHiMdMode`). Asked on every
+   * read and again after opening fails, because the configuration may only be known by then.
+   */
+  readonly hiMdMode?: () => boolean;
 }
 
 /**
@@ -57,18 +60,19 @@ export class DiscReader {
   }
 
   /**
-   * Hi-MD mode is reported only on positive evidence (`hiMdModeOnly`). A session that cannot be
+   * Hi-MD mode is reported only on positive evidence (`hiMdMode`). A session that cannot be
    * opened is "unavailable"; a failed or timed-out query is a failed read. Both can be retried.
    */
   private async readOnce(): Promise<DiscReadResult> {
-    if (this.options.hiMdModeOnly === true) return { kind: 'failed', reason: 'not-netmd' };
+    const hiMdMode = this.options.hiMdMode ?? (() => false);
+    if (hiMdMode()) return { kind: 'failed', reason: 'not-netmd' };
     let session: DiscSession;
     try {
       this.session ??= this.openSession();
       session = await this.session;
     } catch {
       this.session = null;
-      return { kind: 'failed', reason: 'unavailable' };
+      return { kind: 'failed', reason: hiMdMode() ? 'not-netmd' : 'unavailable' };
     }
     try {
       if (!(await session.isDiscPresent())) return { kind: 'no-disc' };
