@@ -54,3 +54,13 @@ In the web app, a supported device the user granted in this browser SHALL be lis
 
 - **WHEN** the selected device is unplugged while the web app is open
 - **THEN** the UI is notified and shows that no device is connected
+
+#### Scenario: Replug of a device without a USB serial number
+
+- **WHEN** a device that reports no USB serial number is unplugged while the web app is open
+- **THEN** the Connect screen says, naming the device, that after plugging it back in the user must click Connect device and pick it in the browser's list again, because the browser keeps the grant only while such a device stays connected
+
+#### Scenario: Unplug where reconnecting needs no prompt
+
+- **WHEN** a device with a USB serial number is unplugged in the web app, or any device is unplugged in the desktop app
+- **THEN** no replug hint is shown

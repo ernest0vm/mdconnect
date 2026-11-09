@@ -15,16 +15,26 @@ export interface ConnectState {
   readonly device: ConnectedDevice | null;
   readonly requesting: boolean;
   readonly failure: UsbFailureKind | null;
+  /** The device whose unplug reset the screen, until a device connects again. */
+  readonly unplugged: ConnectedDevice | null;
 }
 
 export type ConnectAction =
   | { readonly type: 'request-started' }
   | { readonly type: 'connected'; readonly device: ConnectedDevice }
   | { readonly type: 'failed'; readonly failure: UsbFailureKind }
-  /** Dispatched only when the open device itself is unplugged. */
-  | { readonly type: 'device-disconnected' };
+  /**
+   * Dispatched when the open device, or the one being switched to, is unplugged. `device` names
+   * the device that left (null when it is not in the supported table).
+   */
+  | { readonly type: 'device-disconnected'; readonly device: ConnectedDevice | null };
 
-export const initialConnectState: ConnectState = { device: null, requesting: false, failure: null };
+export const initialConnectState: ConnectState = {
+  device: null,
+  requesting: false,
+  failure: null,
+  unplugged: null,
+};
 
 /**
  * State transitions of the Connect screen. Failures never clear the connected device: a failed
@@ -35,11 +45,11 @@ export function connectReducer(state: ConnectState, action: ConnectAction): Conn
     case 'request-started':
       return { ...state, requesting: true, failure: null };
     case 'connected':
-      return { device: action.device, requesting: false, failure: null };
+      return { device: action.device, requesting: false, failure: null, unplugged: null };
     case 'failed':
       return { ...state, requesting: false, failure: action.failure };
     case 'device-disconnected':
-      return initialConnectState;
+      return { ...initialConnectState, unplugged: action.device };
   }
 }
 
@@ -61,6 +71,8 @@ export function describeDevice(handle: {
     name: entry.name,
     vendorId: handle.vendorId,
     productId: handle.productId,
-    serialNumber: handle.serialNumber ?? undefined,
+    // Chrome reports a missing serial number as an empty string; WebUSB allows null.
+    serialNumber:
+      handle.serialNumber === null || handle.serialNumber === '' ? undefined : handle.serialNumber,
   };
 }

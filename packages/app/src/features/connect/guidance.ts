@@ -1,6 +1,7 @@
 import type { DeviceKind, UsbFailureKind } from '@mdconnect/core';
 
 import type { OperatingSystem, PlatformKind } from '../../platform';
+import type { ConnectState } from './connect-state';
 
 /** Community setup guide that upstream webminidisc also points to. */
 const SETUP_GUIDE_URL = 'https://www.minidisc.wiki/guides/webminidisc/requirements';
@@ -85,4 +86,16 @@ export function guidanceFor(
     case 'unknown':
       return { title: 'Something went wrong', message: RECONNECT };
   }
+}
+
+/**
+ * After an unplug in the web app, a device without a USB serial number cannot reconnect on its
+ * own: the browser keeps its grant only while it stays connected. The hint shows only while no
+ * device is connected. Desktop and serial-numbered devices reconnect by themselves.
+ */
+export function replugHint(state: ConnectState, platformKind: PlatformKind): string | null {
+  const { device, unplugged } = state;
+  if (device !== null || unplugged === null || platformKind !== 'web') return null;
+  if (unplugged.serialNumber !== undefined) return null;
+  return `${unplugged.name} was unplugged. After plugging it back in, click Connect device and pick it in the browser's list again: this device has no USB serial number, so the browser only remembers it while it stays connected.`;
 }

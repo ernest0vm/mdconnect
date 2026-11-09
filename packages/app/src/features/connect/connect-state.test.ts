@@ -17,7 +17,7 @@ function supported(vendorId: number, productId: number, serialNumber?: string): 
 
 const mzN510 = supported(0x054c, 0x00c9, 'A1');
 const mzRh1 = supported(0x054c, 0x0286);
-const connected: ConnectState = { device: mzN510, requesting: false, failure: null };
+const connected: ConnectState = { ...initialConnectState, device: mzN510 };
 
 describe('formatUsbId', () => {
   it('formats vendor and product as lowercase four-digit hex', () => {
@@ -35,6 +35,12 @@ describe('describeDevice', () => {
     });
   });
 
+  it('normalises the empty serial number Chrome reports for serial-less devices to undefined', () => {
+    expect(
+      describeDevice({ vendorId: 0x054c, productId: 0x00ca, serialNumber: '' })?.serialNumber,
+    ).toBeUndefined();
+  });
+
   it('normalises a null serial number to undefined', () => {
     expect(
       describeDevice({ vendorId: 0x054c, productId: 0x0286, serialNumber: null })?.serialNumber,
@@ -48,15 +54,21 @@ describe('describeDevice', () => {
 
 describe('connectReducer', () => {
   it('starts with no device, no request and no failure', () => {
-    expect(initialConnectState).toEqual({ device: null, requesting: false, failure: null });
+    expect(initialConnectState).toEqual({
+      device: null,
+      requesting: false,
+      failure: null,
+      unplugged: null,
+    });
   });
 
   it('marks a request in progress and clears the previous failure', () => {
-    const failed: ConnectState = { device: null, requesting: false, failure: 'no-device' };
+    const failed: ConnectState = { ...initialConnectState, failure: 'no-device' };
     expect(connectReducer(failed, { type: 'request-started' })).toEqual({
       device: null,
       requesting: true,
       failure: null,
+      unplugged: null,
     });
   });
 
@@ -70,17 +82,19 @@ describe('connectReducer', () => {
       device: mzRh1,
       requesting: false,
       failure: null,
+      unplugged: null,
     });
   });
 
   it.each(['no-device', 'cancelled', 'access-denied', 'unknown'] as const)(
     'records a %s failure',
     (failure) => {
-      const requesting: ConnectState = { device: null, requesting: true, failure: null };
+      const requesting: ConnectState = { ...initialConnectState, requesting: true };
       expect(connectReducer(requesting, { type: 'failed', failure })).toEqual({
         device: null,
         requesting: false,
         failure,
+        unplugged: null,
       });
     },
   );
@@ -91,10 +105,21 @@ describe('connectReducer', () => {
       device: mzN510,
       requesting: false,
       failure: 'access-denied',
+      unplugged: null,
     });
   });
 
-  it('clears the device when the open device is unplugged', () => {
-    expect(connectReducer(connected, { type: 'device-disconnected' })).toEqual(initialConnectState);
+  it('clears the device when a device is unplugged, remembering the one the action names', () => {
+    expect(connectReducer(connected, { type: 'device-disconnected', device: mzRh1 })).toEqual({
+      ...initialConnectState,
+      unplugged: mzRh1,
+    });
+  });
+
+  it('forgets the unplugged device once a device connects again', () => {
+    const unplugged = connectReducer(connected, { type: 'device-disconnected', device: mzN510 });
+    const requesting = connectReducer(unplugged, { type: 'request-started' });
+    expect(requesting.unplugged).toBe(mzN510);
+    expect(connectReducer(requesting, { type: 'connected', device: mzN510 }).unplugged).toBeNull();
   });
 });
