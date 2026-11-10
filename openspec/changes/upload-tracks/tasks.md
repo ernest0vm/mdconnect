@@ -101,9 +101,9 @@
 
 ## 8. UI (`packages/app`)
 
-- [ ] 8.1 Add `upload-preferences.ts`, which stores the mode, title source, full-width, ReplayGain, encoder and online consent, with defaults when storage is blocked. Verify with tests (track-upload: "Remembered mode").
-- [ ] 8.2 Add the "Add tracks" toolbar action and the drop target on the disc panel, with availability reasons. Verify the view logic with unit tests. Check in the browser with the demo device (track-upload: "Pick files", "Drop files", "Write-protected disc", "Files that are not audio").
-- [ ] 8.3 Add the convert dialog:
+- [x] 8.1 Add `upload-preferences.ts`, which stores the mode, title source, full-width, ReplayGain, encoder and online consent, with defaults when storage is blocked. Verify with tests (track-upload: "Remembered mode"). Checked: `upload-preferences.test.ts` covers remembering, field-by-field fallback, and blocked storage.
+- [x] 8.2 Add the "Add tracks" toolbar action and the drop target on the disc panel, with availability reasons. Verify the view logic with unit tests. Check in the browser with the demo device (track-upload: "Pick files", "Drop files", "Write-protected disc", "Files that are not audio"). Checked in Chrome with `?demo`. Dropping two WAVs and a text file opens the dialog with the WAVs and says “notes.txt” was not added. "Add tracks" sits next to Rename disc. Its availability is tested in `upload-view.test.ts`.
+- [x] 8.3 Add the convert dialog:
   - modes;
   - the encoder choice and quality note;
   - the consent notice;
@@ -112,9 +112,18 @@
   - full-width and ReplayGain;
   - the fit summary and warnings.
 
-  Verify the view logic with unit tests. Check in the browser that the dialog works from the keyboard (track-upload: "Reorder", "Rename before upload", "Remove the last track", "Unknown duration"; audio-conversion: "Quality note", "First use asks for consent").
+  Verify the view logic with unit tests. Check in the browser that the dialog works from the keyboard (track-upload: "Reorder", "Rename before upload", "Remove the last track", "Unknown duration"; audio-conversion: "Quality note", "First use asks for consent"). Checked in Chrome with `?demo`, in light and dark:
+  - LP2 is remembered between uploads;
+  - the online encoder asks first, and declining selects the built-in encoder with no request sent;
+  - full-width title fields appear when that option is on;
+  - the fit line reads, for example, "0:07 needed of 2:14 free".
 
-- [ ] 8.4 Add the upload dialog: track N of M, two meters, "Stopping after current track…", cancel, and the final summary, with the screen wake lock held while it runs. Check in the browser with the demo device, in light and dark (track-upload: "Progress shown").
+- [x] 8.4 Add the upload dialog: track N of M, two meters, "Stopping after current track…", cancel, and the final summary, with the screen wake lock held while it runs. Check in the browser with the demo device, in light and dark (track-upload: "Progress shown"). Checked in Chrome with `?demo`:
+  - two tracks encoded to LP2 by the built-in encoder upload with "2 tracks uploaded.";
+  - cancelling during a 3-track SP upload ends with "1 track uploaded. Cancelled before “B”";
+  - checked in light and dark.
+
+  In a production build served with the production CSP and cross-origin isolation, the atracdenc worker encodes LP4 with no CSP violation.
 
 ## 9. Manual verification
 

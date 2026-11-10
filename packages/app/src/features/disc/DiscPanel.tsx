@@ -60,6 +60,7 @@ import {
 import { browserClock, documentVisibility, StatusPoller } from './status-poller';
 import { TitleDialog } from './TitleDialog';
 import { TrackTable } from './TrackTable';
+import { useUploadFlow, type UploadFlow } from '../upload/useUploadFlow';
 
 type Dialog =
   | { readonly kind: 'rename-disc' }
@@ -73,11 +74,19 @@ function DiscAreas({
   summary,
   tracks,
   busy,
+  upload,
 }: {
   readonly summary: ReactNode;
   readonly tracks: ReactNode;
   readonly busy: boolean;
+  /** Makes both areas a drop target for audio files. */
+  readonly upload?: Pick<UploadFlow, 'dropZone' | 'dragging'>;
 }) {
+  // Outlines both areas while files are dragged over them.
+  const dropTarget =
+    upload?.dragging === true
+      ? 'outline-2 outline-dashed outline-indigo-600 dark:outline-indigo-300'
+      : '';
   return (
     <>
       <GlassPanel
@@ -85,7 +94,8 @@ function DiscAreas({
         aria-label="Disc"
         // It scrolls on its own in two columns; scrollable regions must be reachable by keyboard.
         tabIndex={0}
-        className="flex shrink-0 flex-col gap-3 p-4 lg:min-h-0 lg:overflow-y-auto"
+        className={`flex shrink-0 flex-col gap-3 p-4 lg:min-h-0 lg:overflow-y-auto ${dropTarget}`}
+        {...upload?.dropZone}
       >
         {summary}
       </GlassPanel>
@@ -93,7 +103,8 @@ function DiscAreas({
         role="region"
         aria-label="Tracks"
         aria-busy={busy}
-        className="flex min-h-96 flex-1 flex-col gap-3 p-4 lg:min-h-0"
+        className={`flex min-h-96 flex-1 flex-col gap-3 p-4 lg:min-h-0 ${dropTarget}`}
+        {...upload?.dropZone}
       >
         {tracks}
       </GlassPanel>
@@ -115,6 +126,8 @@ interface EditorProps {
   /** Whether the player controls are unavailable. */
   readonly playBlocked: boolean;
   readonly onControl: (command: PlaybackCommand) => void;
+  /** Adding tracks: the button, the drop target and its state. */
+  readonly upload: UploadFlow;
 }
 
 /** The disc with its edit actions, selection and dialogs; it turns user actions into edit plans. */
@@ -129,6 +142,7 @@ function DiscEditor({
   deviceStatus,
   playBlocked,
   onControl,
+  upload,
 }: EditorProps) {
   const [chosen, setSelection] = useState<Selection>(new Set());
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -194,6 +208,7 @@ function DiscEditor({
             setDialog({ kind: 'rename-disc' });
           }}
         />
+        {upload.addTracks}
         {refresh}
       </div>
       {notice}
@@ -323,7 +338,7 @@ function DiscEditor({
 
   return (
     <>
-      <DiscAreas summary={summary} tracks={tracks} busy={busy} />
+      <DiscAreas summary={summary} tracks={tracks} busy={busy} upload={upload} />
       {dialog?.kind === 'rename-disc' && (
         <TitleDialog
           disc={raw}
@@ -540,6 +555,17 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
 
   const status = discStatus(result);
   const saving = editState.kind === 'saving';
+  const upload = useUploadFlow({
+    reader,
+    device,
+    disc: status.kind === 'disc' ? status.raw : null,
+    busy: saving || status.kind === 'reading',
+    onFinished: ({ result: next }) => {
+      setResult(next);
+      // A read cannot tell that the earlier status belongs to this disc: the next poll sets it.
+      setDeviceStatus(null);
+    },
+  });
   const editNotice =
     editState.kind === 'failed' ? (
       <GlassAlert tone="warning" title="Change not saved">
@@ -559,6 +585,7 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
           <p>{importError}</p>
         </GlassAlert>
       )}
+      {upload.notice}
       {editNotice}
     </>
   );
@@ -572,9 +599,9 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
       }}
       variant="soft"
       size="sm"
-      aria-disabled={status.kind === 'reading' || saving}
+      aria-disabled={status.kind === 'reading' || saving || upload.uploading}
       onClick={(event) => {
-        if (status.kind === 'reading' || saving) return;
+        if (status.kind === 'reading' || saving || upload.uploading) return;
         keepRefreshFocus.current = document.activeElement === event.currentTarget;
         refresh();
       }}
@@ -597,7 +624,8 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
   const blocker = playerBlocker({
     status: shownStatus,
     reading: status.kind === 'reading',
-    saving,
+    // Controls would wait behind the upload and then start playback unexpectedly.
+    saving: saving || upload.uploading,
     readable,
     noDisc: result !== 'reading' && result.kind === 'no-disc',
   });
@@ -625,7 +653,7 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
   const availability = menuAvailability({
     discRead: raw !== null,
     writeProtected: raw?.writeProtected ?? false,
-    busy: saving || status.kind === 'reading',
+    busy: saving || upload.uploading || status.kind === 'reading',
   });
   /** Reads a chosen CSV and shows the review, or says why it cannot be used. */
   const startImport = (file: File) => {
@@ -719,14 +747,16 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
       <>
         {menu}
         {dialogs}
+        {upload.dialogs}
         <DiscEditor
+          upload={upload}
           player={player}
           deviceStatus={shownStatus}
           playBlocked={blocker !== null}
           onControl={runControl}
           disc={status.disc}
           raw={status.raw}
-          busy={saving}
+          busy={saving || upload.uploading}
           onEdit={runEdit}
           notice={notice}
           refresh={refreshButton}
@@ -737,6 +767,8 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
   return (
     <>
       {menu}
+      {/* The read after an upload may find no disc; the upload summary must still show. */}
+      {upload.dialogs}
       <DiscAreas
         busy={status.kind === 'reading'}
         summary={
