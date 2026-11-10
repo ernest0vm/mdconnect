@@ -35,19 +35,37 @@ export interface GlassMenuItemProps extends React.ComponentPropsWithoutRef<
   readonly children: ReactNode;
 }
 
+/** The look shared by dropdown and context menu items. */
+export const MENU_ITEM_CLASS = clsx(
+  'flex cursor-pointer flex-col rounded-lg px-3 py-2 text-sm outline-none select-none',
+  'data-[highlighted]:bg-indigo-500/20 data-[disabled]:cursor-not-allowed',
+);
+
+/** A menu item's label, and under it the reason it is unavailable, if any. */
+export function MenuItemBody({
+  disabled,
+  reason,
+  children,
+}: {
+  readonly disabled?: boolean | undefined;
+  readonly reason?: string | null | undefined;
+  readonly children: ReactNode;
+}) {
+  return (
+    <>
+      <span className={disabled ? 'opacity-60' : undefined}>{children}</span>
+      {reason && <span className="text-xs opacity-80">{reason}</span>}
+    </>
+  );
+}
+
 /** A menu item; a disabled one shows its reason, since it cannot take focus to describe it. */
 export function GlassMenuItem({ className, reason, children, ...rest }: GlassMenuItemProps) {
   return (
-    <MenuPrimitive.Item
-      className={clsx(
-        'flex cursor-pointer flex-col rounded-lg px-3 py-2 text-sm outline-none select-none',
-        'data-[highlighted]:bg-indigo-500/20 data-[disabled]:cursor-not-allowed',
-        className,
-      )}
-      {...rest}
-    >
-      <span className={rest.disabled ? 'opacity-60' : undefined}>{children}</span>
-      {reason && <span className="text-xs opacity-80">{reason}</span>}
+    <MenuPrimitive.Item className={clsx(MENU_ITEM_CLASS, className)} {...rest}>
+      <MenuItemBody disabled={rest.disabled} reason={reason}>
+        {children}
+      </MenuItemBody>
     </MenuPrimitive.Item>
   );
 }
@@ -67,16 +85,7 @@ export function GlassMenuLinkItem({
 }) {
   return (
     <MenuPrimitive.Item asChild {...rest}>
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        className={clsx(
-          'flex cursor-pointer rounded-lg px-3 py-2 text-sm outline-none select-none',
-          'data-[highlighted]:bg-indigo-500/20',
-          className,
-        )}
-      >
+      <a href={href} target="_blank" rel="noreferrer" className={clsx(MENU_ITEM_CLASS, className)}>
         {children}
       </a>
     </MenuPrimitive.Item>

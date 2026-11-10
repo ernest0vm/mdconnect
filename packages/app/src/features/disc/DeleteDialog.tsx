@@ -13,10 +13,13 @@ export function DeleteDialog({
   count,
   onConfirm,
   onClose,
+  returnFocus,
 }: {
   readonly count: number;
   readonly onConfirm: () => void;
   readonly onClose: () => void;
+  /** Where focus goes when the dialog closes, for a dialog opened from a menu. */
+  readonly returnFocus?: (() => HTMLElement | null) | undefined;
 }) {
   const tracks = trackCountLabel(count);
   return (
@@ -28,6 +31,7 @@ export function DeleteDialog({
     >
       <GlassDialogContent
         closeLabel="Cancel"
+        returnFocus={returnFocus}
         role="alertdialog"
         onOpenAutoFocus={(event) => {
           // Start on Cancel, so Enter does not erase anything by accident.

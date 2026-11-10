@@ -59,15 +59,20 @@ import {
 } from './player-view';
 import { browserClock, documentVisibility, StatusPoller } from './status-poller';
 import { TitleDialog } from './TitleDialog';
-import { TrackTable } from './TrackTable';
+import { trackActions, trackAfterAction, type TrackAction } from './track-menu';
+import { TrackTable, trackRow } from './TrackTable';
 import { useUploadFlow, type UploadFlow } from '../upload/useUploadFlow';
+
+/** The tracks region, a focus target that outlives the rows in it. */
+const TRACKS_REGION_ID = 'disc-tracks';
 
 type Dialog =
   | { readonly kind: 'rename-disc' }
-  | { readonly kind: 'rename-track'; readonly index: number }
+  /** `fromMenu`: opened from the track's context menu, so focus goes back to its row. */
+  | { readonly kind: 'rename-track'; readonly index: number; readonly fromMenu?: boolean }
   | { readonly kind: 'new-group'; readonly tracks: readonly number[] }
   | { readonly kind: 'rename-group'; readonly track: number }
-  | { readonly kind: 'delete'; readonly tracks: readonly number[] };
+  | { readonly kind: 'delete'; readonly tracks: readonly number[]; readonly fromMenu?: boolean };
 
 /** The two grid areas the disc fills in the connected layout: its summary and its tracks. */
 function DiscAreas({
@@ -102,6 +107,9 @@ function DiscAreas({
       <GlassPanel
         role="region"
         aria-label="Tracks"
+        id={TRACKS_REGION_ID}
+        // Where focus goes after the tracks it was on are deleted.
+        tabIndex={-1}
         aria-busy={busy}
         className={`flex min-h-96 flex-1 flex-col gap-3 p-4 lg:min-h-0 ${dropTarget}`}
         {...upload?.dropZone}
@@ -116,15 +124,16 @@ interface EditorProps {
   readonly disc: DiscView;
   readonly raw: Disc;
   readonly busy: boolean;
-  readonly onEdit: (plan: EditPlan, selectAfter?: Selection) => void;
+  /** Runs a plan; resolves true once the device saved it. */
+  readonly onEdit: (plan: EditPlan) => Promise<boolean>;
   readonly notice: ReactNode;
   /** The Refresh button, which belongs in the summary. */
   readonly refresh: ReactNode;
   /** The player bar, at the bottom of the summary. */
   readonly player: ReactNode;
   readonly deviceStatus: DeviceStatus | null;
-  /** Whether the player controls are unavailable. */
-  readonly playBlocked: boolean;
+  /** Why the player controls are unavailable, or null. */
+  readonly playBlocker: string | null;
   readonly onControl: (command: PlaybackCommand) => void;
   /** Adding tracks: the button, the drop target and its state. */
   readonly upload: UploadFlow;
@@ -140,12 +149,29 @@ function DiscEditor({
   refresh,
   player,
   deviceStatus,
-  playBlocked,
+  playBlocker,
   onControl,
   upload,
 }: EditorProps) {
   const [chosen, setSelection] = useState<Selection>(new Set());
+  /** The selection as last rendered, to tell whether the user changed it while a change saved. */
+  const latestChoice = useRef(chosen);
+  useEffect(() => {
+    latestChoice.current = chosen;
+  }, [chosen]);
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  /** Whether the open delete dialog was confirmed, which decides where focus goes when it closes. */
+  const deleteConfirmed = useRef(false);
+  /**
+   * A row to focus once the table shows the saved change. It is set after the re-read disc is in
+   * state, so the effect below runs on the committed, updated table. A new object each time, so
+   * the effect runs once per request and not again when the disc is read later.
+   */
+  const [focusRequest, setFocusRequest] = useState<{ readonly track: number } | null>(null);
+  // Runs after React commits the re-read disc, so the row is the one in the updated table.
+  useEffect(() => {
+    if (focusRequest !== null) trackRow(focusRequest.track)?.focus();
+  }, [focusRequest]);
   const reasonId = useId();
   const blocker = editBlocker({ writeProtected: raw.writeProtected, busy });
   const locked = blocker !== null;
@@ -160,16 +186,61 @@ function DiscEditor({
   const grouping = groupTracksPlan(raw, selected, 'check');
   const allState = selectAllState(selection, raw.trackCount);
 
-  /** Runs a plan, closes any dialog and optionally moves the selection. */
-  const edit = (plan: EditPlan, selectAfter?: Selection) => {
+  /**
+   * Runs a plan, closes any dialog and, once the device saved the change, moves the selection. A
+   * refused change leaves the selection on the tracks the user chose. A selection the user changed
+   * while the change was saving is cleared once it is saved: its track numbers were picked on the
+   * old order and may now name other tracks.
+   */
+  const edit = (plan: EditPlan, selectAfter?: Selection, afterSave?: () => void) => {
     setDialog(null);
-    onEdit(plan, selectAfter);
-    if (selectAfter) setSelection(selectAfter);
+    const before = chosen;
+    void onEdit(plan).then((saved) => {
+      // Edits that renumber tracks pass `selectAfter`; renames leave the numbers as they were.
+      if (!saved || selectAfter === undefined) return;
+      if (latestChoice.current !== before) {
+        setSelection(new Set());
+        return;
+      }
+      setSelection(selectAfter);
+      afterSave?.();
+    });
   };
   /** Moves a track to a valid position and keeps it selected. */
-  const move = (from: number, to: number) => {
+  const move = (from: number, to: number, afterSave?: () => void) => {
     if (from === to || to < 0 || to >= raw.trackCount) return;
-    edit(moveTrackPlan(raw, from, to), new Set([to]));
+    edit(moveTrackPlan(raw, from, to), new Set([to]), afterSave);
+  };
+  /** Plays a track, or pauses or resumes it when it is the current one. */
+  const play = (track: number) => {
+    const state = trackPlayState(deviceStatus, track);
+    if (state === 'playing') onControl({ kind: 'pause' });
+    else if (state === 'paused') onControl({ kind: 'play' });
+    else onControl({ kind: 'playTrack', track });
+  };
+  /** Runs a track's context menu action, the same as the matching player or toolbar action. */
+  const runTrackAction = (track: number, action: TrackAction['id']) => {
+    switch (action) {
+      case 'play':
+        play(track);
+        return;
+      case 'rename':
+        setDialog({ kind: 'rename-track', index: track, fromMenu: true });
+        return;
+      case 'delete':
+        deleteConfirmed.current = false;
+        setDialog({ kind: 'delete', tracks: [track], fromMenu: true });
+        return;
+      case 'move-up':
+      case 'move-down': {
+        // Focus follows the track once the device has saved the move; a refused move leaves it.
+        const to = trackAfterAction(track, action);
+        move(track, to, () => {
+          setFocusRequest({ track: to });
+        });
+        return;
+      }
+    }
   };
   const summary = (
     <>
@@ -324,13 +395,21 @@ function DiscEditor({
               edit(ungroupPlan(raw, track));
             }}
             playState={(track) => trackPlayState(deviceStatus, track)}
-            playBlocked={playBlocked}
-            onPlay={(track) => {
-              const state = trackPlayState(deviceStatus, track);
-              if (state === 'playing') onControl({ kind: 'pause' });
-              else if (state === 'paused') onControl({ kind: 'play' });
-              else onControl({ kind: 'playTrack', track });
+            playBlocked={playBlocker !== null}
+            onPlay={play}
+            trackMenu={(track) =>
+              trackActions(track, {
+                trackCount: raw.trackCount,
+                editBlocker: blocker,
+                playBlocker,
+                playState: trackPlayState(deviceStatus, track),
+              })
+            }
+            onMenuOpen={(track) => {
+              // The menu acts on the track it was opened on, so that track becomes the selection.
+              if (!selection.has(track)) setSelection(new Set([track]));
             }}
+            onTrackAction={runTrackAction}
           />
         </div>
       </>
@@ -361,6 +440,7 @@ function DiscEditor({
           target={{ kind: 'track', index: dialog.index }}
           heading={`Rename track ${String(dialog.index + 1)}`}
           saveLabel="Rename"
+          returnFocus={dialog.fromMenu === true ? () => trackRow(dialog.index) : undefined}
           onClose={() => {
             setDialog(null);
           }}
@@ -414,10 +494,20 @@ function DiscEditor({
       {dialog?.kind === 'delete' && (
         <DeleteDialog
           count={dialog.tracks.length}
+          returnFocus={
+            dialog.fromMenu === true
+              ? () =>
+                  // A confirmed delete removes the row, so focus goes to the tracks region.
+                  deleteConfirmed.current
+                    ? document.getElementById(TRACKS_REGION_ID)
+                    : trackRow(dialog.tracks[0] ?? 0)
+              : undefined
+          }
           onClose={() => {
             setDialog(null);
           }}
           onConfirm={() => {
+            deleteConfirmed.current = true;
             edit(deleteTracksPlan(raw, dialog.tracks), new Set());
           }}
         />
@@ -537,17 +627,17 @@ export function DiscPanel({
   }, []);
 
   const runEdit = useCallback(
-    (plan: EditPlan) => {
-      if (plan.commands.length === 0) return;
+    async (plan: EditPlan): Promise<boolean> => {
+      if (plan.commands.length === 0) return false;
       const blocked = planBlocker(plan);
       if (blocked !== null) {
         setEditState({ kind: 'failed', message: blocked });
-        return;
+        return false;
       }
       setImportError(null);
       setEditState({ kind: 'saving' });
-      void reader.edit(plan).then(({ outcome, result: next }) => {
-        if (!mounted.current) return;
+      return reader.edit(plan).then(({ outcome, result: next }) => {
+        if (!mounted.current) return false;
         setResult(next);
         // A read cannot tell that the earlier status belongs to this disc: the next poll sets it.
         setDeviceStatus(null);
@@ -556,6 +646,7 @@ export function DiscPanel({
             ? { kind: 'saved' }
             : { kind: 'failed', message: editFailureMessage(outcome.reason) },
         );
+        return outcome.kind === 'saved';
       });
     },
     [reader],
@@ -727,7 +818,7 @@ export function DiscPanel({
           }}
           onConfirm={() => {
             setMenuDialog(null);
-            runEdit(wipeDiscPlan());
+            void runEdit(wipeDiscPlan());
           }}
         />
       )}
@@ -744,7 +835,7 @@ export function DiscPanel({
           }}
           onConfirm={(skipped) => {
             setMenuDialog(null);
-            runEdit(importPlan(menuDialog.parsed, raw, skipped));
+            void runEdit(importPlan(menuDialog.parsed, raw, skipped));
           }}
         />
       )}
@@ -761,7 +852,7 @@ export function DiscPanel({
           upload={upload}
           player={player}
           deviceStatus={shownStatus}
-          playBlocked={blocker !== null}
+          playBlocker={blocker}
           onControl={runControl}
           disc={status.disc}
           raw={status.raw}
