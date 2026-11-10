@@ -52,6 +52,37 @@ export function GlassMenuItem({ className, reason, children, ...rest }: GlassMen
   );
 }
 
+/**
+ * A menu item that is a link, opened in a new tab or, in the desktop app, the default browser.
+ * Choosing it with the keyboard follows the link, as a click does.
+ */
+export function GlassMenuLinkItem({
+  className,
+  href,
+  children,
+  ...rest
+}: Omit<React.ComponentPropsWithoutRef<typeof MenuPrimitive.Item>, 'asChild'> & {
+  readonly href: string;
+  readonly children: ReactNode;
+}) {
+  return (
+    <MenuPrimitive.Item asChild {...rest}>
+      <a
+        href={href}
+        target="_blank"
+        rel="noreferrer"
+        className={clsx(
+          'flex cursor-pointer rounded-lg px-3 py-2 text-sm outline-none select-none',
+          'data-[highlighted]:bg-indigo-500/20',
+          className,
+        )}
+      >
+        {children}
+      </a>
+    </MenuPrimitive.Item>
+  );
+}
+
 /** A line between groups of menu items. */
 export function GlassMenuSeparator({
   className,

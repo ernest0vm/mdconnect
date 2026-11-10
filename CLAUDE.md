@@ -40,4 +40,5 @@ Port of [webminidisc](https://github.com/asivery/webminidisc) for Sony NetMD / H
 - Test-first: use the `tdd` skill for any behaviour change.
 - Clean code: follow the `typescript-clean-code` skill (vendored, see its `SOURCE.md`) when writing, reviewing or refactoring TypeScript. Where it conflicts with this file, this file wins: use the Yarn commands above instead of its `npm` examples (E1/E2), and its "< 100ms per test" rule (T9) applies to unit tests, not to manual hardware verification.
 - UI: shadcn/ui + Tailwind + GlassyUI. No Material UI, Emotion, styled-components, tss-react or react95 (enforced by repo-policy tests).
+- **Changelog.** A user-visible change adds a line to `CHANGELOG.md` (Keep a Changelog). A version bump sets the same `version` in `apps/desktop` and `apps/web` and adds a `## [x.y.z] - date` entry; repo-policy fails when they differ. The app bundles the file, so it shows under More → Changelog.
 - Work goes through OpenSpec: `/opsx:propose` → `/opsx:apply` → `/opsx:archive`. Project constraints live in `openspec/config.yaml`.

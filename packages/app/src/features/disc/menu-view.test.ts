@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ignoredTracksNote, menuAvailability } from './menu-view';
+import { ignoredTracksNote, MENU_LINKS, menuAvailability } from './menu-view';
 
 describe('menuAvailability (app-menu: "Unavailable item"; disc-editing: "Write-protected disc")', () => {
   it('offers everything for a writable disc', () => {
@@ -37,5 +37,15 @@ describe('ignoredTracksNote (disc-csv: "Different track count")', () => {
   it('uses the singular for one row and says nothing when none is ignored', () => {
     expect(ignoredTracksNote([99])).toBe('Track 99 of the file will be ignored.');
     expect(ignoredTracksNote([])).toBe('');
+  });
+});
+
+describe('MENU_LINKS (app-menu: "Menu", "Open a link")', () => {
+  it('links to the guide, the source and the donation page, in menu order', () => {
+    expect(MENU_LINKS).toEqual([
+      { label: 'Support and FAQ', href: 'https://www.minidisc.wiki/guides/start' },
+      { label: 'Source code on GitHub', href: 'https://github.com/ernest0vm/mdconnect' },
+      { label: 'Donate', href: 'https://paypal.me/ernest0vm' },
+    ]);
   });
 });

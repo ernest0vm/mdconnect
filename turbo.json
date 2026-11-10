@@ -18,6 +18,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/CHANGELOG.md"],
       "outputs": ["dist/**", "out/**"]
     },
     "package": {
@@ -60,6 +61,11 @@
       "outputs": [],
       "inputs": ["$TURBO_DEFAULT$", "!apps/**", "!packages/**"]
     },
+    "@mdconnect/app#test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/CHANGELOG.md"]
+    },
     "@mdconnect/repo-policy#test": {
       "dependsOn": ["^build"],
       "outputs": [],
@@ -70,6 +76,7 @@
         "$TURBO_ROOT$/apps/*/tsconfig.json",
         "$TURBO_ROOT$/packages/*/tsconfig.json",
         "$TURBO_ROOT$/lint-staged.config.mjs",
+        "$TURBO_ROOT$/CHANGELOG.md",
         "$TURBO_ROOT$/.yarn/releases/**"
       ]
     }

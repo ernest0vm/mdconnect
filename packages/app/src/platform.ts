@@ -86,4 +86,6 @@ export interface Platform {
   readonly deviceKinds: readonly DeviceKind[];
   /** Commit the build was made from (empty in development), for the GPL source link. */
   readonly buildCommit: string;
+  /** The app version, the newest entry in CHANGELOG.md. */
+  readonly version: string;
 }

@@ -8,6 +8,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { Platform, UsbConnectionEventLike } from '../../platform';
 import { PageShell } from '../../PageShell';
 import { AboutDialog } from '../about/AboutDialog';
+import { ChangelogDialog } from '../changelog/ChangelogDialog';
 import { menuTrigger } from '../disc/DiscMenu';
 import { DiscPanel } from '../disc/DiscPanel';
 import { ChooserDialog } from './ChooserDialog';
@@ -24,6 +25,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   const chooserCancelled = useRef(false);
   const [menuSlot, setMenuSlot] = useState<HTMLElement | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [changelogOpen, setChangelogOpen] = useState(false);
   const controller = useMemo(
     () => new ConnectionController(platform.usb, platform.deviceKinds, dispatch),
     [platform.usb, platform.deviceKinds],
@@ -148,6 +150,9 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
               onAbout={() => {
                 setAboutOpen(true);
               }}
+              onChangelog={() => {
+                setChangelogOpen(true);
+              }}
               onExit={(device) => {
                 controller.exit(device);
               }}
@@ -158,9 +163,19 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
         {aboutOpen && (
           <AboutDialog
             returnFocus={() => menuTrigger(menuSlot)}
+            version={platform.version}
             commit={platform.buildCommit}
             onClose={() => {
               setAboutOpen(false);
+            }}
+          />
+        )}
+        {changelogOpen && (
+          <ChangelogDialog
+            title="Changelog"
+            returnFocus={() => menuTrigger(menuSlot)}
+            onClose={() => {
+              setChangelogOpen(false);
             }}
           />
         )}

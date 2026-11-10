@@ -2,7 +2,7 @@
 
 Keep Sony NetMD and Hi-MD MiniDisc devices usable. mdconnect is a port of [Web MiniDisc Pro](https://github.com/asivery/webminidisc) that ships as a **desktop app** (Electron, macOS / Windows / Linux) and a **web app** for Chromium-based browsers, from one TypeScript codebase.
 
-Current status: the walking skeleton. The app connects to a supported MiniDisc device over WebUSB and shows its name and USB IDs. Disc management is being ported next.
+Current status: reading, editing, playback, CSV titles and track uploads work on NetMD devices. [CHANGELOG.md](CHANGELOG.md) lists what each version adds; the app shows it under More → Changelog.
 
 ## Download
 
