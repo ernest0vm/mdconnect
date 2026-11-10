@@ -64,6 +64,7 @@ export function TrackTable(props: TrackTableProps) {
   );
 }
 
+/** One group's rows: a header row with its title and actions, then its tracks. */
 function GroupRows({
   group,
   selection,
@@ -136,6 +137,7 @@ function GroupRows({
   );
 }
 
+/** One track row, with its checkbox, drag handlers and drop indicator. */
 function TrackRow({
   track,
   selected,

@@ -14,6 +14,7 @@ const supported = isWebUsbSupported({
   hasUsb: 'usb' in navigator,
 });
 
+/** The browser platform, or, in development with `?demo`, the platform with the demo device. */
 async function platformForThisPage() {
   const platform = webPlatform(__MDCONNECT_COMMIT__);
   // `import.meta.env.DEV` is false in production builds, so the demo module is left out of them.

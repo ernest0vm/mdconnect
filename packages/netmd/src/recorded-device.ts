@@ -12,6 +12,7 @@ const REQUEST_SEND = 0x80;
 const REQUEST_READ = 0x81;
 const STATUS_REJECTED = '0a';
 
+/** Bytes as lowercase hex, the form the recordings store. */
 const toHex = (data: BufferSource) =>
   Array.from(
     ArrayBuffer.isView(data)
@@ -21,6 +22,7 @@ const toHex = (data: BufferSource) =>
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
 
+/** Hex from a recording as bytes. */
 const fromHex = (hex: string) =>
   Uint8Array.from((hex.match(/../g) ?? []).map((pair) => Number.parseInt(pair, 16)));
 

@@ -43,6 +43,7 @@ if (app.requestSingleInstanceLock()) {
   app.quit();
 }
 
+/** Sets up the session handlers, the app protocol and the main window once Electron is ready. */
 function start(): void {
   nativeTheme.themeSource = 'system';
   const defaultSession = session.defaultSession;
@@ -95,10 +96,12 @@ function createMainWindow(): BrowserWindow {
   return window;
 }
 
+/** The OS appearance signals the renderer needs: reduced transparency. */
 function appearancePayload(): AppearancePayload {
   return { prefersReducedTransparency: nativeTheme.prefersReducedTransparency };
 }
 
+/** Answers appearance requests from the renderer and pushes changes to it. */
 function forwardAppearance(): void {
   ipcMain.on(IPC.appearanceGet, (event) => {
     event.returnValue = appearancePayload();

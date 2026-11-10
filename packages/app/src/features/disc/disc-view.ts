@@ -45,6 +45,7 @@ const MODE_LABELS: Readonly<Record<number, string>> = {
 
 const MONO: number = Channels.mono;
 
+/** The recording mode as shown: SP, LP2 or LP4, with "mono" for mono tracks. */
 function modeLabel(track: Track): string {
   const base = MODE_LABELS[track.encoding] ?? 'Unknown mode';
   return track.channel === MONO ? `${base} mono` : base;
@@ -61,6 +62,7 @@ function titles(halfWidth: string, fullWidth: string | null): { main: string; su
   return { main: full, sub: halfWidth !== '' && halfWidth !== full ? halfWidth : null };
 }
 
+/** What a track row shows: number, titles, duration and mode. */
 function trackView(track: Track): TrackView {
   const { main, sub } = titles(track.title, track.fullWidthTitle);
   return {

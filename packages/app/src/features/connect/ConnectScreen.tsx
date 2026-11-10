@@ -25,6 +25,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
     [platform.usb, platform.deviceKinds],
   );
 
+  /** Opens the platform's device chooser and connects the chosen device. */
   const requestDevice = () => {
     chooserCancelled.current = false;
     void controller.request(() => chooserCancelled.current);
@@ -42,9 +43,11 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
       .catch(() => {
         // Reconnecting on launch is best-effort; the Connect button still works.
       });
+    /** Connects a granted device as soon as it is plugged in. */
     const onConnect = ({ device }: UsbConnectionEventLike) => {
       if (active) void controller.autoConnect(device);
     };
+    /** Returns to the connect screen when the open device is unplugged. */
     const onDisconnect = ({ device }: UsbConnectionEventLike) => {
       controller.handleDisconnect(device);
     };
