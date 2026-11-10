@@ -161,6 +161,8 @@ export function ConvertDialog({
 
   const lp = mode === 'lp2' || mode === 'lp4';
   const uploadCount = items.filter((item) => item.problem === null).length;
+  // Pre-encoded ATRAC3 files are uploaded as they are and never sent to the online encoder.
+  const sentCount = items.filter((item) => item.problem === null && item.atrac === null).length;
   const fit = fitView(items, mode, disc, fullWidth);
   const chosen: UploadPreferences = {
     mode,
@@ -415,7 +417,7 @@ export function ConvertDialog({
             <GlassAlert tone="info" title={`Send your files to ${ONLINE_HOST}?`}>
               <p>
                 Sony's encoder runs on {ONLINE_HOST}, a service run by MiniDisc enthusiasts. Your{' '}
-                {uploadCount === 1 ? 'file is' : `${String(uploadCount)} files are`} uploaded there,
+                {sentCount === 1 ? 'file is' : `${String(sentCount)} files are`} uploaded there,
                 encoded and sent back. Nothing else leaves your computer.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
@@ -458,7 +460,8 @@ export function ConvertDialog({
               size="sm"
               disabled={!fit.canUpload || askConsent}
               onClick={() => {
-                if (lp && encoder === 'online' && !preferences.onlineConsent) setAskConsent(true);
+                const sends = lp && encoder === 'online' && sentCount > 0;
+                if (sends && !preferences.onlineConsent) setAskConsent(true);
                 else upload();
               }}
             >
