@@ -12,6 +12,7 @@ const platform: Platform = {
   usb: navigator.usb,
   deviceKinds: ['netmd', 'himd'],
   buildCommit: __MDCONNECT_COMMIT__,
+  version: __MDCONNECT_VERSION__,
   deviceChooser: {
     onChooseDevice: (callback) => bridge.usb.onChooseDevice(callback),
     respond: (requestId, deviceId) => {

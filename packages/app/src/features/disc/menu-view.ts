@@ -1,3 +1,5 @@
+import { sourceRepositoryUrl } from '@mdconnect/core';
+
 /** For each More menu item, why it is unavailable, or null when it can be used. */
 export interface MenuAvailability {
   readonly export: string | null;
@@ -23,6 +25,18 @@ export function menuAvailability(state: {
         : null);
   return { export: noDisc, import: writing, wipe: writing, about: null, exit: null };
 }
+
+export interface MenuLink {
+  readonly label: string;
+  readonly href: string;
+}
+
+/** The More menu's links, which open in the default browser. */
+export const MENU_LINKS: readonly MenuLink[] = [
+  { label: 'Support and FAQ', href: 'https://www.minidisc.wiki/guides/start' },
+  { label: 'Source code on GitHub', href: sourceRepositoryUrl },
+  { label: 'Donate', href: 'https://paypal.me/ernest0vm' },
+];
 
 /** The import review's note on rows of the file past the end of the disc, or '' for none. */
 export function ignoredTracksNote(outside: readonly number[]): string {

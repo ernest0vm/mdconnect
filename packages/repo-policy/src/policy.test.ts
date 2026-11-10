@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   allManifests,
+  newestChangelogVersion,
   parseAgeGateMinutes,
   parseYarnrc,
   readRootFile,
@@ -173,6 +174,31 @@ describe('workspace conventions', () => {
       expect(manifest.json.devDependencies?.['@mdconnect/tsconfig']).toMatch(/^workspace:/);
     },
   );
+});
+
+describe('newestChangelogVersion', () => {
+  it('reads the first version heading', () => {
+    const text = '# Changelog\n\n## [0.2.0] - 2027-01-02\n\n- b\n\n## [0.1.0] - 2026-11-10\n';
+    expect(newestChangelogVersion(text)).toBe('0.2.0');
+  });
+
+  it('is undefined without a version heading', () => {
+    expect(newestChangelogVersion('# Changelog\n')).toBeUndefined();
+  });
+});
+
+describe('app version (changelog: "Bundled changelog")', () => {
+  const apps = workspaceManifests().filter((m) => m.dir.startsWith(join(repoRoot, 'apps')));
+
+  it('finds the desktop and web apps', () => {
+    expect(apps.map((m) => m.name).sort()).toEqual(['@mdconnect/desktop', '@mdconnect/web']);
+  });
+
+  it('is the same in both apps and is the newest CHANGELOG.md version', () => {
+    const newest = newestChangelogVersion(readRootFile('CHANGELOG.md'));
+    expect(newest).toBeDefined();
+    expect(apps.map((m) => [m.name, m.json.version])).toEqual(apps.map((m) => [m.name, newest]));
+  });
 });
 
 describe('git hooks', () => {

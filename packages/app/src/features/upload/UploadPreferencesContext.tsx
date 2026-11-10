@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { browserStorage } from '../../browser-storage';
 import {
   createConsentGuard,
   createUploadPreferencesStore,
@@ -16,15 +17,8 @@ interface UploadPreferencesValue {
 
 const UploadPreferencesContext = createContext<UploadPreferencesValue | null>(null);
 
-/** `window.localStorage` itself throws when a profile blocks storage. */
 function browserStore(): UploadPreferencesStore {
-  let storage: Storage | null;
-  try {
-    storage = window.localStorage;
-  } catch {
-    storage = null;
-  }
-  return createUploadPreferencesStore(storage, window);
+  return createUploadPreferencesStore(browserStorage(), window);
 }
 
 /**

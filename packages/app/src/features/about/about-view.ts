@@ -2,3 +2,6 @@
 export function buildLabel(commit: string): string {
   return commit === '' ? 'Development build' : `Build ${commit.slice(0, 12)}`;
 }
+
+/** The version line in About. */
+export const versionLabel = (version: string): string => `Version ${version}`;
