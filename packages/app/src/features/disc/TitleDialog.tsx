@@ -72,6 +72,7 @@ export function TitleDialog({
   const [input, setInput] = useState(() => currentTitles(disc, target));
   const form = useMemo(() => titleForm(disc, target, input), [disc, target, input]);
   const changed = form.halfWidthChanged || form.fullWidthChanged || target.kind === 'new-group';
+  const canSave = form.fits && changed && !form.missingTitle;
 
   return (
     <GlassDialog
@@ -90,7 +91,7 @@ export function TitleDialog({
           className="mt-4 flex flex-col gap-4"
           onSubmit={(event) => {
             event.preventDefault();
-            if (form.fits && changed) onSave(form);
+            if (canSave) onSave(form);
           }}
         >
           <TitleField
@@ -111,6 +112,7 @@ export function TitleDialog({
               setInput((current) => ({ ...current, fullWidth }));
             }}
           />
+          {form.missingTitle && <p className="text-sm">A group needs a title.</p>}
           {!form.fits && (
             <p role="alert" className="text-sm font-semibold text-red-800 dark:text-red-200">
               This title does not fit in the space left on the disc. Shorten it to save.
@@ -120,12 +122,7 @@ export function TitleDialog({
             <GlassButton type="button" variant="ghost" size="sm" onClick={onClose}>
               Cancel
             </GlassButton>
-            <GlassButton
-              type="submit"
-              variant="primary"
-              size="sm"
-              disabled={!form.fits || !changed}
-            >
+            <GlassButton type="submit" variant="primary" size="sm" disabled={!canSave}>
               {saveLabel}
             </GlassButton>
           </div>

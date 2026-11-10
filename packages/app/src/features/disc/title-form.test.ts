@@ -106,4 +106,54 @@ describe('titleForm', () => {
     expect(form.halfWidthChanged).toBe(false);
     expect(form.fullWidthChanged).toBe(false);
   });
+
+  it('removes slashes that would read as the group delimiter from disc and group titles', () => {
+    const form = titleForm(
+      disc([track(0)]),
+      { kind: 'disc' },
+      { halfWidth: 'AC//DC/', fullWidth: 'エー／／ビー／' },
+    );
+    expect(form.halfWidth).toBe('AC/DC');
+    expect(form.fullWidth).toBe('エー／ビー');
+    const group = titleForm(
+      disc([track(0), track(1)]),
+      { kind: 'new-group', tracks: [0, 1] },
+      {
+        halfWidth: 'A//B',
+        fullWidth: '',
+      },
+    );
+    expect(group.halfWidth).toBe('A/B');
+  });
+
+  it('keeps slashes in track titles, which are stored apart from the groups', () => {
+    const form = titleForm(
+      disc([track(0)]),
+      { kind: 'track', index: 0 },
+      { halfWidth: 'AC//DC/', fullWidth: '' },
+    );
+    expect(form.halfWidth).toBe('AC//DC/');
+  });
+
+  it('requires a title for a group, so the group stays editable', () => {
+    const tracks = [track(0), track(1)];
+    expect(
+      titleForm(
+        disc(tracks),
+        { kind: 'new-group', tracks: [0, 1] },
+        { halfWidth: '  ', fullWidth: '' },
+      ).missingTitle,
+    ).toBe(true);
+    expect(
+      titleForm(
+        disc(tracks),
+        { kind: 'new-group', tracks: [0, 1] },
+        { halfWidth: 'Live', fullWidth: '' },
+      ).missingTitle,
+    ).toBe(false);
+    // A disc or a track may be untitled.
+    expect(
+      titleForm(disc(tracks), { kind: 'disc' }, { halfWidth: '', fullWidth: '' }).missingTitle,
+    ).toBe(false);
+  });
 });
