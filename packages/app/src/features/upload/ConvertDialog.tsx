@@ -163,6 +163,9 @@ export function ConvertDialog({
   const uploadCount = items.filter((item) => item.problem === null).length;
   // Pre-encoded ATRAC3 files are uploaded as they are and never sent to the online encoder.
   const sentCount = items.filter((item) => item.problem === null && item.atrac === null).length;
+  const sendsOnline = lp && encoder === 'online' && sentCount > 0;
+  // Derived from the current list, so the prompt goes away once nothing would be sent.
+  const consentPending = askConsent && sendsOnline;
   const fit = fitView(items, mode, disc, fullWidth);
   const chosen: UploadPreferences = {
     mode,
@@ -413,7 +416,7 @@ export function ConvertDialog({
             )}
           </div>
 
-          {askConsent && (
+          {consentPending && (
             <GlassAlert tone="info" title={`Send your files to ${ONLINE_HOST}?`}>
               <p>
                 Sony's encoder runs on {ONLINE_HOST}, a service run by MiniDisc enthusiasts. Your{' '}
@@ -458,10 +461,9 @@ export function ConvertDialog({
               type="button"
               variant="primary"
               size="sm"
-              disabled={!fit.canUpload || askConsent}
+              disabled={!fit.canUpload || consentPending}
               onClick={() => {
-                const sends = lp && encoder === 'online' && sentCount > 0;
-                if (sends && !preferences.onlineConsent) setAskConsent(true);
+                if (sendsOnline && !preferences.onlineConsent) setAskConsent(true);
                 else upload();
               }}
             >
