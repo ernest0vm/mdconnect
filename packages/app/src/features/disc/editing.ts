@@ -3,6 +3,7 @@ import type { EditPlan, GroupTracksResult, LayoutPlan } from './edit-plan';
 
 export type Selection = ReadonlySet<number>;
 
+/** Adds or removes a track from the selection, keeping it sorted. */
 export function toggleTrack(selection: Selection, track: number): Selection {
   const next = new Set(selection);
   if (next.has(track)) next.delete(track);
@@ -15,11 +16,13 @@ export function trackCountLabel(count: number): string {
   return `${String(count)} ${count === 1 ? 'track' : 'tracks'}`;
 }
 
+/** Describes the selection, for example "2 tracks selected". */
 export function selectionLabel(selection: Selection): string {
   if (selection.size === 0) return 'No tracks selected';
   return `${trackCountLabel(selection.size)} selected`;
 }
 
+/** Whether none, some or all tracks are selected, for the select-all box. */
 export function selectAllState(selection: Selection, trackCount: number): 'none' | 'some' | 'all' {
   if (selection.size === 0) return 'none';
   return selection.size >= trackCount ? 'all' : 'some';
@@ -43,6 +46,7 @@ export function editBlocker(state: { writeProtected: boolean; busy: boolean }): 
 
 type GroupProblem = Extract<GroupTracksResult, { kind: 'invalid' }>['reason'];
 
+/** Why the selected tracks cannot be grouped, in words. */
 export function groupBlocker(reason: GroupProblem): string {
   switch (reason) {
     case 'empty':
@@ -56,6 +60,7 @@ export function groupBlocker(reason: GroupProblem): string {
 
 type FailureReason = Extract<EditOutcome, { kind: 'failed' }>['reason'];
 
+/** A readable message for a failed edit; never a raw error. */
 export function editFailureMessage(reason: FailureReason): string {
   switch (reason) {
     case 'rejected':

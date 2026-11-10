@@ -93,6 +93,7 @@ function joinVoicingMarks(title: string): string {
 
 const HALF_WIDTH_KANA = new Set(Object.values(TO_HALF_WIDTH));
 
+/** The half-width form of a character, itself if already allowed, or null. */
 function toHalfWidth(char: string): string | null {
   const mapped = TO_HALF_WIDTH[char];
   if (mapped) return mapped;
@@ -100,6 +101,7 @@ function toHalfWidth(char: string): string | null {
   return null;
 }
 
+/** Maps ASCII and half-width kana to full width, and transliterates Cyrillic and German. */
 function remapForFullWidth(title: string): string {
   return title.replace(/./gu, (char) => {
     const japanese = TO_FULL_WIDTH[char] ?? char;

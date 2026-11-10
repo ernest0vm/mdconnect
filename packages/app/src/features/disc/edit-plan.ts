@@ -37,10 +37,12 @@ export interface LayoutPlan extends EditPlan {
   readonly fits: boolean;
 }
 
+/** Renames the disc; the full-width title is left alone unless given. */
 export function renameDiscPlan(title: string, fullWidthTitle?: string): EditPlan {
   return { commands: [{ kind: 'renameDisc', title, fullWidthTitle }] };
 }
 
+/** Renames a track; the full-width title is written only when given. */
 export function renameTrackPlan(track: number, title: string, fullWidthTitle?: string): EditPlan {
   const commands: EditCommand[] = [{ kind: 'setTrackTitle', track, title, fullWidth: false }];
   if (fullWidthTitle !== undefined) {
@@ -61,6 +63,7 @@ interface Layout {
   readonly names: Map<number, GroupName>;
 }
 
+/** The disc as positions with group ids, sorted by track index. */
 function layoutOf(disc: Disc): Layout {
   const slots: Layout['slots'] = [];
   const names = new Map<number, GroupName>();
@@ -99,6 +102,7 @@ function discOf({ disc, slots, names }: Layout): Disc {
   return { ...disc, trackCount: tracks.length, groups };
 }
 
+/** A plan that runs `commands` and then rewrites the groups for the resulting layout. */
 function layoutPlan(commands: EditCommand[], layout: Layout): LayoutPlan {
   const expected = discOf(layout);
   return {
@@ -188,6 +192,7 @@ export function groupTracksPlan(
   return { kind: 'plan', ...layoutPlan([], { ...layout, slots, names }) };
 }
 
+/** The id of the group that holds the track at `firstTrack`, or null. */
 function groupAt(layout: Layout, firstTrack: number): number | null {
   return layout.slots[firstTrack]?.group ?? null;
 }

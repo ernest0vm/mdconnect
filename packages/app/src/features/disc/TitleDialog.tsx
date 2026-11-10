@@ -20,6 +20,7 @@ export interface TitleDialogProps {
   readonly onClose: () => void;
 }
 
+/** One title input with what will be stored and the space left. */
 function TitleField({
   label,
   value,

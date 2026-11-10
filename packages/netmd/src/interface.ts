@@ -138,6 +138,7 @@ export class NetMdInterface {
     return result;
   }
 
+  /** The operating status block; byte 4 tells whether a disc is inserted. */
   async getStatus(): Promise<Uint8Array> {
     return this.withDescriptor(Descriptor.operatingStatusBlock, async () => {
       const reply = await this.sendQuery(
@@ -151,6 +152,7 @@ export class NetMdInterface {
     return (await this.getStatus())[4] === 0x40;
   }
 
+  /** The disc flags: writable and write-protected. */
   async getDiscFlags(): Promise<number> {
     return this.withDescriptor(Descriptor.rootTD, async () => {
       const reply = await this.sendQuery(formatQuery('1806 01101000 ff00 0001000b'));
@@ -158,6 +160,7 @@ export class NetMdInterface {
     });
   }
 
+  /** The number of tracks on the disc. */
   async getTrackCount(): Promise<number> {
     return this.withDescriptor(Descriptor.audioContentsTD, async () => {
       const reply = await this.sendQuery(formatQuery('1806 02101001 3000 1000 ff00 00000000'));
@@ -170,6 +173,7 @@ export class NetMdInterface {
     return decodeSjis(await this.readDiscTitleBytes(fullWidth));
   }
 
+  /** Reads the raw disc title field in chunks, as stored. */
   private async readDiscTitleBytes(fullWidth: boolean): Promise<Uint8Array> {
     await this.descriptor(Descriptor.audioContentsTD, OPEN_READ);
     await this.descriptor(Descriptor.discTitleTD, OPEN_READ);
@@ -214,6 +218,7 @@ export class NetMdInterface {
     return decodeSjis(await this.readTrackTitleBytes(track, fullWidth));
   }
 
+  /** Reads a track's half-width or full-width title as stored. */
   private async readTrackTitleBytes(track: number, fullWidth: boolean): Promise<Uint8Array> {
     const descriptor = fullWidth ? Descriptor.audioUTOC4TD : Descriptor.audioUTOC1TD;
     return this.withDescriptor(descriptor, async () => {
@@ -224,6 +229,7 @@ export class NetMdInterface {
     });
   }
 
+  /** Reads one track attribute from the audio contents descriptor. */
   private async getTrackInfo(track: number, p1: number, p2: number): Promise<Uint8Array> {
     return this.withDescriptor(Descriptor.audioContentsTD, async () => {
       const reply = await this.sendQuery(
@@ -233,6 +239,7 @@ export class NetMdInterface {
     });
   }
 
+  /** A track's length as hours, minutes, seconds and frames. */
   async getTrackLength(track: number): Promise<DeviceTime> {
     const info = await this.getTrackInfo(track, 0x3000, 0x0100);
     const [h, m, s, f] = scanQuery(info, '0001 0006 0000 %B %B %B %B').map(num);
@@ -246,6 +253,7 @@ export class NetMdInterface {
     return { codec: codec ?? 0, channel: channel ?? 0 };
   }
 
+  /** A track's protection flags (`TrackFlag`). */
   async getTrackFlags(track: number): Promise<number> {
     return this.withDescriptor(Descriptor.audioContentsTD, async () => {
       const reply = await this.sendQuery(formatQuery('1806 01201001 %w ff00 00010008', track));

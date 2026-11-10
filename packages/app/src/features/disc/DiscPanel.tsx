@@ -81,6 +81,7 @@ interface TrackListProps {
   readonly onUngroup: (track: number) => void;
 }
 
+/** The tracks of one group, with its title, group actions, selection and drag handles. */
 function TrackList({
   group,
   selection,
@@ -196,6 +197,7 @@ interface EditorProps {
   readonly notice: ReactNode;
 }
 
+/** The disc with its edit actions, selection and dialogs; it turns user actions into edit plans. */
 function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
   const [chosen, setSelection] = useState<Selection>(new Set());
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -213,11 +215,13 @@ function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
   const grouping = groupTracksPlan(raw, selected, 'check');
   const allState = selectAllState(selection, raw.trackCount);
 
+  /** Runs a plan, closes any dialog and optionally moves the selection. */
   const edit = (plan: EditPlan, selectAfter?: Selection) => {
     setDialog(null);
     onEdit(plan, selectAfter);
     if (selectAfter) setSelection(selectAfter);
   };
+  /** Moves a track to a valid position and keeps it selected. */
   const move = (from: number, to: number) => {
     if (from === to || to < 0 || to >= raw.trackCount) return;
     edit(moveTrackPlan(raw, from, to), new Set([to]));

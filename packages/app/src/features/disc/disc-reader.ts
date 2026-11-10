@@ -58,6 +58,7 @@ export async function openNetMdSession(handle: UsbDeviceHandle): Promise<DiscSes
   };
 }
 
+/** Maps an error from an edit to the reason shown to the user. */
 function failureReason(error: unknown): Extract<EditOutcome, { kind: 'failed' }>['reason'] {
   if (error instanceof NetMdRejectedError) return 'rejected';
   // encodeSjis throws RangeError before anything is sent.
@@ -65,6 +66,7 @@ function failureReason(error: unknown): Extract<EditOutcome, { kind: 'failed' }>
   return 'failed';
 }
 
+/** Sends one edit command to the device through the NetMD interface. */
 async function runCommand(md: NetMdInterface, command: EditCommand): Promise<void> {
   switch (command.kind) {
     case 'renameDisc':
@@ -121,6 +123,7 @@ export class DiscReader {
     return done;
   }
 
+  /** Makes a read the one later read() calls share until it settles. */
   private share(read: Promise<DiscReadResult>): Promise<DiscReadResult> {
     const shared = read.finally(() => {
       if (this.inFlight === shared) this.inFlight = null;
@@ -128,12 +131,14 @@ export class DiscReader {
     return shared;
   }
 
+  /** Runs a task after every read or edit already queued. */
   private exclusive<T>(task: () => Promise<T>): Promise<T> {
     const run = this.queue.then(task);
     this.queue = run.catch(() => undefined);
     return run;
   }
 
+  /** Runs the plan commands in order and recovers if one fails part way. */
   private async runPlan(plan: EditPlan): Promise<EditOutcome> {
     let session: DiscSession;
     try {

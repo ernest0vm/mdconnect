@@ -13,6 +13,7 @@ const NEC_IBM_LAST = 8835;
 
 let table: Map<string, number> | null = null;
 
+/** Builds the character-to-code table by decoding every Shift-JIS code. */
 function buildTable(): Map<string, number> {
   const decoder = new TextDecoder('shift_jis');
   const codes = new Map<string, number>();
@@ -38,6 +39,7 @@ function buildTable(): Map<string, number> {
   return codes;
 }
 
+/** A character's Shift-JIS code, building the table on first use. */
 function codeOf(char: string): number | undefined {
   table ??= buildTable();
   return table.get(char);

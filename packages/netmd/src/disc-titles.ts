@@ -24,6 +24,7 @@ const SP: number = Encoding.sp;
 
 const cells = (bytes: number) => Math.ceil(bytes / CELL_BYTES);
 
+/** Title cells one track uses, half-width and full-width. */
 function cellsForTrack(track: Track): { halfWidth: number; fullWidth: number } {
   // Devices may prefix long-play track titles with "LP: ", even untitled ones.
   const longPlay = track.encoding === SP ? 0 : 1;
@@ -33,6 +34,7 @@ function cellsForTrack(track: Track): { halfWidth: number; fullWidth: number } {
   };
 }
 
+/** The 1-based range of a group as stored: `3` or `3-5`. */
 function groupRange(indexes: readonly number[]): string {
   const first = Math.min(...indexes) + 1;
   return indexes.length === 1
