@@ -32,7 +32,7 @@ export interface TrackPacketOptions {
   readonly frameSize: number;
   /** Returns `length` random bytes; the data key is drawn from it. */
   readonly random: (length: number) => Uint8Array;
-  /** Bytes per bulk write, header included; a multiple of 8. */
+  /** Bytes per bulk write, header included: a multiple of 8, above 24. */
   readonly packetSize?: number;
 }
 
@@ -51,6 +51,16 @@ export function* trackPackets(
   const { data, frameSize } = options;
   if (data.length === 0) throw new Error('A track with no audio cannot be uploaded');
   const packetSize = options.packetSize ?? DEFAULT_PACKET_SIZE;
+  // Each packet holds whole DES blocks, and the first one room for audio after its header.
+  if (
+    !Number.isInteger(packetSize) ||
+    packetSize <= HEADER_LENGTH ||
+    packetSize % KEY_LENGTH !== 0
+  ) {
+    throw new RangeError(
+      `The packet size must be a multiple of 8 above ${String(HEADER_LENGTH)}, got ${String(packetSize)}`,
+    );
+  }
   const total = paddedLength(data.length, frameSize);
 
   const dataKey = options.random(KEY_LENGTH);

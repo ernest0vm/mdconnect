@@ -78,7 +78,7 @@ The app SHALL NOT send audio, file names or tags anywhere except to the online A
 
 ### Requirement: ReplayGain
 
-When ReplayGain is enabled in the convert dialog, the app SHALL apply each file's ReplayGain track gain from its tags, limited so the audio does not clip. Files without the tag SHALL be uploaded unchanged. ReplayGain SHALL be off by default and remembered.
+When ReplayGain is enabled in the convert dialog, the app SHALL apply each file's ReplayGain track gain from its tags, limited so the audio does not clip. Files without the tag SHALL be uploaded unchanged, and so SHALL pre-encoded ATRAC3 files, which are never re-encoded. ReplayGain SHALL be off by default and remembered.
 
 #### Scenario: Apply track gain
 
@@ -89,6 +89,11 @@ When ReplayGain is enabled in the convert dialog, the app SHALL apply each file'
 
 - **WHEN** ReplayGain is enabled and a file has no ReplayGain tag
 - **THEN** the file is uploaded at its original level
+
+#### Scenario: Pre-encoded file with a track gain
+
+- **WHEN** ReplayGain is enabled and an ATRAC3 WAV tagged with a track gain of -6 dB is added
+- **THEN** it is uploaded as is, at its original level
 
 ### Requirement: Pre-encoded ATRAC3
 
