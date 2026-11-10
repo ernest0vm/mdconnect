@@ -26,6 +26,9 @@ function session(overrides: Partial<DiscSession> = {}): DiscSession {
     isDiscPresent: () => Promise.resolve(true),
     listContent: () => Promise.resolve(blank),
     run: () => Promise.resolve(),
+    playback: () => Promise.resolve(),
+    deviceStatus: () =>
+      Promise.resolve({ discPresent: true, state: 'ready', track: 0, time: null }),
     ...overrides,
   };
 }
@@ -277,11 +280,7 @@ describe('DiscReader', () => {
 });
 
 describe('DiscReader.edit failures', () => {
-  const blankSession = (run: DiscSession['run']): DiscSession => ({
-    isDiscPresent: () => Promise.resolve(true),
-    listContent: () => Promise.resolve(blank),
-    run,
-  });
+  const blankSession = (run: DiscSession['run']): DiscSession => session({ run });
 
   it('runs the plan recovery for the commands that completed before a failure', async () => {
     const ran: string[] = [];

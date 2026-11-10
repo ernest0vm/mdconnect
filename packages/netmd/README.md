@@ -1,6 +1,6 @@
 # @mdconnect/netmd
 
-NetMD protocol code: the USB transport, the query encoder and decoder, the queries needed to list a disc, and the commands that edit titles, erase and move tracks, and store groups.
+NetMD protocol code: the USB transport, the query encoder and decoder, the queries needed to list a disc, the commands that edit titles, erase and move tracks, and store groups, and the playback controls and status (`play`, `pause`, `stop`, `nextTrack`, `previousTrack`, `gotoTrack`, `getDeviceStatus`).
 
 It is a TypeScript port of part of [netmd-js](https://github.com/cybercase/netmd-js) 4.4.1 by Stefano Brilli and Asivery, licensed under the GNU General Public License v2.0. Each ported file names its upstream source. Changes from upstream are listed in the file that makes them:
 

@@ -1,4 +1,6 @@
+import { GlassButton } from '@mdconnect/ui/components/glassyui/glass-button';
 import { GlassCheckbox } from '@mdconnect/ui/components/glassyui/glass-checkbox';
+import { PauseIcon, PlayIcon } from '@mdconnect/ui/components/glassyui/playback-icons';
 import { useState } from 'react';
 
 import { Action } from './Action';
@@ -17,10 +19,15 @@ export interface TrackTableProps {
   readonly onMove: (from: number, to: number) => void;
   readonly onRenameGroup: (track: number) => void;
   readonly onUngroup: (track: number) => void;
+  /** Whether a zero-based track is the one playing, the one paused, or neither. */
+  readonly playState: (track: number) => 'playing' | 'paused' | 'none';
+  readonly playBlocked: boolean;
+  /** Plays a track, or pauses or resumes it when it is the current one. */
+  readonly onPlay: (track: number) => void;
 }
 
 /** Column count, for the group rows that span the table. */
-const COLUMNS = 5;
+const COLUMNS = 6;
 
 const CELL = 'px-2 py-1.5 align-middle';
 
@@ -36,6 +43,9 @@ export function TrackTable(props: TrackTableProps) {
         <tr className="text-left text-xs font-semibold">
           <th scope="col" className={`${CELL} w-8`}>
             <span className="sr-only">Selected</span>
+          </th>
+          <th scope="col" className={`${CELL} w-10`}>
+            <span className="sr-only">Play</span>
           </th>
           <th scope="col" className={`${CELL} w-10 text-right`}>
             #
@@ -74,6 +84,9 @@ function GroupRows({
   onMove,
   onRenameGroup,
   onUngroup,
+  playState,
+  playBlocked,
+  onPlay,
   dropHint,
   onDropHint,
 }: TrackTableProps & {
@@ -128,6 +141,9 @@ function GroupRows({
           selected={selection.has(track.number - 1)}
           locked={locked}
           hint={dropHint?.index === track.number - 1 ? dropHint.side : null}
+          playState={playState(track.number - 1)}
+          playBlocked={playBlocked}
+          onPlay={onPlay}
           onToggle={onToggle}
           onMove={onMove}
           onDropHint={onDropHint}
@@ -143,6 +159,9 @@ function TrackRow({
   selected,
   locked,
   hint,
+  playState,
+  playBlocked,
+  onPlay,
   onToggle,
   onMove,
   onDropHint,
@@ -151,6 +170,9 @@ function TrackRow({
   readonly selected: boolean;
   readonly locked: boolean;
   readonly hint: 'before' | 'after' | null;
+  readonly playState: 'playing' | 'paused' | 'none';
+  readonly playBlocked: boolean;
+  readonly onPlay: (track: number) => void;
   readonly onToggle: (index: number) => void;
   readonly onMove: (from: number, to: number) => void;
   readonly onDropHint: (hint: DropHint) => void;
@@ -189,6 +211,7 @@ function TrackRow({
       className={[
         '[&>td]:border-y-2 [&>td]:border-transparent',
         selected ? 'bg-indigo-500/15' : '',
+        playState === 'none' ? '' : 'font-semibold',
         locked ? '' : 'cursor-grab',
         edge,
       ].join(' ')}
@@ -201,6 +224,25 @@ function TrackRow({
             onToggle(index);
           }}
         />
+      </td>
+      <td className={CELL}>
+        <GlassButton
+          variant={playState === 'none' ? 'ghost' : 'soft'}
+          size="sm"
+          aria-label={
+            playState === 'playing'
+              ? `Pause track ${String(track.number)}, playing`
+              : playState === 'paused'
+                ? `Resume track ${String(track.number)}, paused`
+                : `Play track ${String(track.number)}`
+          }
+          aria-disabled={playBlocked}
+          onClick={() => {
+            if (!playBlocked) onPlay(index);
+          }}
+        >
+          {playState === 'playing' ? <PauseIcon /> : <PlayIcon />}
+        </GlassButton>
       </td>
       <td className={`${CELL} text-right font-mono tabular-nums opacity-80`}>{track.number}</td>
       <td className={`${CELL} [overflow-wrap:anywhere]`}>
