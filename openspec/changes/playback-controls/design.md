@@ -53,9 +53,9 @@ Query tests check each command's bytes. A replay test uses a recorded play, next
   - it returns the new status, or a failure reason (`rejected` or `failed`).
 - `status()`:
   - a status read in the queue, shared like `read()` so two callers never read twice;
-  - it reopens the session after a failure, like a disc read.
+  - it reopens the session after a transport failure, like a disc read. A device that refuses the status queries keeps its session, so polling does not reopen it every second.
 
-Playback commands are plain values: `{ kind: 'play' } | { kind: 'pause' } | { kind: 'stop' } | { kind: 'next' } | { kind: 'previous' } | { kind: 'goto', track }`. They sit next to `EditCommand` but are not `EditCommand`s, because they do not change the disc and need no re-read.
+Playback commands are plain values: `{ kind: 'play' } | { kind: 'pause' } | { kind: 'stop' } | { kind: 'next' } | { kind: 'previous' } | { kind: 'goto', track } | { kind: 'playTrack', track }`. `playTrack` is webminidisc's goto followed by play, as one step in the queue. They sit next to `EditCommand` but are not `EditCommand`s, because they do not change the disc and need no re-read.
 
 Alternative: a separate session for playback. Rejected: one USB interface means one queue (edit-disc design, decision 5).
 
@@ -70,13 +70,11 @@ A `useDeviceStatus(reader)` hook:
 
 The timer and visibility source are injected, so tests run without real time.
 
-Desktop and web behave the same. Electron fires `visibilitychange` when the window is minimized or hidden. Polling costs four small queries a second, which is what webminidisc does. If it delays a Refresh or an edit, that is by at most one status read.
+Desktop and web behave the same. Electron fires `visibilitychange` when the window is minimized or hidden. Polling `getDeviceStatus` costs three queries a second, as in webminidisc. If it delays a Refresh or an edit, that is by at most one status read.
 
 ### 4. Player UI
 
-- **`PlayerBar`** sits in the connected layout:
-  - at `lg` and up, at the bottom of the disc summary column;
-  - below `lg`, a bar under the header, so it stays in view while the list scrolls.
+- **`PlayerBar`** sits at the bottom of the disc summary at every width. Below `lg` the summary is above the list and keeps its height, so the player stays in view while the list scrolls; a separate bar under the header was not needed.
 - **Inside the bar:**
   - icon buttons with text labels for assistive technology: Previous, Play or Pause, Stop, Next;
   - the now-playing text, "004 · Intro · 1:23", in a polite live region that only announces a change of track or state, not every second;

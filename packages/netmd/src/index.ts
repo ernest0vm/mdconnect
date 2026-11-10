@@ -37,3 +37,4 @@ export {
   stripDiacritics,
 } from './sanitize';
 export { encodeSjis, isSjisEncodable, sjisLength } from './sjis';
+export { getDeviceStatus, type DeviceStatus, type OperatingState } from './status';

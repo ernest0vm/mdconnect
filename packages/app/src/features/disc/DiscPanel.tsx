@@ -1,4 +1,4 @@
-import type { Disc } from '@mdconnect/netmd';
+import type { DeviceStatus, Disc } from '@mdconnect/netmd';
 import { GlassAlert } from '@mdconnect/ui/components/glassyui/glass-alert';
 import { GlassBadge } from '@mdconnect/ui/components/glassyui/glass-badge';
 import { GlassButton } from '@mdconnect/ui/components/glassyui/glass-button';
@@ -11,7 +11,12 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNod
 import type { UsbDeviceHandle } from '../../platform';
 import { Action } from './Action';
 import { DeleteDialog } from './DeleteDialog';
-import { DiscReader, openNetMdSession, type DiscReadResult } from './disc-reader';
+import {
+  DiscReader,
+  openNetMdSession,
+  type DiscReadResult,
+  type PlaybackCommand,
+} from './disc-reader';
 import { discStatus } from './disc-status';
 import type { DiscView } from './disc-view';
 import {
@@ -36,6 +41,9 @@ import {
   type Selection,
 } from './editing';
 import { isHiMdMode } from './hi-md-mode';
+import { PlayerBar } from './PlayerBar';
+import { controlFailureMessage, playerBlocker, playerView, trackPlayState } from './player-view';
+import { browserClock, documentVisibility, StatusPoller } from './status-poller';
 import { TitleDialog } from './TitleDialog';
 import { TrackTable } from './TrackTable';
 
@@ -87,10 +95,27 @@ interface EditorProps {
   readonly notice: ReactNode;
   /** The Refresh button, which belongs in the summary. */
   readonly refresh: ReactNode;
+  /** The player bar, at the bottom of the summary. */
+  readonly player: ReactNode;
+  readonly deviceStatus: DeviceStatus | null;
+  /** Whether the player controls are unavailable. */
+  readonly playBlocked: boolean;
+  readonly onControl: (command: PlaybackCommand) => void;
 }
 
 /** The disc with its edit actions, selection and dialogs; it turns user actions into edit plans. */
-function DiscEditor({ disc, raw, busy, onEdit, notice, refresh }: EditorProps) {
+function DiscEditor({
+  disc,
+  raw,
+  busy,
+  onEdit,
+  notice,
+  refresh,
+  player,
+  deviceStatus,
+  playBlocked,
+  onControl,
+}: EditorProps) {
   const [chosen, setSelection] = useState<Selection>(new Set());
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const reasonId = useId();
@@ -158,6 +183,7 @@ function DiscEditor({ disc, raw, busy, onEdit, notice, refresh }: EditorProps) {
         {refresh}
       </div>
       {notice}
+      {player}
     </>
   );
 
@@ -267,6 +293,14 @@ function DiscEditor({ disc, raw, busy, onEdit, notice, refresh }: EditorProps) {
             }}
             onUngroup={(track) => {
               edit(ungroupPlan(raw, track));
+            }}
+            playState={(track) => trackPlayState(deviceStatus, track)}
+            playBlocked={playBlocked}
+            onPlay={(track) => {
+              const state = trackPlayState(deviceStatus, track);
+              if (state === 'playing') onControl({ kind: 'pause' });
+              else if (state === 'paused') onControl({ kind: 'play' });
+              else onControl({ kind: 'playTrack', track });
             }}
           />
         </div>
@@ -381,7 +415,23 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   const [result, setResult] = useState<DiscReadResult | 'reading'>('reading');
   const [generation, setGeneration] = useState(0);
   const [editState, setEditState] = useState<EditState>({ kind: 'idle' });
+  const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
+  const [controlError, setControlError] = useState<string | null>(null);
   const mounted = useRef(true);
+
+  // Keep the player current while the app is visible; reads share the device queue.
+  useEffect(() => {
+    const poller = new StatusPoller(
+      () => reader.status(),
+      setDeviceStatus,
+      browserClock,
+      documentVisibility,
+    );
+    poller.start();
+    return () => {
+      poller.stop();
+    };
+  }, [reader]);
 
   useEffect(() => {
     mounted.current = true;
@@ -474,9 +524,45 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
     </GlassButton>
   );
 
+  const trackCount = status.kind === 'disc' ? status.raw.trackCount : 0;
+  const titles =
+    status.kind === 'disc'
+      ? status.disc.groups
+          .flatMap((group) => group.tracks)
+          .sort((a, b) => a.number - b.number)
+          .map((track) => (track.untitled ? '' : track.title))
+      : [];
+  const blocker = playerBlocker({
+    status: deviceStatus,
+    reading: status.kind === 'reading',
+    saving,
+  });
+  const runControl = (command: PlaybackCommand) => {
+    setControlError(null);
+    void reader
+      .control(command, { track: deviceStatus?.track ?? null, trackCount })
+      .then(({ outcome, status: next }) => {
+        if (!mounted.current) return;
+        if (next !== null) setDeviceStatus(next);
+        if (outcome.kind === 'failed') setControlError(controlFailureMessage(outcome.reason));
+      });
+  };
+  const player = (
+    <PlayerBar
+      view={playerView(deviceStatus, titles)}
+      blocker={blocker}
+      error={controlError}
+      onControl={runControl}
+    />
+  );
+
   if (status.kind === 'disc') {
     return (
       <DiscEditor
+        player={player}
+        deviceStatus={deviceStatus}
+        playBlocked={blocker !== null}
+        onControl={runControl}
         disc={status.disc}
         raw={status.raw}
         busy={saving}
@@ -493,6 +579,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
         <>
           <h2 className="text-lg font-semibold">Disc</h2>
           <div>{refreshButton}</div>
+          {player}
         </>
       }
       tracks={

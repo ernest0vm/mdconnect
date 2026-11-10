@@ -13,6 +13,10 @@
  *   the lengths are computed from the exact bytes sent and stored. Upstream measured the new
  *   title before sanitising it, and the old one by re-encoding its decoded text.
  * - `eraseTrack` and `moveTrack` fail on a rejected reply like every other command.
+ * - `getPosition` closes its descriptor after a rejected query too; upstream left it open.
+ * - `stop` ignores only a rejected or not-implemented reply and an unexpected echo (the LAM-1
+ *   fix); a timeout or a transfer error, such as an unplugged device, is passed on. Upstream
+ *   ignores every error.
  */
 
 import { NetMdNotImplementedError, NetMdRejectedError } from './errors';
@@ -75,6 +79,12 @@ export interface InterfaceOptions {
 }
 
 const SHARP_VENDOR_ID = 0x04dd;
+
+/** The play command's action byte. */
+const PlayAction = { play: 0x75, pause: 0x7d } as const;
+
+/** The track change command's direction word. */
+const TrackChange = { previous: 0x0002, next: 0x8001, restart: 0x0001 } as const;
 
 const num = (value: ScannedValue | undefined): number =>
   typeof value === 'bigint' || typeof value === 'number' ? Number(value) : 0;
@@ -353,5 +363,91 @@ export class NetMdInterface {
   /** Moves a track to `destination`; the tracks in between shift by one. */
   async moveTrack(source: number, destination: number): Promise<void> {
     await this.sendQuery(formatQuery('1843 ff00 00 201001 %w 201001 %w', source, destination));
+  }
+
+  /** Sends a play action (play or pause) and checks the echo. */
+  private async playAction(action: number): Promise<void> {
+    const reply = await this.sendQuery(formatQuery('18c3 ff %b 000000', action));
+    scanQuery(reply, '18c3 00 %b 000000');
+  }
+
+  async play(): Promise<void> {
+    await this.playAction(PlayAction.play);
+  }
+
+  async pause(): Promise<void> {
+    await this.playAction(PlayAction.pause);
+  }
+
+  /** Stops playback. Some devices (LAM-1) reject stop or answer it oddly; that is ignored. */
+  async stop(): Promise<void> {
+    let reply: Uint8Array;
+    try {
+      reply = await this.sendQuery(formatQuery('18c5 ff 00000000'));
+    } catch (error) {
+      if (error instanceof NetMdRejectedError || error instanceof NetMdNotImplementedError) return;
+      throw error;
+    }
+    try {
+      scanQuery(reply, '18c5 00 00000000');
+    } catch {
+      // An unexpected echo still means the device took the command.
+    }
+  }
+
+  /** Moves playback to a track; returns the zero-based track the device reports. */
+  async gotoTrack(track: number): Promise<number> {
+    const reply = await this.sendQuery(formatQuery('1850 ff010000 0000 %w', track));
+    return num(scanQuery(reply, '1850 00010000 0000 %w')[0]);
+  }
+
+  /** Changes track relative to the current one. */
+  private async changeTrack(direction: number): Promise<void> {
+    const reply = await this.sendQuery(formatQuery('1850 ff10 00000000 %w', direction));
+    scanQuery(reply, '1850 0010 00000000 %?%?');
+  }
+
+  async nextTrack(): Promise<void> {
+    await this.changeTrack(TrackChange.next);
+  }
+
+  async previousTrack(): Promise<void> {
+    await this.changeTrack(TrackChange.previous);
+  }
+
+  /** The second playback status block; bytes 4 and 5 are the operating status. */
+  async getPlaybackStatus2(): Promise<Uint8Array> {
+    return this.withDescriptor(Descriptor.operatingStatusBlock, async () => {
+      const reply = await this.sendQuery(
+        formatQuery('1809 8001 0330 %w 0030 8805 0030 %w 00 ff00 00000000', 0x8802, 0x8806),
+      );
+      // The trailing byte varies by device (an MZ-RH1 fix upstream).
+      return buf(
+        scanQuery(reply, '1809 8001 0330 %?%? %?%? %?%? %?%? %?%? %? 1000 00%?0000 %x %?')[0],
+      );
+    });
+  }
+
+  /**
+   * The playback position: the zero-based track, then hours, minutes, seconds and frames. Null
+   * when the device rejects the query, as it does with no disc or while stopped on some models.
+   */
+  async getPosition(): Promise<readonly [number, number, number, number, number] | null> {
+    return this.withDescriptor(Descriptor.operatingStatusBlock, async () => {
+      let reply: Uint8Array;
+      try {
+        reply = await this.sendQuery(
+          formatQuery('1809 8001 0430 8802 0030 8805 0030 0003 0030 0002 00 ff00 00000000'),
+        );
+      } catch (error) {
+        if (error instanceof NetMdRejectedError) return null;
+        throw error;
+      }
+      const [track, hours, minutes, seconds, frames] = scanQuery(
+        reply,
+        '1809 8001 0430 %?%? %?%? %?%? %?%? %?%? %?%? %?%? %? %?00 00%?0000 000b 0002 0007 00 %w %B %B %B %B',
+      ).map(num);
+      return [track ?? 0, hours ?? 0, minutes ?? 0, seconds ?? 0, frames ?? 0] as const;
+    });
   }
 }
