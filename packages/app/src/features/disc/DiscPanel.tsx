@@ -157,6 +157,16 @@ function DiscEditor({
   const [dialog, setDialog] = useState<Dialog | null>(null);
   /** Whether the open delete dialog was confirmed, which decides where focus goes when it closes. */
   const deleteConfirmed = useRef(false);
+  /**
+   * A row to focus once the table shows the saved change. It is set after the re-read disc is in
+   * state, so the effect below runs on the committed, updated table. A new object each time, so
+   * the effect runs once per request and not again when the disc is read later.
+   */
+  const [focusRequest, setFocusRequest] = useState<{ readonly track: number } | null>(null);
+  // Runs after React commits the re-read disc, so the row is the one in the updated table.
+  useEffect(() => {
+    if (focusRequest !== null) trackRow(focusRequest.track)?.focus();
+  }, [focusRequest]);
   const reasonId = useId();
   const blocker = editBlocker({ writeProtected: raw.writeProtected, busy });
   const locked = blocker !== null;
@@ -212,7 +222,9 @@ function DiscEditor({
       case 'move-down': {
         // Focus follows the track once the device has saved the move; a refused move leaves it.
         const to = trackAfterAction(track, action);
-        move(track, to, () => trackRow(to)?.focus());
+        move(track, to, () => {
+          setFocusRequest({ track: to });
+        });
         return;
       }
     }
