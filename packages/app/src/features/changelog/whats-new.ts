@@ -37,8 +37,14 @@ export function whatsNew(
   );
 }
 
-/** Remembers `current` as seen; a blocked storage is ignored. */
+/**
+ * Remembers `current` as seen, unless a newer version was seen already (an older build starting
+ * must not make the newer one show its changes again). A blocked storage is ignored.
+ */
 export function rememberVersion(storage: StorageLike | null, current: string): void {
+  const lastSeen = readLastSeen(storage);
+  if (lastSeen.blocked) return;
+  if (lastSeen.version !== null && compareVersions(lastSeen.version, current) >= 0) return;
   try {
     storage?.setItem(LAST_SEEN_VERSION_KEY, current);
   } catch {

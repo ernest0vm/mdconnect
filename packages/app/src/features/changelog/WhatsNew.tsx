@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react';
 
+import { browserStorage } from '../../browser-storage';
 import { BUNDLED_CHANGELOG } from './bundled';
 import { ChangelogDialog } from './ChangelogDialog';
 import { readLastSeen, rememberVersion, whatsNew } from './whats-new';
-
-/** `window.localStorage` itself throws when a profile blocks storage. */
-function browserStorage(): Storage | null {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
 
 /** Opens "What's new" once when the app starts with a version newer than the last one shown. */
 export function WhatsNew({ version }: { readonly version: string }) {

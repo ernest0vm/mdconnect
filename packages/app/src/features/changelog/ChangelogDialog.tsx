@@ -50,8 +50,9 @@ export function ChangelogDialog({
                 <div key={section.title} className="flex flex-col gap-1">
                   <h4 className="text-sm font-semibold">{section.title}</h4>
                   <ul className="flex list-disc flex-col gap-1 pl-5 text-sm">
-                    {section.items.map((item) => (
-                      <li key={item}>{item}</li>
+                    {section.items.map((item, index) => (
+                      // Two bullets can read the same, so the position keeps them apart.
+                      <li key={index}>{item}</li>
                     ))}
                   </ul>
                 </div>

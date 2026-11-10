@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
+import { browserStorage } from '../../browser-storage';
 import type { AppearanceChoice } from './appearance-choice';
 import { createAppearanceStore, type AppearanceStore } from './appearance-store';
 
@@ -10,15 +11,8 @@ interface AppearanceChoiceValue {
 
 const AppearanceChoiceContext = createContext<AppearanceChoiceValue | null>(null);
 
-/** `window.localStorage` itself throws when a profile blocks storage. */
 function browserStore(): AppearanceStore {
-  let storage: Storage | null;
-  try {
-    storage = window.localStorage;
-  } catch {
-    storage = null;
-  }
-  return createAppearanceStore(storage, window);
+  return createAppearanceStore(browserStorage(), window);
 }
 
 /** Holds the user's Appearance choice, remembered across launches and shared between tabs. */

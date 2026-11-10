@@ -72,4 +72,12 @@ describe("What's new", () => {
       expect(whatsNew(readLastSeen(storage), '0.3.0', CHANGELOG)).toEqual([]);
     }
   });
+
+  it('keeps a newer version seen when an older build starts', () => {
+    const storage = memoryStorage({ [LAST_SEEN_VERSION_KEY]: '0.3.0' });
+    rememberVersion(storage, '0.2.0');
+    expect(storage.items.get(LAST_SEEN_VERSION_KEY)).toBe('0.3.0');
+    rememberVersion(storage, '0.4.0');
+    expect(storage.items.get(LAST_SEEN_VERSION_KEY)).toBe('0.4.0');
+  });
 });
