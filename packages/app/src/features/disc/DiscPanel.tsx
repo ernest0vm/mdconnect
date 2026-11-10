@@ -42,7 +42,13 @@ import {
 } from './editing';
 import { isHiMdMode } from './hi-md-mode';
 import { PlayerBar } from './PlayerBar';
-import { controlFailureMessage, playerBlocker, playerView, trackPlayState } from './player-view';
+import {
+  controlFailureMessage,
+  playerBlocker,
+  playerView,
+  statusAfterRead,
+  trackPlayState,
+} from './player-view';
 import { browserClock, documentVisibility, StatusPoller } from './status-poller';
 import { TitleDialog } from './TitleDialog';
 import { TrackTable } from './TrackTable';
@@ -448,7 +454,10 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   useEffect(() => {
     let current = true;
     void reader.read().then((next) => {
-      if (current) setResult(next);
+      if (current) {
+        setResult(next);
+        setDeviceStatus((previous) => statusAfterRead(previous, next));
+      }
     });
     return () => {
       current = false;
@@ -483,6 +492,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
       void reader.edit(plan).then(({ outcome, result: next }) => {
         if (!mounted.current) return;
         setResult(next);
+        setDeviceStatus((previous) => statusAfterRead(previous, next));
         setEditState(
           outcome.kind === 'saved'
             ? { kind: 'saved' }

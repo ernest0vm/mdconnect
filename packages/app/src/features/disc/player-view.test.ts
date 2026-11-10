@@ -1,7 +1,7 @@
 import type { DeviceStatus } from '@mdconnect/netmd';
 import { describe, expect, it } from 'vitest';
 
-import { playerBlocker, playerView, trackPlayState } from './player-view';
+import { playerBlocker, playerView, statusAfterRead, trackPlayState } from './player-view';
 
 const titles = ['Intro', '', 'Outro'];
 const at = (state: DeviceStatus['state'], track: number | null, second = 0): DeviceStatus => ({
@@ -104,6 +104,24 @@ describe('playerBlocker after a read found no disc', () => {
         noDisc: true,
       }),
     ).toBeNull();
+  });
+});
+
+describe('statusAfterRead', () => {
+  it('drops a stale status when a read finds no disc, and lets a later poll enable playback', () => {
+    // Playing, then the disc is swapped out and Refresh finds no disc.
+    const afterRead = statusAfterRead(at('playing', 3), { kind: 'no-disc' });
+    expect(afterRead).toBeNull();
+    const base = { reading: false, saving: false, readable: true, noDisc: true };
+    expect(playerBlocker({ ...base, status: afterRead })).toBe('Insert a disc to play it.');
+    // A disc goes back in and a poll sees it.
+    expect(playerBlocker({ ...base, status: at('ready', 0) })).toBeNull();
+  });
+
+  it('drops the status after a failed read and keeps it after a disc read', () => {
+    expect(statusAfterRead(at('playing', 3), { kind: 'failed' })).toBeNull();
+    const kept = at('playing', 3);
+    expect(statusAfterRead(kept, { kind: 'disc' })).toBe(kept);
   });
 });
 
