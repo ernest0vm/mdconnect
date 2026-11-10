@@ -6,8 +6,9 @@
  * - Works on a minimal device interface instead of `USBDevice`, so it stays platform-agnostic.
  * - `readReply` gives up after `timeoutMs` (upstream polls forever), unless a call asks for no
  *   limit, and polls at most once a second (upstream keeps doubling the interval).
- * - Every USB transfer fails after `transferTimeoutMs` (5 s) if it does not complete, so a
- *   device that stops answering at the USB level cannot leave a read waiting forever.
+ * - Every USB transfer fails after `transferTimeoutMs` (5 s), or `bulkTimeoutMs` (2 min) for a
+ *   bulk write, if it does not complete, so a device that stops answering at the USB level cannot
+ *   leave the app waiting forever. Upstream has no limit.
  * - No DES/3DES loading, factory commands, bulk reads or logging. `bulkWrite` (upstream
  *   `writeBulk`) is used by uploads; DES lives in des.ts.
  * - A transfer whose status is not "ok" (stall, babble) is an error; upstream uses its bytes. A
@@ -63,6 +64,8 @@ export interface TransportOptions {
    * never completes a transfer, and WebUSB has no timeout of its own; upstream has none either.
    */
   readonly transferTimeoutMs?: number;
+  /** Time one bulk write may take; longer, because the deck holds data back while it writes. */
+  readonly bulkTimeoutMs?: number;
   readonly sleep?: (ms: number) => Promise<void>;
   readonly timer?: TransferTimer;
 }
@@ -75,6 +78,12 @@ const FIRST_RETRY_MS = 10;
 const MAX_RETRY_MS = 1_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_TRANSFER_TIMEOUT_MS = 5_000;
+/**
+ * A bulk write waits while the deck still writes the previous track: it holds new data back
+ * (USB flow control) for as long as that takes. Measured on the MZ-N510, a 10-second SP track made
+ * the next track's first packet wait past 5 s.
+ */
+const DEFAULT_BULK_TIMEOUT_MS = 120_000;
 
 const setup = (request: number): ControlSetup => ({
   requestType: 'vendor',
@@ -100,6 +109,7 @@ const realSleep = (ms: number) =>
 export class NetMdTransport {
   private readonly timeoutMs: number;
   private readonly transferTimeoutMs: number;
+  private readonly bulkTimeoutMs: number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly timer: TransferTimer;
 
@@ -109,6 +119,7 @@ export class NetMdTransport {
   ) {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.transferTimeoutMs = options.transferTimeoutMs ?? DEFAULT_TRANSFER_TIMEOUT_MS;
+    this.bulkTimeoutMs = options.bulkTimeoutMs ?? DEFAULT_BULK_TIMEOUT_MS;
     this.sleep = options.sleep ?? realSleep;
     this.timer = options.timer ?? realTimer;
   }
@@ -133,6 +144,7 @@ export class NetMdTransport {
     const result = await this.limited(
       this.device.transferOut(BULK_OUT_ENDPOINT, data),
       'bulk transfer',
+      this.bulkTimeoutMs,
     );
     if (result.status !== undefined && result.status !== 'ok') {
       throw new NetMdError(`USB bulk transfer ended with ${result.status}`);
@@ -189,14 +201,14 @@ export class NetMdTransport {
    * Fails a transfer that does not complete in time. WebUSB cannot cancel it: the transfer is
    * abandoned, and the caller reopens the session (initialising drains any late reply).
    */
-  private limited<T>(transfer: Promise<T>, what: string): Promise<T> {
+  private limited<T>(
+    transfer: Promise<T>,
+    what: string,
+    timeoutMs: number = this.transferTimeoutMs,
+  ): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      const cancel = this.timer(this.transferTimeoutMs, () => {
-        reject(
-          new NetMdTimeoutError(
-            `USB ${what} did not complete in ${String(this.transferTimeoutMs)} ms`,
-          ),
-        );
+      const cancel = this.timer(timeoutMs, () => {
+        reject(new NetMdTimeoutError(`USB ${what} did not complete in ${String(timeoutMs)} ms`));
       });
       transfer.then(
         (value) => {
