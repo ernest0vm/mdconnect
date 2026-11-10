@@ -81,4 +81,10 @@ describe('trackPackets', () => {
       ...trackPackets({ data: new Uint8Array(), frameSize: 96, random: fixedRandom }),
     ]).toThrow(/no audio/i);
   });
+
+  it.each([24, 16, 0, 1020, 1024.5])('refuses a packet size of %s', (packetSize) => {
+    expect(() => [
+      ...trackPackets({ data: audio(100), frameSize: 96, random: fixedRandom, packetSize }),
+    ]).toThrow(/packet size/i);
+  });
 });

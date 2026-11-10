@@ -89,22 +89,36 @@ Before uploading, the convert dialog SHALL let the user reorder tracks, remove a
 
 ### Requirement: Fit check
 
-The convert dialog SHALL show the time the tracks need in the chosen mode against the disc's free time, and the title characters they need against the disc's remaining title space. Free time is counted in SP time: a track uses its full length of it in SP, half in SP mono and LP2, and a quarter in LP4. The upload SHALL be refused while the tracks do not fit in time; titles that do not fit SHALL be shortened with a warning.
+The convert dialog SHALL show the time the tracks need against the disc's free time, and SHALL refuse the upload while they do not fit. Each track counts in the mode it will be uploaded in: the chosen mode, or its own mode for a pre-encoded ATRAC3 file. Free time is counted in SP time: a track uses its full length of it in SP, half in SP mono, LP2 and LP105, and a quarter in LP4.
 
 #### Scenario: Fits in LP2 but not in SP
 
 - **WHEN** the disc has 20 minutes free and the tracks last 30 minutes
 - **THEN** in SP the dialog says they do not fit and upload is disabled, and in LP2 upload is enabled
 
-#### Scenario: Title space runs out
+#### Scenario: Pre-encoded LP2 file with LP4 chosen
 
-- **WHEN** the tracks' titles need more characters than the disc has left
-- **THEN** the dialog warns that some titles will be shortened, and upload stays enabled
+- **WHEN** LP4 is chosen and the tracks include a 40-minute ATRAC3 file in LP2
+- **THEN** that file counts as 20 minutes of free time, not 10
+
+#### Scenario: Pre-encoded LP4 file with SP chosen
+
+- **WHEN** SP is chosen, the disc has 15 minutes free, and the only track is a 40-minute ATRAC3 file in LP4
+- **THEN** the file counts as 10 minutes and upload is enabled
 
 #### Scenario: Unknown duration
 
 - **WHEN** a file's duration cannot be determined before decoding
 - **THEN** the dialog decodes it to measure its duration before enabling upload
+
+### Requirement: Title space
+
+The convert dialog SHALL show the title characters the tracks need against the disc's remaining title space. Titles that do not fit SHALL be shortened, in order, with a warning; they do not block the upload.
+
+#### Scenario: Title space runs out
+
+- **WHEN** the tracks' titles need more characters than the disc has left
+- **THEN** the dialog warns that some titles will be shortened, and upload stays enabled
 
 ### Requirement: Upload progress
 
@@ -131,7 +145,7 @@ The user SHALL be able to cancel an upload. The track being transferred SHALL be
 
 ### Requirement: Upload errors
 
-If a track cannot be converted, the app SHALL skip it, keep going, and list it at the end with the reason. If the device fails, the app SHALL stop the upload, keep the tracks already written, and show which tracks were not uploaded. In every case the app SHALL end the device's upload session and read the disc again.
+If a track cannot be converted, the app SHALL skip it, keep going, and list it at the end with the reason. If the device fails, the app SHALL stop the upload, keep the tracks already written, and show which tracks were not uploaded. In every case the app SHALL try to end the device's upload session. It SHALL read the disc again while the device is connected; after an unplug the disc is read when the device connects again.
 
 #### Scenario: A file cannot be decoded
 
