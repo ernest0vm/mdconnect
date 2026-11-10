@@ -83,7 +83,7 @@ describe('ConnectionController', () => {
     await flush();
     a.finishOpen();
     await done;
-    controller.exit();
+    controller.exit(a.handle);
     expect(actions.at(-1)).toBe('exited');
     expect(controller.openDevice()).toBeNull();
   });
@@ -96,7 +96,7 @@ describe('ConnectionController', () => {
     await flush();
     a.finishOpen();
     await done;
-    controller.exit();
+    controller.exit(a.handle);
     expect(a.calls).toEqual(['open', 'close']);
   });
 
@@ -112,7 +112,7 @@ describe('ConnectionController', () => {
     usb.nextRequest = () => Promise.resolve(b.handle);
     const switching = controller.request(() => false);
     await flush();
-    controller.exit();
+    controller.exit(a.handle);
     a.finishClose();
     b.finishOpen();
     await flush();
@@ -125,6 +125,28 @@ describe('ConnectionController', () => {
     expect(controller.openDevice()).toBeNull();
   });
 
+  it('ignores a late Exit for a device that is no longer the open one', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const first = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await first;
+    usb.nextRequest = () => Promise.resolve(b.handle);
+    const second = controller.request(() => false);
+    await flush();
+    b.finishOpen();
+    await flush();
+    a.finishClose();
+    await second;
+    controller.exit(a.handle);
+    expect(actions.at(-1)).toBe('connected');
+    expect(controller.openDevice()).toBe(b.handle);
+    expect(b.calls).toEqual(['open']);
+  });
+
   it('waits for the Exit close to finish before opening the device again', async () => {
     const { usb, actions, controller } = setup();
     const a = controllableDevice(MZ_N510);
@@ -133,7 +155,7 @@ describe('ConnectionController', () => {
     await flush();
     a.finishOpen();
     await first;
-    controller.exit();
+    controller.exit(a.handle);
     const again = controller.request(() => false);
     await flush();
     expect(a.calls).toEqual(['open', 'close']);

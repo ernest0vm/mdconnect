@@ -101,6 +101,14 @@ describe('parseCsv', () => {
     const bad = `${formatCsv(grouped)}\nx,,,,Bonus,,,,30,SPS,292`;
     expect(parseCsv(bad)).toEqual({ error: 'unsupported' });
   });
+
+  it('refuses an index with characters after the number, such as 1abc or 1e3', () => {
+    for (const index of ['1abc', '1e3', ' ', '-1']) {
+      expect(parseCsv(`${formatCsv(grouped)}\n${index},,,,Bonus,,,,30,SPS,292`)).toEqual({
+        error: 'unsupported',
+      });
+    }
+  });
 });
 
 describe('reviewImport', () => {

@@ -148,8 +148,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
               onAbout={() => {
                 setAboutOpen(true);
               }}
-              onExit={() => {
-                controller.exit();
+              onExit={(device) => {
+                controller.exit(device);
               }}
             />
           </div>

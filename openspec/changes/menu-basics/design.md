@@ -81,7 +81,7 @@ Result of the check: an `<a download>` click on a `blob:` URL starts a download 
 
 - `DiscReader.close()` queues behind work in progress, then calls a new `DiscSession.end()`.
 - The session implements `end()` as netmd-js `finalize`: `device.reset()`, `releaseInterface(0)`, `close()`. Errors are ignored, as upstream does.
-- `ConnectionController` gains `exit()`. It clears the open device, closes it (the session usually closed it already; this covers a device whose session never opened), makes the next open wait for that close, abandons an open still in progress (closing that device when it opens), and dispatches a state that shows the Connect screen without the "Device unplugged" hint.
+- `ConnectionController` gains `exit(device)`, which does nothing unless `device` is still the open one (a late Exit after a reconnect). It clears the open device, closes it (the session usually closed it already; this covers a device whose session never opened), makes the next open wait for that close, abandons an open still in progress (closing that device when it opens), and dispatches a state that shows the Connect screen without the "Device unplugged" hint.
 - The desktop app's device grant is unchanged, so Connect reconnects without a chooser. The web app keeps its grant too.
 
 ### 6. About

@@ -425,7 +425,7 @@ export interface DiscPanelProps {
   /** Called when the user chooses About in the menu. */
   readonly onAbout?: () => void;
   /** Called once the session with the device has ended after Exit. */
-  readonly onExit?: () => void;
+  readonly onExit?: (device: UsbDeviceHandle) => void;
 }
 
 type MenuDialog =
@@ -631,21 +631,28 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
   const startImport = (file: File) => {
     if (raw === null) return;
     setImportError(null);
-    void file.text().then((text) => {
-      if (!mounted.current) return;
-      const parsed = parseCsv(text);
-      if ('error' in parsed) {
-        setImportError(
-          `“${file.name}” is not a title list mdconnect can read: it needs webminidisc's CSV columns.`,
-        );
-        return;
-      }
-      setMenuDialog({
-        kind: 'import',
-        fileName: file.name,
-        parsed,
-      });
-    });
+    void file.text().then(
+      (text) => {
+        if (!mounted.current) return;
+        const parsed = parseCsv(text);
+        if ('error' in parsed) {
+          setImportError(
+            `“${file.name}” is not a title list mdconnect can read: it needs webminidisc's CSV columns.`,
+          );
+          return;
+        }
+        setMenuDialog({
+          kind: 'import',
+          fileName: file.name,
+          parsed,
+        });
+      },
+      () => {
+        // The file was moved, deleted or could not be read; editState is left alone.
+        if (mounted.current)
+          setImportError(`“${file.name}” could not be read. Choose the file again.`);
+      },
+    );
   };
   const menu = menuSlot
     ? createPortal(
@@ -660,7 +667,7 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
           }}
           onAbout={() => onAbout?.()}
           onExit={() => {
-            void reader.close().then(() => onExit?.());
+            void reader.close().then(() => onExit?.(device));
           }}
         />,
         menuSlot,

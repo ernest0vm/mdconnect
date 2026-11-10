@@ -148,6 +148,12 @@ function cells(line: string): string[] {
   return line.split(/(?<!\\),/u).map((cell) => cell.replace(/\\,/gu, ','));
 }
 
+/** A cell holding only digits as a number, or NaN (parseInt would read "1abc" as 1). */
+function wholeNumber(cell: string): number {
+  const trimmed = cell.trim();
+  return /^\d+$/u.test(trimmed) ? Number(trimmed) : Number.NaN;
+}
+
 /** Reads webminidisc's CSV, current or older format. */
 export function parseCsv(text: string): ParsedCsv {
   const lines = text
@@ -166,9 +172,9 @@ export function parseCsv(text: string): ParsedCsv {
     const c = cells(line);
     const at = (i: number) => c[i] ?? '';
     const [duration, codec, bitrate] = old ? [at(6), at(7), ''] : [at(8), at(9), at(10)];
-    const durationSeconds = Number.parseInt(duration, 10);
+    const durationSeconds = wholeNumber(duration);
     return {
-      index: Number.parseInt(at(0), 10),
+      index: wholeNumber(at(0)),
       groupRange: at(1).replace(/ /gu, ''),
       groupName: at(2),
       groupFullWidthName: at(3),
@@ -181,7 +187,7 @@ export function parseCsv(text: string): ParsedCsv {
   });
   // A row that cannot be placed would be dropped silently, while the rest of the file still
   // rewrites the disc title and groups, so the whole file is refused instead.
-  if (rows.some((row) => Number.isNaN(row.index) || row.index < 0)) return { error: 'unsupported' };
+  if (rows.some((row) => Number.isNaN(row.index))) return { error: 'unsupported' };
   return { rows };
 }
 
