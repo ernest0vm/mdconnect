@@ -154,6 +154,11 @@ function DiscEditor({
   upload,
 }: EditorProps) {
   const [chosen, setSelection] = useState<Selection>(new Set());
+  /** The selection as last rendered, to tell whether the user changed it while a change saved. */
+  const latestChoice = useRef(chosen);
+  useEffect(() => {
+    latestChoice.current = chosen;
+  }, [chosen]);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   /** Whether the open delete dialog was confirmed, which decides where focus goes when it closes. */
   const deleteConfirmed = useRef(false);
@@ -183,13 +188,21 @@ function DiscEditor({
 
   /**
    * Runs a plan, closes any dialog and, once the device saved the change, moves the selection. A
-   * refused change leaves the selection on the tracks the user chose.
+   * refused change leaves the selection on the tracks the user chose. A selection the user changed
+   * while the change was saving is cleared once it is saved: its track numbers were picked on the
+   * old order and may now name other tracks.
    */
   const edit = (plan: EditPlan, selectAfter?: Selection, afterSave?: () => void) => {
     setDialog(null);
+    const before = chosen;
     void onEdit(plan).then((saved) => {
-      if (!saved) return;
-      if (selectAfter) setSelection(selectAfter);
+      // Edits that renumber tracks pass `selectAfter`; renames leave the numbers as they were.
+      if (!saved || selectAfter === undefined) return;
+      if (latestChoice.current !== before) {
+        setSelection(new Set());
+        return;
+      }
+      setSelection(selectAfter);
       afterSave?.();
     });
   };
