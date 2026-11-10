@@ -9,6 +9,7 @@ import {
 import { GlassInput } from '@mdconnect/ui/components/glassyui/glass-input';
 import { useId, useMemo, useState } from 'react';
 
+import { useUploadPreferences } from '../upload/UploadPreferencesContext';
 import { currentTitles, titleForm, type TitleForm, type TitleTarget } from './title-form';
 
 export interface TitleDialogProps {
@@ -70,6 +71,8 @@ export function TitleDialog({
   onSave,
   onClose,
 }: TitleDialogProps) {
+  // With Full-width titles off, the full-width title keeps its current value and is not saved.
+  const showFullWidth = useUploadPreferences().preferences.fullWidth;
   const [input, setInput] = useState(() => currentTitles(disc, target));
   const form = useMemo(() => titleForm(disc, target, input), [disc, target, input]);
   const changed = form.halfWidthChanged || form.fullWidthChanged || target.kind === 'new-group';
@@ -85,8 +88,8 @@ export function TitleDialog({
       <GlassDialogContent closeLabel="Cancel">
         <GlassDialogTitle className="text-lg font-semibold">{heading}</GlassDialogTitle>
         <GlassDialogDescription className="mt-1 text-sm opacity-80">
-          The disc stores plain letters, numbers and half-width katakana. A full-width title can
-          hold Japanese text.
+          The disc stores plain letters, numbers and half-width katakana.
+          {showFullWidth && ' A full-width title can hold Japanese text.'}
         </GlassDialogDescription>
         <form
           className="mt-4 flex flex-col gap-4"
@@ -104,15 +107,17 @@ export function TitleDialog({
               setInput((current) => ({ ...current, halfWidth }));
             }}
           />
-          <TitleField
-            label="Full-width title (optional)"
-            value={input.fullWidth}
-            stored={form.fullWidth}
-            remaining={`${String(Math.floor(form.remaining.fullWidth / 2))} full-width characters left on the disc.`}
-            onChange={(fullWidth) => {
-              setInput((current) => ({ ...current, fullWidth }));
-            }}
-          />
+          {showFullWidth && (
+            <TitleField
+              label="Full-width title (optional)"
+              value={input.fullWidth}
+              stored={form.fullWidth}
+              remaining={`${String(Math.floor(form.remaining.fullWidth / 2))} full-width characters left on the disc.`}
+              onChange={(fullWidth) => {
+                setInput((current) => ({ ...current, fullWidth }));
+              }}
+            />
+          )}
           {form.missingTitle && <p className="text-sm">A group needs a title.</p>}
           {!form.fits && (
             <p role="alert" className="text-sm font-semibold text-red-800 dark:text-red-200">

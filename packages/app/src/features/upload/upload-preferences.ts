@@ -18,7 +18,8 @@ export const UPLOAD_PREFERENCES_KEY = 'mdconnect.upload';
 export const DEFAULT_UPLOAD_PREFERENCES: UploadPreferences = {
   mode: 'sp',
   titleSource: 'file',
-  fullWidth: false,
+  // The rename dialogs showed a full-width field before it became a setting, so it stays on.
+  fullWidth: true,
   replayGain: false,
   encoder: 'built-in',
   onlineConsent: false,
@@ -65,10 +66,21 @@ export interface UploadPreferencesStore {
   load(): UploadPreferences;
   /** False when the browser refuses to store them (private browsing, blocked storage). */
   save(preferences: UploadPreferences): boolean;
+  /** Reports preferences saved by another tab of the same app. */
+  subscribe(listener: (preferences: UploadPreferences) => void): () => void;
 }
 
+/** The preferences without the online-encoder consent, so the next online upload asks again. */
+export const withdrawConsent = (preferences: UploadPreferences): UploadPreferences => ({
+  ...preferences,
+  onlineConsent: false,
+});
+
 /** Keeps upload preferences in `localStorage`, like the Appearance choice. */
-export function createUploadPreferencesStore(storage: StorageLike | null): UploadPreferencesStore {
+export function createUploadPreferencesStore(
+  storage: StorageLike | null,
+  events: EventTarget | null = null,
+): UploadPreferencesStore {
   return {
     load() {
       try {
@@ -85,6 +97,18 @@ export function createUploadPreferencesStore(storage: StorageLike | null): Uploa
       } catch {
         return false;
       }
+    },
+    subscribe(listener) {
+      if (events === null) return () => undefined;
+      const onStorage = (event: Event) => {
+        const { key, newValue } = event as Partial<StorageEvent>;
+        // A null key means another tab cleared the whole storage.
+        if (key === UPLOAD_PREFERENCES_KEY || key === null) listener(parse(newValue ?? null));
+      };
+      events.addEventListener('storage', onStorage);
+      return () => {
+        events.removeEventListener('storage', onStorage);
+      };
     },
   };
 }

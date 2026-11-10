@@ -20,6 +20,7 @@ import { baseName, titleFromSource, type TitleSource } from './title-source';
 import type { UploadPreferences } from './upload-preferences';
 import {
   audioFiles,
+  ENCODER_LABELS,
   fitView,
   formatSeconds,
   initialMode,
@@ -52,6 +53,7 @@ export interface ConvertDialogProps {
 }
 
 const ONLINE_HOST = new URL(ONLINE_ENCODER_ORIGIN).host;
+const ENCODERS: readonly Encoder[] = ['built-in', 'online'];
 const radioClass =
   'size-4 shrink-0 cursor-pointer accent-indigo-600 dark:accent-indigo-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600';
 
@@ -215,10 +217,7 @@ export function ConvertDialog({
                 legend="LP encoder"
                 name={`${id}-encoder`}
                 value={encoder}
-                options={[
-                  { value: 'built-in', label: 'Built-in, offline' },
-                  { value: 'online', label: "Sony's encoder, online" },
-                ]}
+                options={ENCODERS.map((value) => ({ value, label: ENCODER_LABELS[value] }))}
                 onChange={(value) => {
                   setEncoder(value);
                   setAskConsent(false);

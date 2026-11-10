@@ -9,7 +9,7 @@ import {
 } from '@mdconnect/netmd';
 
 import { formatDuration } from '../disc/disc-view';
-import type { ConversionFailure, RecordingMode } from './convert-track';
+import type { ConversionFailure, Encoder, RecordingMode } from './convert-track';
 import type { AudioTags } from './tags';
 import { titleFromSource, type TitleSource } from './title-source';
 import { fitTitles, timeFit, type TrackTitles } from './upload-plan';
@@ -103,6 +103,11 @@ export const MODE_LABELS: Readonly<Record<UploadMode, string>> = {
   lp2: 'LP2',
   lp105: 'LP105',
   lp4: 'LP4',
+};
+
+export const ENCODER_LABELS: Readonly<Record<Encoder, string>> = {
+  'built-in': 'Built-in, offline',
+  online: "Sony's encoder, online",
 };
 
 export const TITLE_SOURCE_LABELS: Readonly<Record<TitleSource, string>> = {

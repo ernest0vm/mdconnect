@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { AppearanceDialog } from './features/appearance/AppearanceDialog';
+import { SettingsDialog } from './features/settings/SettingsDialog';
 import { SourceFooter } from './SourceFooter';
 
 const BACKDROP =
@@ -10,7 +10,7 @@ export type PageLayout = 'centered' | 'app';
 
 /**
  * Full-page backdrop shared by every top-level screen, with the GPL source footer and the
- * Appearance control.
+ * Settings control.
  *
  * - `centered`: one column of at most 28 rem in the middle of the page, for screens with little
  *   content (connecting, unsupported browser). The page scrolls if it has to.
@@ -33,7 +33,7 @@ export function PageShell({
       <div className={`grid h-dvh grid-rows-[auto_minmax(0,1fr)_auto] ${BACKDROP}`}>
         <header className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-3 pb-2 sm:px-6">
           <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2">{header}</div>
-          <AppearanceDialog />
+          <SettingsDialog />
         </header>
         <main className="min-h-0 overflow-y-auto px-4 sm:px-6">{children}</main>
         <footer className="px-4 py-2 sm:px-6">
@@ -48,7 +48,7 @@ export function PageShell({
         {children}
         <div className="flex items-center justify-between gap-3">
           <SourceFooter commit={commit} />
-          <AppearanceDialog />
+          <SettingsDialog />
         </div>
       </div>
     </main>
