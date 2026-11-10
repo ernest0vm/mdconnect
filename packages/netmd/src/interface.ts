@@ -19,7 +19,7 @@
  *   ignores every error.
  * - Upload commands take the session key as bytes, not hex text. `sendTrack` takes packets that
  *   are already framed (see packets.ts), reports bytes written including the packet header, waits
- *   for its final reply without a time limit, and returns the UUID and content ID as bytes;
+ *   up to five minutes for its final reply (upstream has no limit), and returns the UUID and content ID as bytes;
  *   upstream decodes them as UTF-8 text, which can lose bytes. Its 200 ms pauses for Sharp decks
  *   use the injected `sleep`.
  */
@@ -103,6 +103,11 @@ const SECURE = '1800 080046 f0030103';
 const PACKET_HEADER_LENGTH = 24;
 /** Sharp decks need a pause before the track command and before its data. */
 const SHARP_PAUSE_MS = 200;
+/**
+ * How long the device may take to finish storing a track after its data. It usually answers in
+ * seconds; a deck stuck in its recording state would otherwise keep the upload waiting forever.
+ */
+const FINAL_REPLY_TIMEOUT_MS = 5 * 60_000;
 const ZERO_BLOCK = new Uint8Array(8);
 
 const OPEN_READ = '01';
@@ -600,8 +605,8 @@ export class NetMdInterface {
   }
 
   /**
-   * Sends one track: announces it, writes the packets to the bulk endpoint, then waits, without
-   * a time limit, for the device to finish storing it.
+   * Sends one track: announces it, writes the packets to the bulk endpoint, then waits up to five
+   * minutes for the device to finish storing it.
    */
   async sendTrack(
     transfer: TrackTransfer,
@@ -635,7 +640,7 @@ export class NetMdInterface {
       onProgress?.({ writtenBytes, totalBytes });
     }
 
-    const done = await this.readQueryReply({}, { timeoutMs: Number.POSITIVE_INFINITY });
+    const done = await this.readQueryReply({}, { timeoutMs: FINAL_REPLY_TIMEOUT_MS });
     const [track, encrypted] = scanQuery(
       done,
       `${SECURE} 28 00 000100 1001 %w 00 %?%? %?%?%?%? %?%?%?%? %*`,

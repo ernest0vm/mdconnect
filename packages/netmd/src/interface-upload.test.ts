@@ -186,10 +186,10 @@ describe('sendTrack', () => {
     expect(sleeps).toEqual([200, 200]);
   });
 
-  it('waits for the final reply without a time limit', async () => {
+  it('waits up to five minutes for the final reply, past the usual limit', async () => {
     const { ch, readOptions } = trackChannel(`09 ${SECURE} 28 00 000100 1001 ffff 00 94 02`);
     await new NetMdInterface(ch, { sleep: noSleep }).sendTrack(params, packets(), SESSION_KEY);
-    expect(readOptions[1]).toEqual({ timeoutMs: Number.POSITIVE_INFINITY });
+    expect(readOptions[1]).toEqual({ timeoutMs: 5 * 60_000 });
   });
 
   it('reports the bytes written after each packet', async () => {

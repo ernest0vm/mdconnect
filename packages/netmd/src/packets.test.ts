@@ -66,4 +66,19 @@ describe('trackPackets', () => {
     ];
     expect(big.map((p) => p.length)).toEqual([4096, 1112]);
   });
+
+  it("leaves the caller's audio untouched", () => {
+    const source = audio(100);
+    const copy = source.slice();
+    expect([
+      ...trackPackets({ data: source, frameSize: 96, random: fixedRandom }),
+    ]).not.toHaveLength(0);
+    expect(source).toEqual(copy);
+  });
+
+  it('refuses a track with no audio', () => {
+    expect(() => [
+      ...trackPackets({ data: new Uint8Array(), frameSize: 96, random: fixedRandom }),
+    ]).toThrow(/no audio/i);
+  });
 });

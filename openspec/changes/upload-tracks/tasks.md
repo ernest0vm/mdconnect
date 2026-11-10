@@ -4,7 +4,7 @@
 
 - [x] 1.1 Add `des.ts` with DES-ECB encrypt and decrypt and DES-CBC encrypt and decrypt. Verify with tests against the FIPS 81 DES-ECB and DES-CBC vectors and the classic "Now is the time for all " vector.
 - [x] 1.2 Add `retailMac` (ISO 9797-1 MAC algorithm 3, 2-key 3DES on the last block). Verify with a published ISO 9797-1 vector and with the session key from a netmd-js session recorded for the fixture in 3.4. Checked: the ANSI X9.19 vector, and a session key built the way netmd-js builds it with crypto-js (`EDE(K1, K2, K1)` of the device nonce XOR `DES_K1(hostNonce)`). The recorded session is part of 3.4.
-- [x] 1.3 Add a throughput check that encrypts 10 MB with DES-CBC. Run it outside the unit-test time budget, and verify it is faster than 20 MB/s on the maintainer's machine. Record the figure in the design. Checked: `des-throughput.test.ts` runs only with `NETMD_THROUGHPUT=1`. It measured about 29 MB/s on the maintainer's Mac with Node 22.
+- [x] 1.3 Add a throughput check that encrypts 10 MB with DES-CBC. Run it outside the unit-test time budget, and verify it is faster than 20 MB/s on the maintainer's machine. Record the figure in the design. Checked: `des-throughput.test.ts` runs only with `NETMD_THROUGHPUT=1`. It measured about 74 MB/s on the maintainer's Mac with Node 22.
 
 ## 2. Transport and commands (`packages/netmd`)
 

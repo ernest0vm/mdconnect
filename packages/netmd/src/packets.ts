@@ -7,6 +7,8 @@
  *   key, IV) is added here instead of in `sendTrack`.
  * - The random source is injected, so packets can be tested.
  * - 1024-byte packets by default, as webminidisc uses; upstream defaults to 1 MiB.
+ * - Only the last chunk is copied for padding; upstream pads a copy of the whole track. A track
+ *   with no audio is refused instead of sending a header with a length of zero.
  */
 
 import { Des } from './des';
@@ -46,10 +48,10 @@ export const paddedLength = (length: number, frameSize: number): number =>
 export function* trackPackets(
   options: TrackPacketOptions,
 ): Generator<Uint8Array<ArrayBuffer>, void, undefined> {
+  const { data, frameSize } = options;
+  if (data.length === 0) throw new Error('A track with no audio cannot be uploaded');
   const packetSize = options.packetSize ?? DEFAULT_PACKET_SIZE;
-  const total = paddedLength(options.data.length, options.frameSize);
-  const padded = new Uint8Array(total);
-  padded.set(options.data);
+  const total = paddedLength(data.length, frameSize);
 
   const dataKey = options.random(KEY_LENGTH);
   const cipher = new Des(dataKey);
@@ -58,24 +60,29 @@ export function* trackPackets(
   const iv = new Uint8Array(KEY_LENGTH);
 
   let chain: Uint8Array = iv;
-  let offset = 0;
-  let first = true;
-  while (offset < total || first) {
-    const room = first ? packetSize - HEADER_LENGTH : packetSize;
-    const end = Math.min(offset + room, total);
-    const encrypted = cipher.encryptCbc(padded.subarray(offset, end), chain);
-    if (encrypted.length > 0) chain = encrypted.subarray(encrypted.length - KEY_LENGTH);
-    if (first) {
-      const packet = new Uint8Array(HEADER_LENGTH + encrypted.length);
-      new DataView(packet.buffer).setUint32(4, total);
-      packet.set(wrappedKey, 8);
-      packet.set(iv, 16);
-      packet.set(encrypted, HEADER_LENGTH);
-      yield packet;
-      first = false;
-    } else {
-      yield encrypted;
-    }
+  for (let offset = 0; offset < total;) {
+    const first = offset === 0;
+    const end = Math.min(offset + (first ? packetSize - HEADER_LENGTH : packetSize), total);
+    const encrypted = cipher.encryptCbc(chunk(data, offset, end), chain);
+    chain = encrypted.subarray(encrypted.length - KEY_LENGTH);
     offset = end;
+    if (!first) {
+      yield encrypted;
+      continue;
+    }
+    const packet = new Uint8Array(HEADER_LENGTH + encrypted.length);
+    new DataView(packet.buffer).setUint32(4, total);
+    packet.set(wrappedKey, 8);
+    packet.set(iv, 16);
+    packet.set(encrypted, HEADER_LENGTH);
+    yield packet;
   }
+}
+
+/** Bytes `start` to `end` of the audio, zero-padded past its end (only the last chunk is). */
+function chunk(data: Uint8Array, start: number, end: number): Uint8Array {
+  if (end <= data.length) return data.subarray(start, end);
+  const padded = new Uint8Array(end - start);
+  padded.set(data.subarray(start));
+  return padded;
 }

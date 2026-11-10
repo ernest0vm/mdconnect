@@ -93,9 +93,12 @@ const FP = IP.map((_, index) => IP.indexOf(index + 1) + 1);
 const IP_TABLES = permutationTables(IP);
 const FP_TABLES = permutationTables(FP);
 
-/** S-box `box` followed by P, for each 6-bit input: one lookup per S-box in a round. */
-const SP_TABLES = S_BOXES.map((box, boxIndex) => {
-  const table = new Uint32Array(64);
+/**
+ * S-box `box` followed by P, for each 6-bit input: one lookup per S-box in a round. The eight
+ * tables are stored back to back, so box `n` starts at `n * 64`.
+ */
+const SP = new Uint32Array(8 * 64);
+S_BOXES.forEach((box, boxIndex) => {
   for (let input = 0; input < 64; input++) {
     const row = ((input & 0x20) >>> 4) | (input & 1);
     const column = (input >>> 1) & 0xf;
@@ -104,9 +107,8 @@ const SP_TABLES = S_BOXES.map((box, boxIndex) => {
     P.forEach((source, index) => {
       if ((sOut >>> (32 - source)) & 1) out |= 1 << (31 - index);
     });
-    table[input] = out >>> 0;
+    SP[boxIndex * 64 + input] = out >>> 0;
   }
-  return table;
 });
 
 function permute(tables: { hi: Uint32Array; lo: Uint32Array }, hi: number, lo: number) {
@@ -238,14 +240,14 @@ export class Des {
       const k = round * 8;
       // The E expansion: eight overlapping 6-bit groups of `right`, wrapping at both ends.
       const f =
-        (SP_TABLES[0]?.[(((right & 1) << 5) | (right >>> 27)) ^ (keys[k] ?? 0)] ?? 0) |
-        (SP_TABLES[1]?.[((right >>> 23) & 0x3f) ^ (keys[k + 1] ?? 0)] ?? 0) |
-        (SP_TABLES[2]?.[((right >>> 19) & 0x3f) ^ (keys[k + 2] ?? 0)] ?? 0) |
-        (SP_TABLES[3]?.[((right >>> 15) & 0x3f) ^ (keys[k + 3] ?? 0)] ?? 0) |
-        (SP_TABLES[4]?.[((right >>> 11) & 0x3f) ^ (keys[k + 4] ?? 0)] ?? 0) |
-        (SP_TABLES[5]?.[((right >>> 7) & 0x3f) ^ (keys[k + 5] ?? 0)] ?? 0) |
-        (SP_TABLES[6]?.[((right >>> 3) & 0x3f) ^ (keys[k + 6] ?? 0)] ?? 0) |
-        (SP_TABLES[7]?.[(((right & 0x1f) << 1) | (right >>> 31)) ^ (keys[k + 7] ?? 0)] ?? 0);
+        (SP[(((right & 1) << 5) | (right >>> 27)) ^ (keys[k] ?? 0)] ?? 0) |
+        (SP[64 | (((right >>> 23) & 0x3f) ^ (keys[k + 1] ?? 0))] ?? 0) |
+        (SP[128 | (((right >>> 19) & 0x3f) ^ (keys[k + 2] ?? 0))] ?? 0) |
+        (SP[192 | (((right >>> 15) & 0x3f) ^ (keys[k + 3] ?? 0))] ?? 0) |
+        (SP[256 | (((right >>> 11) & 0x3f) ^ (keys[k + 4] ?? 0))] ?? 0) |
+        (SP[320 | (((right >>> 7) & 0x3f) ^ (keys[k + 5] ?? 0))] ?? 0) |
+        (SP[384 | (((right >>> 3) & 0x3f) ^ (keys[k + 6] ?? 0))] ?? 0) |
+        (SP[448 | ((((right & 0x1f) << 1) | (right >>> 31)) ^ (keys[k + 7] ?? 0))] ?? 0);
       [left, right] = [right, (left ^ f) >>> 0];
     }
     return permute(FP_TABLES, right, left);

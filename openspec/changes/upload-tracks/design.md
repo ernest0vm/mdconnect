@@ -67,7 +67,7 @@
 - **`des.js` (MIT).** Rejected: a new dependency with CommonJS-only builds, for about 200 lines of code.
 - **Web Crypto.** It has no DES at all.
 
-**Throughput:** an SP minute is about 10.6 MB. A table-driven JS DES runs well above the deck's transfer speed, and encryption runs in a worker ahead of the transfer (see 3). Measured: about 29 MB/s for DES-CBC in 1024-byte packets (Node 22, the maintainer's Mac; `des-throughput.test.ts`).
+**Throughput:** an SP minute is about 10.6 MB. A table-driven JS DES runs well above the deck's transfer speed, and encryption runs in a worker ahead of the transfer (see 3). Measured: about 74 MB/s for DES-CBC in 1024-byte packets (Node 22, the maintainer's Mac; `des-throughput.test.ts`).
 
 ### 2. Protocol: an `UploadSession` and transport extensions
 
@@ -75,7 +75,7 @@
 
 - `NetMdUsbDevice` gains `transferOut(endpointNumber, data)`. WebUSB's `USBDevice` in Chromium and in Electron both provide it.
 - `NetMdTransport.bulkWrite(data)` writes to endpoint 2. Each write keeps the 5 s per-transfer limit, so a hung device still fails.
-- `readReply({ timeoutMs })` accepts a per-call limit, with the poll interval capped at 1 s. The reply after a track's bulk transfer uses no total limit: the deck answers once it has written the audio. Each poll still has its 5 s USB limit, and an unplug ends it.
+- `readReply({ timeoutMs })` accepts a per-call limit, with the poll interval capped at 1 s. The reply after a track's bulk transfer may take up to five minutes, because the deck answers once it has written the audio. Upstream has no limit, but a deck stuck in its recording state (as the MZ-NE410 got stuck in #8) would then keep the upload waiting forever. Each poll still has its 5 s USB limit, and an unplug ends it.
 - `sendQuery(query, { acceptInterim: true })` returns the first interim reply. `sendTrack` needs this.
 
 **New `NetMdInterface` commands** (byte layouts as in netmd-js `netmd-interface.ts`, all under the `1800 080046 f0030103` prefix):
@@ -96,7 +96,8 @@
    - disable new-track protection, ignoring a rejection (Sharp);
    - enter the secure session, send the EKB and exchange nonces;
    - derive the session key and send the setup.
-2. **`uploadTrack(track, titles, onProgress)`:**
+2. **`uploadTrack(track, onProgress)`:**
+   - take the track's audio and mode, and build its packets with the mode's frame size, so the frame count, the announced length and the packets always agree;
    - send the track command, wait 200 ms on either side as upstream does for Sharp, then the bulk transfer;
    - read the reply and decrypt the UUID and content ID, keeping them as bytes rather than upstream's lossy text;
    - write the half-width title and, when it differs, the full-width title;
@@ -107,14 +108,14 @@
 
 **Session details:**
 
-- **EKB:** the open-source EKB by default. The "corrupted deck" EKB is used for `054c:0081` when the leaf ID is all `0xFF`.
+- **EKB:** the open-source EKB by default. The "corrupted deck" EKB is used for `054c:0081` when the 8-byte leaf ID is all `0xFF`.
 - **Host nonce:** comes from an injected random source, `globalThis.crypto.getRandomValues` in the app. Upstream uses `Math.random`.
 
 ### 3. Packet encryption in a worker
 
 `packets.ts` in `packages/netmd` is a pure generator, a port of `encrypt-generator.ts`:
 
-- pad the audio to whole frames;
+- pad the audio to whole frames, copying only the last chunk;
 - generate a random 8-byte data key;
 - send the key encrypted under the fixed KEK;
 - encrypt the data with DES-CBC from a zero IV, chained across packets;
@@ -122,7 +123,7 @@
 
 Packets are 1024 bytes, as in webminidisc. That value is proven across many decks. The 1 MiB netmd-js default is not.
 
-In `packages/app`, `encrypt.worker.ts` runs the generator. It posts packets back with transferable buffers and stays at most a few packets ahead, so memory stays flat. The main thread awaits `bulkWrite` for each packet and reports two numbers: bytes encrypted (the "buffer" value) and bytes written.
+`UploadSession` takes a `packets` option, `(data, frameSize) => AsyncIterable<packet>`, which defaults to running the generator on the calling thread. In `packages/app`, that option is backed by `encrypt.worker.ts`, which runs the generator. It posts packets back with transferable buffers and stays at most a few packets ahead, so memory stays flat. The main thread awaits `bulkWrite` for each packet and reports two numbers: bytes encrypted (the "buffer" value) and bytes written.
 
 ### 4. Formats
 

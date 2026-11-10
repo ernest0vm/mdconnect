@@ -73,11 +73,6 @@ function fakeDevice(options: FakeOptions = {}) {
   return { device: Object.assign(device, { operatingState }), calls, transfers };
 }
 
-async function* packetsOf(...sizes: number[]) {
-  await Promise.resolve();
-  for (const size of sizes) yield new Uint8Array(size);
-}
-
 type FakeDevice = UploadDevice & { operatingState: () => Promise<OperatingState> };
 
 const session = (device: FakeDevice, sleeps: number[] = []) =>
@@ -143,8 +138,7 @@ describe('UploadSession', () => {
     calls.length = 0;
     const track = await upload.uploadTrack({
       mode: 'lp2',
-      dataLength: 5000,
-      packets: packetsOf(1024, 1024),
+      data: new Uint8Array(5000),
       title: 'Opening',
       fullWidthTitle: '序曲',
     });
@@ -167,15 +161,44 @@ describe('UploadSession', () => {
     const upload = session(device);
     await upload.open();
     calls.length = 0;
-    await upload.uploadTrack({ mode: 'sp', dataLength: 10, packets: packetsOf(34), title: '' });
+    await upload.uploadTrack({ mode: 'sp', data: new Uint8Array(10), title: '' });
     await upload.uploadTrack({
       mode: 'sp',
-      dataLength: 10,
-      packets: packetsOf(34),
+      data: new Uint8Array(10),
       title: 'A',
       fullWidthTitle: 'A',
     });
     expect(calls.filter((c) => c.startsWith('setTrackTitle'))).toEqual(['setTrackTitle 5 A']);
+  });
+
+  it('pads and encrypts with the frame size of the chosen mode', async () => {
+    const { device } = fakeDevice();
+    const frameSizes: number[] = [];
+    const upload = new UploadSession(device, {
+      vendorId: 0x054c,
+      productId: 0x00ca,
+      operatingState: device.operatingState,
+      random: () => HOST_NONCE.slice(),
+      sleep: () => Promise.resolve(),
+      packets: async function* (_data, frameSize) {
+        frameSizes.push(frameSize);
+        await Promise.resolve();
+        yield new Uint8Array(8);
+      },
+    });
+    await upload.open();
+    await upload.uploadTrack({ mode: 'lp4', data: new Uint8Array(10), title: '' });
+    await upload.uploadTrack({ mode: 'sp', data: new Uint8Array(10), title: '' });
+    expect(frameSizes).toEqual([96, 2048]);
+  });
+
+  it('refuses a track with no audio', async () => {
+    const { device } = fakeDevice();
+    const upload = session(device);
+    await upload.open();
+    await expect(
+      upload.uploadTrack({ mode: 'sp', data: new Uint8Array(), title: '' }),
+    ).rejects.toThrow(/no audio/i);
   });
 
   it('reports transfer progress', async () => {
@@ -183,9 +206,8 @@ describe('UploadSession', () => {
     const upload = session(device);
     await upload.open();
     const progress: number[] = [];
-    await upload.uploadTrack(
-      { mode: 'lp4', dataLength: 96, packets: packetsOf(120), title: 'x' },
-      (p) => progress.push(p.writtenBytes),
+    await upload.uploadTrack({ mode: 'lp4', data: new Uint8Array(96), title: 'x' }, (p) =>
+      progress.push(p.writtenBytes),
     );
     expect(progress).toEqual([120]);
   });
@@ -193,7 +215,7 @@ describe('UploadSession', () => {
   it('refuses to upload before the session is open', async () => {
     const { device } = fakeDevice();
     await expect(
-      session(device).uploadTrack({ mode: 'sp', dataLength: 1, packets: packetsOf(1), title: '' }),
+      session(device).uploadTrack({ mode: 'sp', data: new Uint8Array(1), title: '' }),
     ).rejects.toThrow(/open/i);
   });
 
@@ -215,7 +237,7 @@ describe('UploadSession', () => {
     fail.set('sendTrack', new NetMdRejectedError('Rejected'));
     for (const name of ['sessionKeyForget', 'leaveSecureSession', 'release']) fail.set(name, gone);
     await expect(
-      upload.uploadTrack({ mode: 'sp', dataLength: 1, packets: packetsOf(1), title: '' }),
+      upload.uploadTrack({ mode: 'sp', data: new Uint8Array(1), title: '' }),
     ).rejects.toBeInstanceOf(NetMdRejectedError);
     calls.length = 0;
     await expect(upload.close()).resolves.toBeUndefined();

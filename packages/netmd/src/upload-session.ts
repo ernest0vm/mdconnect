@@ -20,7 +20,7 @@ import { ekbForDevice } from './ekb';
 import { NetMdNotImplementedError, NetMdRejectedError, NetMdTimeoutError } from './errors';
 import { UPLOAD_FORMATS, type UploadMode } from './formats';
 import type { NetMdInterface, TrackTransferProgress } from './interface';
-import { CONTENT_ID, KEY_ENCRYPTION_KEY, paddedLength } from './packets';
+import { CONTENT_ID, KEY_ENCRYPTION_KEY, paddedLength, trackPackets } from './packets';
 import { getDeviceStatus, type OperatingState } from './status';
 
 /** The device commands an upload uses; `NetMdInterface` provides them. */
@@ -50,17 +50,27 @@ export interface UploadSessionOptions {
   readonly productId: number;
   /** What the device is doing; see `operatingStateOf`. */
   readonly operatingState: () => Promise<OperatingState>;
-  /** Returns `length` random bytes, for the host nonce. */
+  /** Returns `length` random bytes, for the host nonce and, by default, the data keys. */
   readonly random: (length: number) => Uint8Array;
+  /**
+   * Encrypts a track's audio into packets for its frame size. Defaults to `trackPackets` on the
+   * calling thread; the app runs it in a worker.
+   */
+  readonly packets?: PacketSource;
   readonly sleep?: (ms: number) => Promise<void>;
 }
 
-/** One track to upload, its audio already split into encrypted packets (see packets.ts). */
+/** Turns a track's audio into encrypted packets, padded to `frameSize` (see packets.ts). */
+export type PacketSource = (
+  data: Uint8Array,
+  frameSize: number,
+) => AsyncIterable<Uint8Array<ArrayBuffer>>;
+
+/** One track to upload. */
 export interface UploadTrack {
   readonly mode: UploadMode;
-  /** The audio's length in the wire format, before padding to whole frames. */
-  readonly dataLength: number;
-  readonly packets: AsyncIterable<Uint8Array<ArrayBuffer>>;
+  /** The audio in the mode's wire format: big-endian PCM for SP, ATRAC3 frames for LP. */
+  readonly data: Uint8Array;
   /** Already converted for the disc (see sanitize.ts). */
   readonly title: string;
   readonly fullWidthTitle?: string | undefined;
@@ -103,6 +113,7 @@ async function quietly(step: () => Promise<void>): Promise<void> {
  */
 export class UploadSession {
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly packets: PacketSource;
   private acquired = false;
   private entered = false;
   private sessionKey: Uint8Array | null = null;
@@ -112,6 +123,12 @@ export class UploadSession {
     private readonly options: UploadSessionOptions,
   ) {
     this.sleep = options.sleep ?? realSleep;
+    this.packets =
+      options.packets ??
+      async function* (data, frameSize) {
+        await Promise.resolve();
+        yield* trackPackets({ data, frameSize, random: options.random });
+      };
   }
 
   async open(): Promise<void> {
@@ -139,8 +156,10 @@ export class UploadSession {
   ): Promise<number> {
     const sessionKey = this.sessionKey;
     if (sessionKey === null) throw new Error('Open the upload session first');
+    if (track.data.length === 0) throw new Error('A track with no audio cannot be uploaded');
     const format = UPLOAD_FORMATS[track.mode];
-    const dataLength = paddedLength(track.dataLength, format.frameSize);
+    // The frame count and length come from the same frame size the packets are padded to.
+    const dataLength = paddedLength(track.data.length, format.frameSize);
     await this.device.setupDownload(CONTENT_ID, KEY_ENCRYPTION_KEY, sessionKey);
     const sent = await this.device.sendTrack(
       {
@@ -149,7 +168,7 @@ export class UploadSession {
         frames: dataLength / format.frameSize,
         dataLength,
       },
-      track.packets,
+      this.packets(track.data, format.frameSize),
       sessionKey,
       onProgress,
     );

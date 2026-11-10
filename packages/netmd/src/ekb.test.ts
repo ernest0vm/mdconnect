@@ -28,4 +28,8 @@ describe('ekbForDevice', () => {
   it('keeps the open-source EKB for another deck whose leaf ID is all 0xFF', () => {
     expect(ekbForDevice(ALL_FF, 0x054c, 0x00ca).id).toBe(0x26422642);
   });
+
+  it('keeps the open-source EKB when the leaf ID is empty', () => {
+    expect(ekbForDevice(new Uint8Array(), 0x054c, 0x0081).id).toBe(0x26422642);
+  });
 });
