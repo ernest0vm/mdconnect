@@ -41,3 +41,10 @@ export function trackActions(track: number, state: TrackMenuState): TrackAction[
     },
   ];
 }
+
+/** The track that holds focus after a menu action: the moved track follows its new position. */
+export function trackAfterAction(track: number, action: TrackAction['id']): number {
+  if (action === 'move-up') return track - 1;
+  if (action === 'move-down') return track + 1;
+  return track;
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { trackActions } from './track-menu';
+import { trackActions, trackAfterAction } from './track-menu';
 
 const base = {
   trackCount: 5,
@@ -50,5 +50,14 @@ describe('trackActions', () => {
     const items = byId(2, { ...base, playBlocker: 'Insert a disc to play it.' });
     expect(items.play?.reason).toBe('Insert a disc to play it.');
     expect(items.rename?.reason).toBeNull();
+  });
+});
+
+describe('trackAfterAction', () => {
+  it('keeps focus on the moved track, and on the same track otherwise', () => {
+    expect(trackAfterAction(4, 'move-up')).toBe(3);
+    expect(trackAfterAction(4, 'move-down')).toBe(5);
+    expect(trackAfterAction(4, 'rename')).toBe(4);
+    expect(trackAfterAction(4, 'play')).toBe(4);
   });
 });

@@ -12,7 +12,7 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 import { Action } from './Action';
 import type { DiscView, GroupView, TrackView } from './disc-view';
 import { moveDestination, type Selection } from './editing';
-import type { TrackAction } from './track-menu';
+import { trackAfterAction, type TrackAction } from './track-menu';
 
 type DropHint = { readonly index: number; readonly side: 'before' | 'after' } | null;
 
@@ -235,12 +235,17 @@ function TrackRow({
 }) {
   const index = track.number - 1;
   const row = useRef<HTMLTableRowElement>(null);
+  /** The track that gets focus when the menu closes: a moved track keeps it. */
+  const focusAfter = useRef(index);
+  /** When the keyboard last opened the menu, to ignore a native `contextmenu` that follows. */
+  const keyboardOpenedAt = useRef(Number.NEGATIVE_INFINITY);
   /** Up and Down move to the next row; keys pressed on the row's own controls are theirs. */
   const onKeyDown = (event: KeyboardEvent<HTMLTableRowElement>) => {
     if (event.target !== event.currentTarget) return;
     if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
       // Browsers differ in whether these keys fire `contextmenu`; open the menu at the row.
       event.preventDefault();
+      keyboardOpenedAt.current = event.timeStamp;
       const box = event.currentTarget.getBoundingClientRect();
       event.currentTarget.dispatchEvent(
         new MouseEvent('contextmenu', {
@@ -267,7 +272,9 @@ function TrackRow({
   return (
     <GlassContextMenu
       onOpenChange={(open) => {
-        if (open) onMenuOpen(index);
+        if (!open) return;
+        focusAfter.current = index;
+        onMenuOpen(index);
       }}
     >
       <GlassContextMenuTrigger asChild>
@@ -280,6 +287,13 @@ function TrackRow({
             onFocus(index);
           }}
           onKeyDown={onKeyDown}
+          onContextMenu={(event) => {
+            // Some platforms also fire their own event for the key (Windows on key up); the menu
+            // is already open at the row, so it must not move.
+            if (event.nativeEvent.isTrusted && event.timeStamp - keyboardOpenedAt.current < 1000) {
+              event.preventDefault();
+            }
+          }}
           draggable={!locked}
           onDragStart={(event) => {
             event.dataTransfer.setData('text/plain', String(index));
@@ -360,7 +374,7 @@ function TrackRow({
         onCloseAutoFocus={(event) => {
           // Back to the row, also after a right-click, so the keyboard can go on from there.
           event.preventDefault();
-          row.current?.focus();
+          if (row.current !== null) focusRow(row.current, focusAfter.current);
         }}
       >
         {actions.map((action) => (
@@ -369,6 +383,7 @@ function TrackRow({
             disabled={action.reason !== null}
             reason={action.reason}
             onSelect={() => {
+              focusAfter.current = trackAfterAction(index, action.id);
               onAction(index, action.id);
             }}
           >
