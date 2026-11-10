@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Disc, Group, Track } from './content';
-import { compileDiscTitles, remainingTitleSpace } from './disc-titles';
+import { compileDiscTitles, remainingTitleSpace, titleSpaceBalance } from './disc-titles';
 import { Encoding } from './interface';
 
 function track(
@@ -84,5 +84,13 @@ describe('remainingTitleSpace', () => {
   it('never reports negative space', () => {
     const full = disc([group(null, [track(0, 'x'.repeat(7 * 300))])]);
     expect(remainingTitleSpace(full).halfWidth).toBe(0);
+  });
+});
+
+describe('titleSpaceBalance', () => {
+  it('reports how far titles overflow the disc', () => {
+    const full = disc([group(null, [track(0, 'x'.repeat(7 * 256))])]);
+    // 256 cells for the track and 1 for the empty disc entry, of 255.
+    expect(titleSpaceBalance(full).halfWidth).toBe(-2 * 7);
   });
 });

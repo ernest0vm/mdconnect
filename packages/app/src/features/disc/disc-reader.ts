@@ -21,7 +21,8 @@ export interface DiscSession {
 }
 
 export type DiscReadResult =
-  | { readonly kind: 'disc'; readonly disc: DiscView }
+  /** `raw` is the disc as read, which edits are planned from. */
+  | { readonly kind: 'disc'; readonly disc: DiscView; readonly raw: Disc }
   | { readonly kind: 'no-disc' }
   /**
    * `not-netmd`: the device is in Hi-MD mode (positive evidence, see `isHiMdMode`).
@@ -157,7 +158,8 @@ export class DiscReader {
     }
     try {
       if (!(await session.isDiscPresent())) return { kind: 'no-disc' };
-      return { kind: 'disc', disc: toDiscView(await session.listContent()) };
+      const raw = await session.listContent();
+      return { kind: 'disc', disc: toDiscView(raw), raw };
     } catch {
       // Reopen on Retry: initialising the transport drains a reply a failed command left behind.
       this.session = null;

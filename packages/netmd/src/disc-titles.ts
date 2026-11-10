@@ -49,6 +49,12 @@ export interface TitleSpace {
 
 /** How much title space is left on the disc, assuming the disc title and groups are rewritten. */
 export function remainingTitleSpace(disc: Disc, includeGroups = true): TitleSpace {
+  const balance = titleSpaceBalance(disc, includeGroups);
+  return { halfWidth: Math.max(balance.halfWidth, 0), fullWidth: Math.max(balance.fullWidth, 0) };
+}
+
+/** Like `remainingTitleSpace`, but negative when the titles overflow the disc's title area. */
+export function titleSpaceBalance(disc: Disc, includeGroups = true): TitleSpace {
   let halfWidthTitle = `${disc.title}0;//`;
   let fullWidthTitle = `${disc.fullWidthTitle}0;//`;
   if (includeGroups) {
@@ -68,8 +74,8 @@ export function remainingTitleSpace(disc: Disc, includeGroups = true): TitleSpac
     fullWidthCells += used.fullWidth;
   }
   return {
-    halfWidth: Math.max(CELL_LIMIT - halfWidthCells, 0) * CELL_BYTES,
-    fullWidth: Math.max(CELL_LIMIT - fullWidthCells, 0) * CELL_BYTES,
+    halfWidth: (CELL_LIMIT - halfWidthCells) * CELL_BYTES,
+    fullWidth: (CELL_LIMIT - fullWidthCells) * CELL_BYTES,
   };
 }
 

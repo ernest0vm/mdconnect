@@ -25,6 +25,7 @@ export { renameDisc, replaceDiscTitle, rewriteDiscGroups, type DiscTitleWriter }
 export {
   compileDiscTitles,
   remainingTitleSpace,
+  titleSpaceBalance,
   type RawDiscTitles,
   type TitleSpace,
 } from './disc-titles';

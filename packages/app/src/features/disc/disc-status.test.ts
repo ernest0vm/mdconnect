@@ -1,3 +1,4 @@
+import type { Disc } from '@mdconnect/netmd';
 import { describe, expect, it } from 'vitest';
 
 import { discStatus } from './disc-status';
@@ -38,7 +39,18 @@ describe('discStatus', () => {
     expect(status.kind === 'warning' && status.message).toMatch(/another app or browser tab/);
   });
 
-  it('passes a read disc through', () => {
+  it('passes a read disc through, with the disc as read for editing', () => {
+    const raw: Disc = {
+      title: '',
+      fullWidthTitle: '',
+      writable: true,
+      writeProtected: false,
+      used: 0,
+      left: 0,
+      total: 0,
+      trackCount: 0,
+      groups: [],
+    };
     const disc = {
       title: null,
       subtitle: null,
@@ -46,6 +58,6 @@ describe('discStatus', () => {
       capacity: { used: '0:00', free: '80:00', total: '80:00' },
       groups: [],
     };
-    expect(discStatus({ kind: 'disc', disc })).toEqual({ kind: 'disc', disc });
+    expect(discStatus({ kind: 'disc', disc, raw })).toEqual({ kind: 'disc', disc, raw });
   });
 });

@@ -20,16 +20,16 @@
 
 ## 4. UI primitives in `packages/ui`
 
-- [ ] 4.1 Add `GlassInput` and `GlassCheckbox`: native elements with GlassyUI styling, visible focus and light and dark tokens. Verify with component tests for label association and the checked and indeterminate states, and check contrast in both appearances.
+- [ ] 4.1 Add `GlassInput` and `GlassCheckbox`: native elements with GlassyUI styling, visible focus and light and dark tokens. Verify in the running app (6.1) that labels, the checked and mixed states and the focus ring work, and that contrast passes in both appearances.
 
 ## 5. Editing UI in `packages/app`
 
-- [ ] 5.1 Add track selection to the track list: row checkboxes, select all, clear, and a count. Verify with component tests for pointer and keyboard selection (disc-editing: "Select several tracks", "Select all").
-- [ ] 5.2 Add the Rename disc and Rename track dialogs: half-width and full-width fields, a converted preview, remaining characters, and Save disabled when the title does not fit. Verify with component tests (disc-editing: "Rename a disc", "Rename a track", "Full-width track title", "Accented title", "Title too long for the disc").
-- [ ] 5.3 Add the Delete confirmation dialog stating the count and that it cannot be undone. Verify with component tests for confirm and cancel (disc-editing: "Delete after confirming", "Cancel deleting").
-- [ ] 5.4 Add drag and drop reordering, plus Move up and Move down with focus following the track. Verify with component tests for the keyboard path and the drop handler (disc-editing: "Drag a track", "Move with the keyboard").
-- [ ] 5.5 Add the Group, Rename group and Ungroup actions. Verify with component tests (disc-editing: "Group tracks", "Non-consecutive selection", "Ungroup").
-- [ ] 5.6 Disable editing with a reason for a write-protected disc and during a read or edit, and show a readable message for failed edits. Verify with component tests (disc-editing: "Write-protected disc", "Edit in progress", "Device rejects an edit").
+- [x] 5.1 Add track selection to the track list: row checkboxes, select all, clear, and a count. Verify with tests of the selection logic (`editing.test.ts`) (disc-editing: "Select several tracks", "Select all").
+- [x] 5.2 Add the Rename disc and Rename track dialogs: half-width and full-width fields, a converted preview, remaining characters, and Save disabled when the title does not fit. Verify with tests of the title form (`title-form.test.ts`; disc-editing: "Rename a disc", "Rename a track", "Full-width track title", "Accented title", "Title too long for the disc").
+- [ ] 5.3 Add the Delete confirmation dialog stating the count and that it cannot be undone. Verify confirm and cancel in the running app (6.1; disc-editing: "Delete after confirming", "Cancel deleting").
+- [x] 5.4 Add drag and drop reordering, plus Move up and Move down with focus following the track. Verify with tests of the drop position (`editing.test.ts`) and the move plan (`edit-plan.test.ts`) (disc-editing: "Drag a track", "Move with the keyboard").
+- [x] 5.5 Add the Group, Rename group and Ungroup actions. Verify with tests of the group plans and messages (`edit-plan.test.ts`, `editing.test.ts`) (disc-editing: "Group tracks", "Non-consecutive selection", "Ungroup").
+- [x] 5.6 Disable editing with a reason for a write-protected disc and during a read or edit, and show a readable message for failed edits. Verify with tests of the blockers and messages (`editing.test.ts`) (disc-editing: "Write-protected disc", "Edit in progress", "Device rejects an edit").
 
 ## 6. Integration and hardware checks
 
