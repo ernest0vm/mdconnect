@@ -14,6 +14,8 @@
  *   title before sanitising it, and the old one by re-encoding its decoded text.
  * - `eraseTrack` and `moveTrack` fail on a rejected reply like every other command.
  * - `getPosition` closes its descriptor after a rejected query too; upstream left it open.
+ * - `getPlaybackStatus2` accepts a reply with nothing after the status block (MZ-N510/N610);
+ *   upstream's format requires one more byte.
  * - `stop` ignores only a rejected or not-implemented reply and an unexpected echo (the LAM-1
  *   fix); a timeout or a transfer error, such as an unplugged device, is passed on. Upstream
  *   ignores every error.
@@ -488,9 +490,10 @@ export class NetMdInterface {
       const reply = await this.sendQuery(
         formatQuery('1809 8001 0330 %w 0030 8805 0030 %w 00 ff00 00000000', 0x8802, 0x8806),
       );
-      // The trailing byte varies by device (an MZ-RH1 fix upstream).
+      // What follows the status block varies by device: one byte on the MZ-NE410 and MZ-RH1 (an
+      // upstream fix), nothing on the MZ-N510/N610. `%*` takes whatever is left, even nothing.
       return buf(
-        scanQuery(reply, '1809 8001 0330 %?%? %?%? %?%? %?%? %?%? %? 1000 00%?0000 %x %?')[0],
+        scanQuery(reply, '1809 8001 0330 %?%? %?%? %?%? %?%? %?%? %? 1000 00%?0000 %x %*')[0],
       );
     });
   }
