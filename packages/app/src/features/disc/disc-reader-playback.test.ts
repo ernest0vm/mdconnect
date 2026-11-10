@@ -179,3 +179,64 @@ describe('DiscReader.status', () => {
     expect(opened).toBe(0);
   });
 });
+
+describe('DiscReader.close (app-menu: "Exit during an edit")', () => {
+  it('ends the session after the edit in progress', async () => {
+    const log: string[] = [];
+    const reader = new DiscReader(() =>
+      Promise.resolve({
+        isDiscPresent: () => Promise.resolve(true),
+        listContent: () => {
+          log.push('list');
+          return Promise.resolve(blank);
+        },
+        run: (command) => {
+          log.push(command.kind);
+          return Promise.resolve();
+        },
+        playback: () => Promise.resolve(),
+        deviceStatus: () => Promise.reject(new NetMdRejectedError('no')),
+        end: () => {
+          log.push('end');
+          return Promise.resolve();
+        },
+      }),
+    );
+    const editing = reader.edit(renameTrackPlan(0, 'x'));
+    const closing = reader.close();
+    await Promise.all([editing, closing]);
+    expect(log).toEqual(['setTrackTitle', 'list', 'end']);
+  });
+
+  it('opens no new session afterwards, so a late status poll leaves the device closed', async () => {
+    let opened = 0;
+    const reader = new DiscReader(() => {
+      opened += 1;
+      return Promise.resolve({
+        isDiscPresent: () => Promise.resolve(true),
+        listContent: () => Promise.resolve(blank),
+        run: () => Promise.resolve(),
+        playback: () => Promise.resolve(),
+        deviceStatus: () => Promise.reject(new NetMdRejectedError('no')),
+        end: () => Promise.resolve(),
+      });
+    });
+    await reader.status();
+    const closing = reader.close();
+    const late = reader.status();
+    await closing;
+    expect(await late).toBeNull();
+    expect(await reader.status()).toBeNull();
+    expect(opened).toBe(1);
+  });
+
+  it('does nothing when no session was opened', async () => {
+    let opened = 0;
+    const reader = new DiscReader(() => {
+      opened += 1;
+      return Promise.reject(new Error('not used'));
+    });
+    await reader.close();
+    expect(opened).toBe(0);
+  });
+});

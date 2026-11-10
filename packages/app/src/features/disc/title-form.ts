@@ -40,7 +40,7 @@ export interface TitleForm {
  * Disc and group titles share the disc title field, where `//` (`／／` in full width) ends each
  * entry. A doubled or trailing slash in a title would split it, so it collapses to one or goes.
  */
-function withoutDelimiters(title: string, slash: '/' | '／'): string {
+export function withoutDelimiters(title: string, slash: '/' | '／'): string {
   return title
     .replace(slash === '/' ? /\/{2,}/gu : /／{2,}/gu, slash)
     .replace(slash === '/' ? /\/+$/u : /／+$/u, '');

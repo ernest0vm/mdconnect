@@ -13,6 +13,10 @@ export class ConnectionController {
   private busy = false;
   private openHandle: UsbDeviceHandle | null = null;
   private switchingTo: UsbDeviceHandle | null = null;
+  /** The close Exit started; an open waits for it, since a device cannot open while closing. */
+  private closing: Promise<void> | null = null;
+  /** Counts Exits, so an open that was in progress when the user chose Exit is abandoned. */
+  private exits = 0;
   /** Devices unplugged while they were being switched to. */
   private readonly unplugged = new WeakSet<UsbDeviceHandle>();
   /** The chooser filters for the platform's device kinds; reconnects honour the same set. */
@@ -82,6 +86,28 @@ export class ConnectionController {
     }
   }
 
+  /**
+   * Closes the open device after the user chose Exit and returns to the Connect screen. The NetMD
+   * session usually closed it already; closing again covers a device with no session open, and
+   * errors are ignored. The device stays granted, so Connect can reopen it. `device` is the one the
+   * user exited; a late call for a device that is no longer open does nothing.
+   */
+  exit(device: UsbDeviceHandle): void {
+    if (device !== this.openHandle) return;
+    this.openHandle = null;
+    this.exits += 1;
+    this.dispatch({ type: 'exited' });
+    const closing: Promise<void> = device
+      .close()
+      .catch(() => {
+        // Already closed by the session, or unplugged.
+      })
+      .then(() => {
+        if (this.closing === closing) this.closing = null;
+      });
+    this.closing = closing;
+  }
+
   /** Whether the chooser would have offered this device (a kind this platform supports). */
   private offers({ vendorId, productId }: UsbDeviceHandle): boolean {
     return this.filters.some((f) => f.vendorId === vendorId && f.productId === productId);
@@ -107,9 +133,13 @@ export class ConnectionController {
     }
     this.switchingTo = handle;
     this.unplugged.delete(handle);
+    const exits = this.exits;
     try {
+      // After the chooser, so the request keeps its user gesture.
+      if (this.closing !== null) await this.closing;
       await switchDevice(this.openHandle, handle);
     } catch (error) {
+      if (this.exits !== exits) return; // The user chose Exit meanwhile: nothing to report.
       if (this.unplugged.has(handle) && this.openHandle === null) {
         // The open failed because the device left; with nothing else open, that is an unplug.
         this.dispatch({ type: 'device-disconnected', device });
@@ -119,6 +149,13 @@ export class ConnectionController {
       return;
     } finally {
       this.switchingTo = null;
+    }
+    if (this.exits !== exits) {
+      // The user chose Exit while this device was opening: close it and stay on Connect.
+      await handle.close().catch(() => {
+        // Unplugged meanwhile.
+      });
+      return;
     }
     if (this.unplugged.has(handle)) {
       // switchDevice already closed the previous device; the new one is gone too.

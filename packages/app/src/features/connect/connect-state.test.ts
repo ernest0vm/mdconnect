@@ -122,4 +122,12 @@ describe('connectReducer', () => {
     expect(requesting.unplugged).toBe(mzN510);
     expect(connectReducer(requesting, { type: 'connected', device: mzN510 }).unplugged).toBeNull();
   });
+
+  it('clears the device on exit, without the unplug hint', () => {
+    const connected = connectReducer(initialConnectState, {
+      type: 'connected',
+      device: { name: 'Sony MZ-N510', vendorId: 0x054c, productId: 0x00c9 },
+    });
+    expect(connectReducer(connected, { type: 'exited' })).toEqual(initialConnectState);
+  });
 });

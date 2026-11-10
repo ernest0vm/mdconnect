@@ -9,6 +9,7 @@ import {
   renameGroupPlan,
   renameTrackPlan,
   ungroupPlan,
+  wipeDiscPlan,
   type EditCommand,
 } from './edit-plan';
 
@@ -225,5 +226,11 @@ describe('deleteTracksPlan fits', () => {
     };
     expect(deleteTracksPlan(crowded, [0, 1]).fits).toBe(false);
     expect(deleteTracksPlan(disc([null, null, 'A', 'A']), [0, 1]).fits).toBe(true);
+  });
+});
+
+describe('wipeDiscPlan (disc-editing: "Wipe after confirming")', () => {
+  it('stops playback, then erases the disc', () => {
+    expect(wipeDiscPlan().commands).toEqual([{ kind: 'stop' }, { kind: 'eraseDisc' }]);
   });
 });

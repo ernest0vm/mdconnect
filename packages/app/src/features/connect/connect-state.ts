@@ -27,7 +27,9 @@ export type ConnectAction =
    * Dispatched when the open device, or the one being switched to, is unplugged. `device` names
    * the device that left (null when it is not in the supported table).
    */
-  | { readonly type: 'device-disconnected'; readonly device: ConnectedDevice | null };
+  | { readonly type: 'device-disconnected'; readonly device: ConnectedDevice | null }
+  /** The user chose Exit: back to the Connect screen, with no unplug hint. */
+  | { readonly type: 'exited' };
 
 export const initialConnectState: ConnectState = {
   device: null,
@@ -50,6 +52,8 @@ export function connectReducer(state: ConnectState, action: ConnectAction): Conn
       return { ...state, requesting: false, failure: action.failure };
     case 'device-disconnected':
       return { ...initialConnectState, unplugged: action.device };
+    case 'exited':
+      return initialConnectState;
   }
 }
 

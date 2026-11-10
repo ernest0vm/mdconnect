@@ -75,6 +75,98 @@ describe('ConnectionController', () => {
     expect(actions).toEqual(['request-started', 'connected']);
   });
 
+  it('returns to the Connect screen on Exit, without the unplug hint (app-menu: "Exit")', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const done = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await done;
+    controller.exit(a.handle);
+    expect(actions.at(-1)).toBe('exited');
+    expect(controller.openDevice()).toBeNull();
+  });
+
+  it('closes the device on Exit even when no NetMD session was open (app-menu: "Exit")', async () => {
+    const { usb, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const done = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await done;
+    controller.exit(a.handle);
+    expect(a.calls).toEqual(['open', 'close']);
+  });
+
+  it('closes a device that finishes opening after Exit, and stays on the Connect screen', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const first = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await first;
+    usb.nextRequest = () => Promise.resolve(b.handle);
+    const switching = controller.request(() => false);
+    await flush();
+    controller.exit(a.handle);
+    a.finishClose();
+    b.finishOpen();
+    await flush();
+    a.finishClose(); // switchDevice closes the previous device again
+    await flush();
+    b.finishClose();
+    await switching;
+    expect(b.calls).toEqual(['open', 'close']);
+    expect(actions.at(-1)).toBe('exited');
+    expect(controller.openDevice()).toBeNull();
+  });
+
+  it('ignores a late Exit for a device that is no longer the open one', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const first = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await first;
+    usb.nextRequest = () => Promise.resolve(b.handle);
+    const second = controller.request(() => false);
+    await flush();
+    b.finishOpen();
+    await flush();
+    a.finishClose();
+    await second;
+    controller.exit(a.handle);
+    expect(actions.at(-1)).toBe('connected');
+    expect(controller.openDevice()).toBe(b.handle);
+    expect(b.calls).toEqual(['open']);
+  });
+
+  it('waits for the Exit close to finish before opening the device again', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const first = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await first;
+    controller.exit(a.handle);
+    const again = controller.request(() => false);
+    await flush();
+    expect(a.calls).toEqual(['open', 'close']);
+    a.finishClose();
+    await flush();
+    expect(a.calls).toEqual(['open', 'close', 'open']);
+    a.finishOpen();
+    await again;
+    expect(actions.at(-1)).toBe('connected');
+  });
+
   it('classifies a cancelled in-app chooser', async () => {
     const { actions, controller } = setup();
     await controller.request(() => true);

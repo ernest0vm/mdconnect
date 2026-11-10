@@ -15,6 +15,10 @@ export type EditCommand =
     }
   | { readonly kind: 'eraseTrack'; readonly track: number }
   | { readonly kind: 'moveTrack'; readonly from: number; readonly to: number }
+  /** Stops playback; a device that rejects it is ignored. */
+  | { readonly kind: 'stop' }
+  /** Erases every track and title on the disc. */
+  | { readonly kind: 'eraseDisc' }
   /** Rewrites the disc title fields so they store this disc's title and groups. */
   | { readonly kind: 'rewriteGroups'; readonly disc: Disc };
 
@@ -35,6 +39,11 @@ export interface LayoutPlan extends EditPlan {
    * compiler leaves out what does not fit, so a plan that does not fit must not run.
    */
   readonly fits: boolean;
+}
+
+/** Erases the whole disc, after stopping playback, as webminidisc's Wipe Disc does. */
+export function wipeDiscPlan(): EditPlan {
+  return { commands: [{ kind: 'stop' }, { kind: 'eraseDisc' }] };
 }
 
 /** Renames the disc; the full-width title is left alone unless given. */
