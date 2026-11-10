@@ -81,6 +81,51 @@ export function titleSpaceBalance(disc: Disc, includeGroups = true): TitleSpace 
   };
 }
 
+/**
+ * Title space left once `changed`'s track titles are stored next to the disc title field as
+ * `stored` writes it (groups with their ";" and range included). Use it for edits that do not
+ * rewrite the disc title field, such as a track rename, where the estimate in
+ * `titleSpaceBalance` leaves out the separators of the stored group entries.
+ */
+export function titleSpaceWithStoredTitle(stored: Disc, changed: Disc): TitleSpace {
+  const field = storedDiscTitles(stored);
+  let halfWidthCells = cells(halfWidthTitleLength(field.title));
+  let fullWidthCells = cells(field.fullWidthTitle.length * 2);
+  for (const track of changed.groups.flatMap((g) => g.tracks)) {
+    const used = cellsForTrack(track);
+    halfWidthCells += used.halfWidth;
+    fullWidthCells += used.fullWidth;
+  }
+  return {
+    halfWidth: (CELL_LIMIT - halfWidthCells) * CELL_BYTES,
+    fullWidth: (CELL_LIMIT - fullWidthCells) * CELL_BYTES,
+  };
+}
+
+/**
+ * The disc title fields as a disc with these titles and groups stores them, with every entry.
+ * Unlike `compileDiscTitles`, nothing is left out for lack of space: this measures what is there.
+ */
+function storedDiscTitles(disc: Disc): RawDiscTitles {
+  const groups = disc.groups.filter((g) => g.title !== null && g.tracks.length > 0);
+  if (groups.length === 0) return { title: disc.title, fullWidthTitle: disc.fullWidthTitle };
+  const ranges = groups.map((g) => groupRange(g.tracks.map((t) => t.index)));
+  const title =
+    (disc.title === '' ? '' : `0;${disc.title}//`) +
+    groups.map((g, i) => `${ranges[i] ?? ''};${g.title ?? ''}//`).join('');
+  const useFullWidth =
+    disc.fullWidthTitle !== '' ||
+    groups.some((g) => (g.fullWidthTitle ?? '') !== '') ||
+    disc.groups.some((g) => g.tracks.some((t) => t.fullWidthTitle !== ''));
+  const fullWidthTitle = useFullWidth
+    ? `０；${disc.fullWidthTitle}／／` +
+      groups
+        .map((g, i) => `${toFullWidthRange(ranges[i] ?? '')}；${g.fullWidthTitle ?? ''}／／`)
+        .join('')
+    : '';
+  return { title, fullWidthTitle };
+}
+
 export interface RawDiscTitles {
   readonly title: string;
   readonly fullWidthTitle: string;

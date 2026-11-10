@@ -3,6 +3,7 @@ import {
   listContent,
   NetMdInterface,
   NetMdRejectedError,
+  NetMdTimeoutError,
   NetMdTransport,
   renameDisc,
   rewriteDiscGroups,
@@ -372,9 +373,14 @@ export class DiscReader {
     try {
       this.session ??= this.openNewSession();
       session = await this.session;
-    } catch {
+    } catch (error) {
       this.session = null;
-      return { kind: 'failed', reason: hiMdMode() ? 'not-netmd' : 'unavailable' };
+      if (hiMdMode()) return { kind: 'failed', reason: 'not-netmd' };
+      // A device that stops answering while the session opens is not in use by someone else.
+      return {
+        kind: 'failed',
+        reason: error instanceof NetMdTimeoutError ? 'read-failed' : 'unavailable',
+      };
     }
     try {
       if (!(await session.isDiscPresent())) return { kind: 'no-disc' };

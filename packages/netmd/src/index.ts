@@ -20,13 +20,19 @@ export {
   type CommandChannel,
   type InterfaceOptions,
 } from './interface';
-export { NetMdTransport, type NetMdUsbDevice, type TransportOptions } from './transport';
+export {
+  NetMdTransport,
+  type NetMdUsbDevice,
+  type TransferTimer,
+  type TransportOptions,
+} from './transport';
 export { renameDisc, replaceDiscTitle, rewriteDiscGroups, type DiscTitleWriter } from './commands';
 export {
   compileDiscTitles,
   groupsFit,
   remainingTitleSpace,
   titleSpaceBalance,
+  titleSpaceWithStoredTitle,
   type RawDiscTitles,
   type TitleSpace,
 } from './disc-titles';
