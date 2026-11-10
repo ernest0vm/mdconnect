@@ -6,7 +6,8 @@
   "type": "module",
   "description": "Read-only NetMD protocol: a TypeScript port of part of netmd-js 4.4.1 over WebUSB.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./demo": "./src/demo.ts"
   },
   "scripts": {
     "lint": "eslint . --max-warnings 0",

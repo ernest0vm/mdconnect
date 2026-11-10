@@ -14,12 +14,22 @@ const supported = isWebUsbSupported({
   hasUsb: 'usb' in navigator,
 });
 
-createRoot(root).render(
-  <StrictMode>
-    {supported ? (
-      <App platform={webPlatform(__MDCONNECT_COMMIT__)} />
-    ) : (
-      <UnsupportedBrowser commit={__MDCONNECT_COMMIT__} />
-    )}
-  </StrictMode>,
+async function platformForThisPage() {
+  const platform = webPlatform(__MDCONNECT_COMMIT__);
+  // `import.meta.env.DEV` is false in production builds, so the demo module is left out of them.
+  if (import.meta.env.DEV) {
+    const demo = await import('./demo-platform');
+    if (demo.demoRequested({ dev: true, search: window.location.search })) {
+      return demo.withDemoDevice(platform);
+    }
+  }
+  return platform;
+}
+
+const app = supported ? (
+  <App platform={await platformForThisPage()} />
+) : (
+  <UnsupportedBrowser commit={__MDCONNECT_COMMIT__} />
 );
+
+createRoot(root).render(<StrictMode>{app}</StrictMode>);

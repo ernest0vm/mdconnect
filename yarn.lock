@@ -967,6 +967,7 @@ __metadata:
   dependencies:
     "@mdconnect/app": "workspace:^"
     "@mdconnect/core": "workspace:^"
+    "@mdconnect/netmd": "workspace:^"
     "@mdconnect/tsconfig": "workspace:^"
     "@mdconnect/ui": "workspace:^"
     "@tailwindcss/vite": "npm:^4"

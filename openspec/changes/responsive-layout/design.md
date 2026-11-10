@@ -34,11 +34,13 @@
 
 Alternative: one shell that only changes widths. Rejected, because the connected screen needs a fixed viewport height so the list scrolls inside it. A centered card needs the page to scroll.
 
+`ConnectScreen` now renders `PageShell` itself, so it can pick the layout; `App` only provides the appearance root.
+
 ### 2. Main area grid
 
-- **Below `lg`:** a single column with rows `auto 1fr`, the disc summary above the track area.
-- **At `lg` and up:** columns `minmax(18rem, 22rem) 1fr`, the summary on the left and the track area on the right.
-- Named grid areas (`summary`, `tracks`). The upload change can add a `source` area to the left and a `transfer` area between the columns without touching the existing two.
+- **Below `lg`:** a flex column. The summary keeps its height (`shrink-0`), and the track area takes the rest with a 24 rem minimum. When the window is too short for both, the main area scrolls instead of squeezing the list. A grid row of `auto` let the glass panel collapse, because its `overflow: hidden` drops its minimum height to zero.
+- **At `lg` and up:** a grid with columns `minmax(18rem, 22rem) minmax(0, 1fr)`, the summary on the left and the track area on the right. Both fill the height, and each scrolls on its own.
+- The upload change can add a column to the left and a transfer column between them without touching the existing two.
 
 ### 3. Split `DiscPanel` rendering, not its state
 
@@ -84,7 +86,7 @@ The behaviour is the same on macOS, Windows and Linux. Electron enforces the min
 
 To check layouts without hardware, `yarn dev:web` with `?demo` in the URL connects a fake device. It replays the anonymised MZ-NE410 recording (`mz-ne410-grouped-lp4.json`) through the existing `NetMdUsbDevice` interface:
 
-- **Dev-only:** the module is imported only under `import.meta.env.DEV`, so production builds and the desktop app do not include it. A test checks that the production bundle contains no `demo` code path.
+- **Dev-only:** the module is imported only under `import.meta.env.DEV`, so production builds and the desktop app do not include it. A responder in `@mdconnect/netmd/demo` answers each recorded command in any order, so Refresh works. The production bundle was checked by grep; it contains no demo code.
 - **Read-only:** edits fail with the normal "device refused" message.
 
 Alternative: screenshots only with the real device. Rejected, because every layout check would need hardware and a free USB port.

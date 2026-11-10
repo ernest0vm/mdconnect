@@ -6,6 +6,7 @@ import { GlassSpinner } from '@mdconnect/ui/components/glassyui/glass-spinner';
 import { useEffect, useMemo, useReducer, useRef } from 'react';
 
 import type { Platform, UsbConnectionEventLike } from '../../platform';
+import { PageShell } from '../../PageShell';
 import { DiscPanel } from '../disc/DiscPanel';
 import { ChooserDialog } from './ChooserDialog';
 import { connectReducer, formatUsbId, initialConnectState } from './connect-state';
@@ -68,29 +69,13 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   // The controller sets the open device before dispatching `connected`, so it is current here.
   const openDevice = state.device === null ? null : controller.openDevice();
 
-  return (
-    <GlassPanel className="flex w-full max-w-md flex-col gap-4 p-6">
-      <h1 className="text-xl font-semibold">Connect your MiniDisc</h1>
-
-      {state.device ? (
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-base font-medium">{state.device.name}</span>
-          <GlassBadge tone="green" className="font-mono">
-            {formatUsbId(state.device.vendorId, state.device.productId)}
-          </GlassBadge>
-        </div>
-      ) : (
-        <p className="text-sm opacity-80">{connectPrompt(platform.deviceKinds)}</p>
-      )}
-
-      {openDevice !== null && <DiscPanel key={deviceKey(openDevice)} device={openDevice} />}
-
+  const alerts = (
+    <>
       {hint && (
         <GlassAlert tone="info" title="Device unplugged">
           <p>{hint}</p>
         </GlassAlert>
       )}
-
       {guidance && (
         <GlassAlert tone="warning" title={guidance.title}>
           <p>{guidance.message}</p>
@@ -101,23 +86,78 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
           )}
         </GlassAlert>
       )}
+    </>
+  );
+  const connectButton = (
+    <div className="flex items-center gap-3">
+      <GlassButton
+        variant={state.device ? 'soft' : 'primary'}
+        size={state.device ? 'sm' : 'md'}
+        disabled={state.requesting}
+        onClick={requestDevice}
+      >
+        {state.device ? 'Connect another device' : 'Connect device'}
+      </GlassButton>
+      {state.requesting && <GlassSpinner label="Connecting" size="sm" />}
+    </div>
+  );
+  const chooser = platform.deviceChooser && (
+    <ChooserDialog
+      chooser={platform.deviceChooser}
+      onCancel={() => {
+        chooserCancelled.current = true;
+      }}
+    />
+  );
 
-      <div className="flex items-center gap-3">
-        <GlassButton variant="primary" disabled={state.requesting} onClick={requestDevice}>
-          {state.device ? 'Connect another device' : 'Connect device'}
-        </GlassButton>
-        {state.requesting && <GlassSpinner label="Connecting" size="sm" />}
-      </div>
+  if (openDevice !== null && state.device) {
+    return (
+      <PageShell
+        commit={platform.buildCommit}
+        layout="app"
+        header={
+          <>
+            <h1 className="text-base font-semibold">mdconnect</h1>
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="truncate text-base font-medium">{state.device.name}</span>
+              <GlassBadge tone="green" className="shrink-0 font-mono">
+                {formatUsbId(state.device.vendorId, state.device.productId)}
+              </GlassBadge>
+            </span>
+            <span className="sm:ml-auto">{connectButton}</span>
+          </>
+        }
+      >
+        <div className="flex h-full min-h-0 flex-col gap-3 pb-2">
+          {alerts}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
+            <DiscPanel key={deviceKey(openDevice)} device={openDevice} />
+          </div>
+        </div>
+        {chooser}
+      </PageShell>
+    );
+  }
 
-      {platform.deviceChooser && (
-        <ChooserDialog
-          chooser={platform.deviceChooser}
-          onCancel={() => {
-            chooserCancelled.current = true;
-          }}
-        />
-      )}
-    </GlassPanel>
+  return (
+    <PageShell commit={platform.buildCommit}>
+      <GlassPanel className="flex w-full flex-col gap-4 p-6">
+        <h1 className="text-xl font-semibold">Connect your MiniDisc</h1>
+        {state.device ? (
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-base font-medium">{state.device.name}</span>
+            <GlassBadge tone="green" className="font-mono">
+              {formatUsbId(state.device.vendorId, state.device.productId)}
+            </GlassBadge>
+          </div>
+        ) : (
+          <p className="text-sm opacity-80">{connectPrompt(platform.deviceKinds)}</p>
+        )}
+        {alerts}
+        {connectButton}
+        {chooser}
+      </GlassPanel>
+    </PageShell>
   );
 }
 

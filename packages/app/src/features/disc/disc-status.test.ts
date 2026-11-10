@@ -56,6 +56,7 @@ describe('discStatus', () => {
       subtitle: null,
       writeProtected: false,
       capacity: { used: '0:00', free: '80:00', total: '80:00' },
+      capacityMeter: { value: 0, max: 4800, text: '0:00 used of 80:00' },
       groups: [],
     };
     expect(discStatus({ kind: 'disc', disc, raw })).toEqual({ kind: 'disc', disc, raw });
