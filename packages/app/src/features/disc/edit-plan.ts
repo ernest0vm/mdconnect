@@ -108,22 +108,33 @@ function layoutPlan(commands: EditCommand[], layout: Layout): LayoutPlan {
   };
 }
 
-/** Erases tracks from the highest index down, so the indexes still to erase stay valid. */
+/**
+ * Erases tracks from the highest index down, so the indexes still to erase stay valid. The plan
+ * fits only if every layout it can stop at fits: a failed erase leaves the disc part way, and the
+ * recovery then writes the groups for that layout.
+ */
 export function deleteTracksPlan(disc: Disc, tracks: readonly number[]): LayoutPlan {
   const doomed = [...new Set(tracks)].sort((a, b) => b - a);
   const layout = layoutOf(disc);
-  const remaining = layout.slots.filter((slot) => !doomed.includes(slot.track.index));
+  const afterErasing = (erased: readonly number[]): Layout => ({
+    ...layout,
+    slots: layout.slots.filter((slot) => !erased.includes(slot.track.index)),
+  });
   const plan = layoutPlan(
     doomed.map((track) => ({ kind: 'eraseTrack', track })),
-    { ...layout, slots: remaining },
+    afterErasing(doomed),
+  );
+  const everyStepFits = doomed.every((_, i) =>
+    groupsFit(discOf(afterErasing(doomed.slice(0, i + 1)))),
   );
   return {
     ...plan,
+    fits: everyStepFits,
     // The erased tracks are the first `completed` of `doomed`; regroup for exactly those.
     recovery: (completed) => {
       const erased = doomed.slice(0, Math.min(completed, doomed.length));
       if (erased.length === 0) return [];
-      return deleteTracksPlan(disc, erased).commands.filter((c) => c.kind === 'rewriteGroups');
+      return [{ kind: 'rewriteGroups', disc: discOf(afterErasing(erased)) }];
     },
   };
 }

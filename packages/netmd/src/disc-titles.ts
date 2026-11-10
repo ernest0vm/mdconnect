@@ -134,11 +134,18 @@ export function compileDiscTitles(disc: Disc): RawDiscTitles {
  */
 export function groupsFit(disc: Disc): boolean {
   const compiled = compileDiscTitles(disc);
-  const expected = disc.groups.filter((g) => g.title !== null && g.tracks.length > 0).length;
+  const groups = disc.groups.filter((g) => g.title !== null && g.tracks.length > 0);
   const kept = parseGroups(compiled.title, compiled.fullWidthTitle, disc.trackCount).filter(
     (g) => g.title !== null,
-  ).length;
-  if (kept !== expected) return false;
+  );
+  if (kept.length !== groups.length) return false;
+  // Full-width group titles are stored in their own field, which can run out on its own.
+  const fullWidthLost = groups.some((group) => {
+    if ((group.fullWidthTitle ?? '') === '') return false;
+    const first = Math.min(...group.tracks.map((t) => t.index));
+    return kept.find((g) => g.tracks[0] === first)?.fullWidthTitle !== group.fullWidthTitle;
+  });
+  if (fullWidthLost) return false;
   if (discDisplayTitle(compiled.title, false) !== disc.title) return false;
   return (
     disc.fullWidthTitle === '' ||

@@ -118,4 +118,10 @@ describe('groupsFit', () => {
   it('is true for a disc without groups', () => {
     expect(groupsFit(disc([group(null, [track(0)])], 'Mix'))).toBe(true);
   });
+
+  it('is false when a full-width group title would be left out', () => {
+    // Full-width track titles fill the full-width area: "エー" no longer fits there.
+    const full = { ...track(0), fullWidthTitle: 'あ'.repeat(887) };
+    expect(groupsFit(disc([group('A', [full, track(1)], 'エー')]))).toBe(false);
+  });
 });

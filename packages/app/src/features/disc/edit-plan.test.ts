@@ -210,3 +210,20 @@ describe('recovery after a partial delete', () => {
     });
   });
 });
+
+describe('deleteTracksPlan fits', () => {
+  it('checks every layout a partial delete could leave', () => {
+    const base = disc([null, null, 'A', 'A']);
+    // Track 1 fills the title area, so the group only fits once track 1 is gone. Tracks are
+    // erased from the highest index, so erasing 2 then 1 passes through a layout that loses "A".
+    const crowded: Disc = {
+      ...base,
+      groups: base.groups.map((g) => ({
+        ...g,
+        tracks: g.tracks.map((t) => (t.index === 0 ? { ...t, title: 'x'.repeat(7 * 252) } : t)),
+      })),
+    };
+    expect(deleteTracksPlan(crowded, [0, 1]).fits).toBe(false);
+    expect(deleteTracksPlan(disc([null, null, 'A', 'A']), [0, 1]).fits).toBe(true);
+  });
+});
