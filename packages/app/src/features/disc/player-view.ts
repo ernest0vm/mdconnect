@@ -1,7 +1,5 @@
 import type { DeviceStatus, OperatingState } from '@mdconnect/netmd';
 
-import type { DiscReadResult } from './disc-reader';
-
 const STATE_LABELS: Readonly<Record<OperatingState, string>> = {
   ready: 'Stopped',
   playing: 'Playing',
@@ -98,22 +96,10 @@ export function controlFailureMessage(reason: 'rejected' | 'failed'): string {
 }
 
 /**
- * The device status to keep once a disc read finishes. A read that found no disc, or that failed,
- * makes an earlier status stale (the disc may have been swapped), so it is dropped until the next
- * poll; a successful read keeps it.
- */
-export function statusAfterRead(
-  previous: DeviceStatus | null,
-  read: Pick<DiscReadResult, 'kind'>,
-): DeviceStatus | null {
-  return read.kind === 'disc' ? previous : null;
-}
-
-/**
  * The status to show after a poll. A failed read (null) keeps what is shown, and a status equal
  * to it keeps the same object, so an unchanged device does not re-render the app every second.
- * It compares with what is shown, not with an earlier poll, so a status cleared by
- * `statusAfterRead` always comes back with the next successful read.
+ * It compares with what is shown, not with an earlier poll, so a status the panel cleared after
+ * a disc read always comes back with the next successful read.
  */
 export function mergeStatus(
   shown: DeviceStatus | null,

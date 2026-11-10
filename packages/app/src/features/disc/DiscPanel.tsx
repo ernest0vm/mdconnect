@@ -47,7 +47,6 @@ import {
   mergeStatus,
   playerBlocker,
   playerView,
-  statusAfterRead,
   trackPlayState,
 } from './player-view';
 import { browserClock, documentVisibility, StatusPoller } from './status-poller';
@@ -459,7 +458,8 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
     void reader.read().then((next) => {
       if (current) {
         setResult(next);
-        setDeviceStatus((previous) => statusAfterRead(previous, next));
+        // A read cannot tell that the earlier status belongs to this disc: the next poll sets it.
+        setDeviceStatus(null);
       }
     });
     return () => {
@@ -495,7 +495,8 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
       void reader.edit(plan).then(({ outcome, result: next }) => {
         if (!mounted.current) return;
         setResult(next);
-        setDeviceStatus((previous) => statusAfterRead(previous, next));
+        // A read cannot tell that the earlier status belongs to this disc: the next poll sets it.
+        setDeviceStatus(null);
         setEditState(
           outcome.kind === 'saved'
             ? { kind: 'saved' }

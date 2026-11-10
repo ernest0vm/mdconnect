@@ -1,13 +1,7 @@
 import type { DeviceStatus } from '@mdconnect/netmd';
 import { describe, expect, it } from 'vitest';
 
-import {
-  mergeStatus,
-  playerBlocker,
-  playerView,
-  statusAfterRead,
-  trackPlayState,
-} from './player-view';
+import { mergeStatus, playerBlocker, playerView, trackPlayState } from './player-view';
 
 const titles = ['Intro', '', 'Outro'];
 const at = (state: DeviceStatus['state'], track: number | null, second = 0): DeviceStatus => ({
@@ -113,21 +107,13 @@ describe('playerBlocker after a read found no disc', () => {
   });
 });
 
-describe('statusAfterRead', () => {
-  it('drops a stale status when a read finds no disc, and lets a later poll enable playback', () => {
-    // Playing, then the disc is swapped out and Refresh finds no disc.
-    const afterRead = statusAfterRead(at('playing', 3), { kind: 'no-disc' });
-    expect(afterRead).toBeNull();
+describe('a disc read clears the status', () => {
+  it('blocks playback after a no-disc read, and lets a later poll enable it', () => {
+    // Playing, then the disc is swapped out and Refresh finds no disc: the panel clears the status.
     const base = { reading: false, saving: false, readable: true, noDisc: true };
-    expect(playerBlocker({ ...base, status: afterRead })).toBe('Insert a disc to play it.');
+    expect(playerBlocker({ ...base, status: null })).toBe('Insert a disc to play it.');
     // A disc goes back in and a poll sees it.
-    expect(playerBlocker({ ...base, status: at('ready', 0) })).toBeNull();
-  });
-
-  it('drops the status after a failed read and keeps it after a disc read', () => {
-    expect(statusAfterRead(at('playing', 3), { kind: 'failed' })).toBeNull();
-    const kept = at('playing', 3);
-    expect(statusAfterRead(kept, { kind: 'disc' })).toBe(kept);
+    expect(playerBlocker({ ...base, status: mergeStatus(null, at('ready', 0)) })).toBeNull();
   });
 });
 
@@ -142,11 +128,10 @@ describe('mergeStatus', () => {
     expect(mergeStatus(shown, null)).toBe(shown);
   });
 
-  it('shows a status equal to one cleared by a no-disc read (reinserted disc)', () => {
+  it('shows a status equal to one cleared by a disc read (reinserted disc)', () => {
     const before = at('ready', 0);
-    const cleared = statusAfterRead(before, { kind: 'no-disc' });
-    // A failed poll leaves it cleared; then the same status as before comes back.
-    const afterFailure = mergeStatus(cleared, null);
+    // A failed poll leaves the cleared status cleared; then the same status as before comes back.
+    const afterFailure = mergeStatus(null, null);
     expect(afterFailure).toBeNull();
     expect(mergeStatus(afterFailure, at('ready', 0))).toEqual(before);
   });
