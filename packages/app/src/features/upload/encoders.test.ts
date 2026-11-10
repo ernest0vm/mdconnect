@@ -66,19 +66,32 @@ describe('BuiltInEncoder', () => {
       data: new Uint8Array([1, 2, 3]).buffer,
     }));
     const encoder = new BuiltInEncoder(() => worker);
-    const frames = await encoder.encode(new Uint8Array(8), 'lp2');
+    const frames = await encoder.encode(new Uint8Array(52), 'lp2');
     expect([...frames]).toEqual([1, 2, 3]);
     expect(requests[0]?.mode).toBe('lp2');
-    // The WAV header (44 bytes) wraps the 8 bytes of PCM.
     expect(requests[0]?.wav.byteLength).toBe(52);
     expect(terminated()).toBe(1);
   });
 
+  it('stops the worker when aborted', async () => {
+    const { worker, terminated } = fakeWorker(() => ({ ok: true, data: new ArrayBuffer(0) }));
+    worker.postMessage = () => undefined; // never answers
+    const controller = new AbortController();
+    const encoding = new BuiltInEncoder(() => worker).encode(
+      new Uint8Array(52),
+      'lp2',
+      controller.signal,
+    );
+    controller.abort(new Error('cancelled'));
+    await expect(encoding).rejects.toThrow('cancelled');
+    expect(terminated()).toBeGreaterThan(0);
+  });
+
   it('reports an encoder failure and still ends the worker', async () => {
     const { worker, terminated } = fakeWorker(() => ({ ok: false, message: 'Fatal error' }));
-    await expect(new BuiltInEncoder(() => worker).encode(new Uint8Array(8), 'lp4')).rejects.toThrow(
-      /Fatal error/,
-    );
+    await expect(
+      new BuiltInEncoder(() => worker).encode(new Uint8Array(52), 'lp4'),
+    ).rejects.toThrow(/Fatal error/);
     expect(terminated()).toBe(1);
   });
 });
@@ -99,8 +112,15 @@ describe('encodeOnline', () => {
 
   it('posts the original file and returns the ATRAC3 frames without the WAV header', async () => {
     const { fetchImpl, calls } = fakeFetch([new Response(encoded)]);
-    const frames = await encodeOnline(file, 'song.mp3', 'lp2', { replayGain: false }, fetchImpl);
-    expect(frames).toHaveLength(384);
+    const encodedTrack = await encodeOnline(
+      file,
+      'song.mp3',
+      'lp2',
+      { replayGain: false },
+      fetchImpl,
+    );
+    expect(encodedTrack.mode).toBe('lp2');
+    expect(encodedTrack.data).toHaveLength(384);
     expect(calls[0]?.url).toBe('https://atrac.minidisc.wiki/transcode?type=LP2');
     const sent = calls[0]?.body.get('file');
     expect(sent).toBeInstanceOf(File);
@@ -121,10 +141,34 @@ describe('encodeOnline', () => {
       new Response('busy', { status: 503 }),
       new Response(encoded),
     ]);
-    await expect(
-      encodeOnline(file, 'song.mp3', 'lp2', { replayGain: false }, fetchImpl),
-    ).resolves.toHaveLength(384);
+    const encodedTrack = await encodeOnline(
+      file,
+      'song.mp3',
+      'lp2',
+      { replayGain: false },
+      fetchImpl,
+    );
+    expect(encodedTrack.data).toHaveLength(384);
     expect(calls).toHaveLength(3);
+  });
+
+  it('stops trying once aborted', async () => {
+    const controller = new AbortController();
+    const { fetchImpl, calls } = fakeFetch([
+      new TypeError('Failed to fetch'),
+      new Response(encoded),
+    ]);
+    controller.abort(new Error('cancelled'));
+    await expect(
+      encodeOnline(
+        file,
+        'song.mp3',
+        'lp2',
+        { replayGain: false, signal: controller.signal },
+        fetchImpl,
+      ),
+    ).rejects.toThrow('cancelled');
+    expect(calls).toHaveLength(0);
   });
 
   it('gives up after three failures (audio-conversion: "Service unavailable")', async () => {

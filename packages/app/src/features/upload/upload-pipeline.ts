@@ -32,10 +32,14 @@ export type UploadEvent =
   | { readonly kind: 'skipped'; readonly index: number; readonly reason: ConversionFailure };
 
 export interface UploadDependencies {
-  /** Converts item `index`; reports progress from 0 to 1. Throws `ConversionError` to skip it. */
+  /**
+   * Converts item `index`; reports progress from 0 to 1. Throws `ConversionError` to skip it.
+   * `signal` aborts when the upload ends early, so a conversion started ahead stops.
+   */
   readonly convert: (
     index: number,
     onProgress: (progress: number) => void,
+    signal: AbortSignal,
   ) => Promise<ConvertedTrack>;
   readonly session: UploadPort;
   /** Checked between tracks: the track being transferred always finishes. */
@@ -66,13 +70,20 @@ export async function runUpload(
   dependencies: UploadDependencies,
 ): Promise<UploadSummary> {
   const { session, onEvent } = dependencies;
+  // Aborted when the loop ends, so a conversion started for a track that will not be uploaded
+  // (after a cancel or a device error) stops instead of running on, or posting a file online.
+  const ahead = new AbortController();
   const conversions = new Map<number, Promise<Conversion>>();
   const convert = (index: number): Promise<Conversion> => {
     let conversion = conversions.get(index);
     if (conversion === undefined) {
       onEvent?.({ kind: 'converting', index, progress: 0 });
       conversion = dependencies
-        .convert(index, (progress) => onEvent?.({ kind: 'converting', index, progress }))
+        .convert(
+          index,
+          (progress) => onEvent?.({ kind: 'converting', index, progress }),
+          ahead.signal,
+        )
         .then(
           (track) => {
             onEvent?.({ kind: 'converting', index, progress: 1 });
@@ -123,6 +134,7 @@ export async function runUpload(
     }
     return { uploaded, skipped, notUploaded: [], cancelled: false, failure: null };
   } finally {
+    ahead.abort(new Error('The upload ended'));
     await session.close();
   }
 }

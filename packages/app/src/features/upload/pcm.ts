@@ -9,6 +9,8 @@ export interface Interleave16Options {
   readonly gain: number;
   /** Big-endian for SP uploads; little-endian for a WAV. */
   readonly bigEndian: boolean;
+  /** Bytes left free at the start of the output, for a header. */
+  readonly offset?: number;
 }
 
 /** Interleaves two float channels (-1 to 1) into 16-bit PCM, clipping past full scale. */
@@ -18,12 +20,13 @@ export function interleave16(
   options: Interleave16Options,
 ): Uint8Array<ArrayBuffer> {
   const frames = Math.min(left.length, right.length);
-  const out = new Uint8Array(frames * CHANNELS * BYTES_PER_SAMPLE);
+  const offset = options.offset ?? 0;
+  const out = new Uint8Array(offset + frames * CHANNELS * BYTES_PER_SAMPLE);
   const view = new DataView(out.buffer);
   const littleEndian = !options.bigEndian;
   for (let i = 0; i < frames; i++) {
-    view.setInt16(i * 4, toInt16((left[i] ?? 0) * options.gain), littleEndian);
-    view.setInt16(i * 4 + 2, toInt16((right[i] ?? 0) * options.gain), littleEndian);
+    view.setInt16(offset + i * 4, toInt16((left[i] ?? 0) * options.gain), littleEndian);
+    view.setInt16(offset + i * 4 + 2, toInt16((right[i] ?? 0) * options.gain), littleEndian);
   }
   return out;
 }
@@ -52,15 +55,23 @@ export function replayGainFactor(gainDb: number | undefined, peak: number): numb
   return peak > 0 ? Math.min(factor, 1 / peak) : factor;
 }
 
-/** Wraps 16-bit little-endian stereo PCM at 44.1 kHz in a WAV file. */
-export function wavFile(pcm: Uint8Array): Uint8Array<ArrayBuffer> {
-  const out = new Uint8Array(WAV_HEADER_LENGTH + pcm.length);
+/**
+ * Two float channels as a 16-bit stereo WAV at 44.1 kHz, written in one buffer (no copy of the
+ * samples to add the header).
+ */
+export function wavFile(
+  left: Float32Array,
+  right: Float32Array,
+  gain: number,
+): Uint8Array<ArrayBuffer> {
+  const out = interleave16(left, right, { gain, bigEndian: false, offset: WAV_HEADER_LENGTH });
+  const length = out.length - WAV_HEADER_LENGTH;
   const view = new DataView(out.buffer);
   const ascii = (offset: number, text: string) => {
     for (let i = 0; i < text.length; i++) out[offset + i] = text.charCodeAt(i);
   };
   ascii(0, 'RIFF');
-  view.setUint32(4, WAV_HEADER_LENGTH - 8 + pcm.length, true);
+  view.setUint32(4, WAV_HEADER_LENGTH - 8 + length, true);
   ascii(8, 'WAVE');
   ascii(12, 'fmt ');
   view.setUint32(16, 16, true);
@@ -71,7 +82,6 @@ export function wavFile(pcm: Uint8Array): Uint8Array<ArrayBuffer> {
   view.setUint16(32, CHANNELS * BYTES_PER_SAMPLE, true);
   view.setUint16(34, 16, true);
   ascii(36, 'data');
-  view.setUint32(40, pcm.length, true);
-  out.set(pcm, WAV_HEADER_LENGTH);
+  view.setUint32(40, length, true);
   return out;
 }

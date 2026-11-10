@@ -47,8 +47,8 @@ describe('peakOf', () => {
 });
 
 describe('wavFile', () => {
-  it('wraps 16-bit stereo PCM in a 44.1 kHz WAV header', () => {
-    const wav = wavFile(new Uint8Array(8));
+  it('writes 16-bit stereo PCM after a 44.1 kHz WAV header', () => {
+    const wav = wavFile(f32(1, 0), f32(-1, 0), 1);
     const view = new DataView(wav.buffer);
     const text = (start: number) => String.fromCharCode(...wav.subarray(start, start + 4));
     expect([text(0), text(8), text(12), text(36)]).toEqual(['RIFF', 'WAVE', 'fmt ', 'data']);
@@ -61,5 +61,6 @@ describe('wavFile', () => {
     expect(view.getUint16(34, true)).toBe(16);
     expect(view.getUint32(40, true)).toBe(8);
     expect(wav).toHaveLength(44 + 8);
+    expect([view.getInt16(44, true), view.getInt16(46, true)]).toEqual([32767, -32768]);
   });
 });

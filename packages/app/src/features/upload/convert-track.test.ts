@@ -19,13 +19,13 @@ function deps(overrides: Partial<ConvertDependencies> = {}) {
         durationSeconds: 2 / 44_100,
       });
     },
-    builtIn: (pcm, mode) => {
-      calls.push(`built-in ${mode} ${String(pcm.length)}`);
+    builtIn: (wav, mode) => {
+      calls.push(`built-in ${mode} ${String(wav.length)}`);
       return Promise.resolve(new Uint8Array([7]));
     },
     online: (_file, name, mode, options) => {
       calls.push(`online ${name} ${mode} ${String(options.replayGain)}`);
-      return Promise.resolve(new Uint8Array([8]));
+      return Promise.resolve({ mode, data: new Uint8Array([8]) });
     },
   };
   return { deps: { ...base, ...overrides }, calls };
@@ -61,11 +61,54 @@ describe('convertTrack', () => {
     );
   });
 
-  it('encodes LP2 with the built-in encoder from little-endian PCM', async () => {
+  it('encodes LP2 with the built-in encoder from a WAV', async () => {
     const { deps: d, calls } = deps();
     const track = await convertTrack(file(new Uint8Array(16)), 'lp2', options, d);
     expect(track).toEqual({ mode: 'lp2', data: new Uint8Array([7]) });
-    expect(calls).toEqual(['decode', 'built-in lp2 8']);
+    // A 44-byte header and two stereo 16-bit samples.
+    expect(calls).toEqual(['decode', 'built-in lp2 52']);
+  });
+
+  it('passes the abort signal to the encoder', async () => {
+    const controller = new AbortController();
+    const signals: (AbortSignal | undefined)[] = [];
+    const { deps: d } = deps({
+      builtIn: (_wav, _mode, signal) => {
+        signals.push(signal);
+        return Promise.resolve(new Uint8Array([7]));
+      },
+    });
+    await convertTrack(
+      file(new Uint8Array(16)),
+      'lp4',
+      { ...options, signal: controller.signal },
+      d,
+    );
+    expect(signals).toEqual([controller.signal]);
+  });
+
+  it('uses the mode the online encoder sent back', async () => {
+    const { deps: d } = deps({
+      online: () => Promise.resolve({ mode: 'lp105', data: new Uint8Array([9]) }),
+    });
+    const track = await convertTrack(
+      file(new Uint8Array(16)),
+      'lp2',
+      { ...options, encoder: 'online' },
+      d,
+    );
+    expect(track.mode).toBe('lp105');
+  });
+
+  it('reports a file that can no longer be read', async () => {
+    const { deps: d } = deps();
+    const gone = new File([new Uint8Array(16)], 'gone.mp3');
+    gone.slice = () => {
+      throw new DOMException('The file was removed', 'NotFoundError');
+    };
+    await expect(convertTrack(gone, 'sp', options, d)).rejects.toMatchObject({
+      reason: 'unreadable',
+    });
   });
 
   it('sends the original file to the online encoder without decoding it', async () => {

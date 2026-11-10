@@ -366,7 +366,14 @@ export class DiscReader {
     } catch {
       // A device that refuses to stop is not playing.
     }
-    const summary = await upload(port);
+    let summary: UploadSummary;
+    try {
+      summary = await upload(port);
+    } catch {
+      // The upload broke off unexpectedly; the read after it shows what reached the disc.
+      this.session = null;
+      return { kind: 'failed' };
+    }
     // Reopen before reading again: initialising the transport drains a stale reply.
     if (summary.failure !== null) this.session = null;
     return { kind: 'done', summary };

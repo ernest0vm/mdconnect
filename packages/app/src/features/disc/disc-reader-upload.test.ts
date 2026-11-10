@@ -98,6 +98,15 @@ describe('DiscReader.upload', () => {
     expect(result.outcome).toEqual({ kind: 'failed' });
   });
 
+  it('still reads the disc again when the upload breaks off unexpectedly', async () => {
+    const log: string[] = [];
+    const reader = new DiscReader(() => Promise.resolve(session(log)));
+    const result = await reader.upload(() => Promise.reject(new Error('bug')));
+    expect(result.outcome).toEqual({ kind: 'failed' });
+    expect(result.result.kind).toBe('disc');
+    expect(log).toContain('read');
+  });
+
   it('reopens the session for the read after an upload a device error stopped', async () => {
     const log: string[] = [];
     let opened = 0;

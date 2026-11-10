@@ -10,8 +10,9 @@
 
 import { ONLINE_ENCODER_ORIGIN } from '@mdconnect/core';
 
+import type { UploadMode } from '@mdconnect/netmd';
+
 import { readAtracFile } from './atrac-file';
-import { wavFile } from './pcm';
 
 export type LpMode = 'lp2' | 'lp4';
 
@@ -45,11 +46,22 @@ const startWorker = (): EncoderWorker =>
 export class BuiltInEncoder {
   constructor(private readonly worker: () => EncoderWorker = startWorker) {}
 
-  /** Encodes 16-bit little-endian stereo PCM at 44.1 kHz into raw ATRAC3 frames. */
-  async encode(pcm: Uint8Array, mode: LpMode): Promise<Uint8Array<ArrayBuffer>> {
+  /**
+   * Encodes a 16-bit stereo 44.1 kHz WAV (see `wavFile`) into raw ATRAC3 frames. The WAV's buffer
+   * is handed to the worker. Aborting stops the worker.
+   */
+  async encode(
+    wav: Uint8Array<ArrayBuffer>,
+    mode: LpMode,
+    signal?: AbortSignal,
+  ): Promise<Uint8Array<ArrayBuffer>> {
+    signal?.throwIfAborted();
     const worker = this.worker();
+    const stop = () => {
+      worker.terminate();
+    };
+    signal?.addEventListener('abort', stop);
     try {
-      const wav = wavFile(pcm).buffer;
       const reply = await new Promise<EncodeReply>((resolve, reject) => {
         worker.onmessage = (event) => {
           resolve(event.data);
@@ -57,11 +69,17 @@ export class BuiltInEncoder {
         worker.onerror = (event) => {
           reject(new Error(event.message || 'The built-in encoder stopped'));
         };
-        worker.postMessage({ wav, mode }, [wav]);
+        signal?.addEventListener('abort', () => {
+          reject(
+            signal.reason instanceof Error ? signal.reason : new Error('Encoding was stopped'),
+          );
+        });
+        worker.postMessage({ wav: wav.buffer, mode }, [wav.buffer]);
       });
       if (!reply.ok) throw new Error(`The built-in encoder failed: ${reply.message}`);
       return new Uint8Array(reply.data);
     } finally {
+      signal?.removeEventListener('abort', stop);
       worker.terminate();
     }
   }
@@ -82,15 +100,16 @@ type FetchFunction = (url: string, init: RequestInit) => Promise<Response>;
 
 /**
  * Encodes with Sony's encoder through the online ATRAC service: the original file is sent, and
- * the ATRAC3 frames come back in a WAV. Only call it after the user agreed to send the file.
+ * the ATRAC3 frames come back in a WAV, in the mode that WAV declares. Only call it after the user
+ * agreed to send the file. Aborting cancels the request and the remaining attempts.
  */
 export async function encodeOnline(
   file: Blob,
   fileName: string,
   mode: LpMode,
-  options: { readonly replayGain: boolean },
+  options: { readonly replayGain: boolean; readonly signal?: AbortSignal | undefined },
   fetchImpl: FetchFunction = (url, init) => fetch(url, init),
-): Promise<Uint8Array> {
+): Promise<{ readonly mode: UploadMode; readonly data: Uint8Array }> {
   const url = new URL('/transcode', ONLINE_ENCODER_ORIGIN);
   url.searchParams.set('type', ONLINE_TYPES[mode]);
   if (options.replayGain) url.searchParams.set('applyReplaygain', 'true');
@@ -99,13 +118,15 @@ export async function encodeOnline(
 
   let lastError: unknown;
   for (let attempt = 0; attempt < ONLINE_ATTEMPTS; attempt++) {
+    options.signal?.throwIfAborted();
     try {
-      const response = await fetchImpl(url.href, { method: 'POST', body });
+      const response = await fetchImpl(url.href, { method: 'POST', body, signal: options.signal });
       if (!response.ok) throw new Error(`The online encoder answered ${String(response.status)}`);
       const encoded = readAtracFile(new Uint8Array(await response.arrayBuffer()));
       if (encoded?.kind !== 'atrac') throw new Error('The online encoder sent no ATRAC3 audio');
-      return encoded.data;
+      return { mode: encoded.mode, data: encoded.data };
     } catch (error) {
+      if (options.signal?.aborted === true) throw error;
       lastError = error;
     }
   }

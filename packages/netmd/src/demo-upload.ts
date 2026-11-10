@@ -69,9 +69,7 @@ export class DemoUploads {
     if (this.expectedBytes === 0 || this.receivedBytes < this.expectedBytes) return undefined;
     this.expectedBytes = 0;
     const track = this.sendingTrack.toString(16).padStart(4, '0');
-    return `${ACCEPTED}${SECURE}2800000100 1001${track}00 0000 00000000 00000000${'00'.repeat(32)}`.replace(
-      / /g,
-      '',
-    );
+    // 28 00 000100 1001 <track> 00, six unused bytes, then the encrypted UUID and content ID.
+    return `${ACCEPTED}${SECURE}28000001001001${track}00${'00'.repeat(10)}${'00'.repeat(32)}`;
   }
 }
