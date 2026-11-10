@@ -6,7 +6,7 @@ mdconnect talks to MiniDisc devices over WebUSB. macOS works out of the box; Win
 
 No setup is needed. NetMD devices use a vendor-specific USB interface, so no system driver claims them.
 
-The first time a MiniDisc device is plugged in, recent macOS versions ask whether to allow the new accessory to connect. Choose **Allow**. Until then neither the desktop app nor Chrome can see the device, and connecting reports that no device was found. If you dismissed the prompt, unplug the device and plug it back in to get it again, or allow the accessory under **System Settings → Privacy & Security**.
+The first time a MiniDisc device is plugged in, recent macOS versions ask whether to allow the new accessory to connect. Choose **Allow**. Until then neither the desktop app nor Chrome can see the device, and connecting reports that no device was found. If you dismissed the prompt, unplug the device and plug it back in to get it again. When macOS asks is set under **System Settings → Privacy & Security → Allow accessories to connect**; that setting applies to every accessory, not just this one.
 
 If connecting fails with "Device busy", quit other apps that may be using the device (for example another MiniDisc tool), unplug the device and plug it back in.
 

@@ -19,6 +19,8 @@ interface Step {
 function replay(steps: readonly Step[]) {
   let index = -1;
   let replied = 0;
+  /** Replies read for each step, to check every recorded reply was consumed. */
+  const consumed: number[] = [];
   let bulkBytes = 0;
   const mismatches: string[] = [];
   const channel: CommandChannel = {
@@ -36,6 +38,7 @@ function replay(steps: readonly Step[]) {
     readReply: () => {
       const reply = steps[index]?.replies[replied];
       replied += 1;
+      consumed[index] = replied;
       return reply === undefined
         ? Promise.reject(new Error(`no recorded reply for command ${String(index)}`))
         : Promise.resolve(bytes(reply));
@@ -49,6 +52,13 @@ function replay(steps: readonly Step[]) {
     channel,
     mismatches,
     sentCommands: () => index + 1,
+    /** Steps whose recorded replies were not all read, as `step: read/recorded`. */
+    unreadReplies: () =>
+      steps.flatMap((step, i) =>
+        (consumed[i] ?? 0) === step.replies.length
+          ? []
+          : [`${String(i)}: ${String(consumed[i] ?? 0)}/${String(step.replies.length)}`],
+      ),
     bulkBytes: () => bulkBytes,
   };
 }
@@ -101,6 +111,7 @@ describe('recorded uploads on a Sony MZ-N510/N610', () => {
     });
     expect(device.mismatches).toEqual([]);
     expect(device.sentCommands()).toBe(recorded.sp.length);
+    expect(device.unreadReplies()).toEqual([]);
     expect(device.bulkBytes()).toBe(recordedBulk(recorded.sp));
     expect(number).toBeGreaterThan(0);
   });
@@ -114,6 +125,7 @@ describe('recorded uploads on a Sony MZ-N510/N610', () => {
     });
     expect(device.mismatches).toEqual([]);
     expect(device.sentCommands()).toBe(recorded.lp2.length);
+    expect(device.unreadReplies()).toEqual([]);
     expect(device.bulkBytes()).toBe(recordedBulk(recorded.lp2));
   });
 });
