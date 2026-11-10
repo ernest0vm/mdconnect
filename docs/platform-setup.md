@@ -2,13 +2,15 @@
 
 mdconnect talks to MiniDisc devices over WebUSB. macOS works out of the box; Windows and Linux need a one-time setup so the app is allowed to open the device. The in-app error messages link to the community guide, which covers the same steps: <https://www.minidisc.wiki/guides/webminidisc/requirements>.
 
+## Power for uploads and edits
+
+Uploading records to the disc, which runs the deck's motor and laser from its own battery or power adapter, not from USB. Plug portable decks into their power adapter, or use a fully charged battery: on a low battery a deck can take all the audio and then stay in **Edit** without finishing, and the upload never completes. Unplug it to recover.
+
 ## macOS
 
 No setup is needed. NetMD devices use a vendor-specific USB interface, so no system driver claims them.
 
 The first time a MiniDisc device is plugged in, recent macOS versions ask whether to allow the new accessory to connect. Choose **Allow**. Until then neither the desktop app nor Chrome can see the device, and connecting reports that no device was found. If you dismissed the prompt, unplug the device and plug it back in to get it again. When macOS asks is set under **System Settings → Privacy & Security → Allow accessories to connect**; that setting applies to every accessory, not just this one.
-
-Uploading records to the disc, which runs the deck's motor and laser from its own battery or power adapter, not from USB. Plug portable decks into their power adapter, or use a fully charged battery: on a low battery a deck can take all the audio and then stay in **Edit** without finishing, and the upload never completes. Unplug it to recover.
 
 If connecting fails with "Device busy", quit other apps that may be using the device (for example another MiniDisc tool), unplug the device and plug it back in.
 
@@ -73,6 +75,8 @@ The rule file is generated from the supported device table (`packages/core/src/d
 - **Linux Snap or Flatpak browsers** run sandboxed and may not see USB devices even with the udev rule. Use a browser installed from your distribution's packages, or the desktop app.
 
 ## Verified hardware
+
+The tested MZ-NE410 stayed in Edit after disc edits and lost the changes after unplugging. The cause is not confirmed; low battery is suspected (#8).
 
 | OS                           | Device                                    | Result | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | ---------------------------- | ----------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
