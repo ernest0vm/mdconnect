@@ -24,6 +24,7 @@ export { NetMdTransport, type NetMdUsbDevice, type TransportOptions } from './tr
 export { renameDisc, replaceDiscTitle, rewriteDiscGroups, type DiscTitleWriter } from './commands';
 export {
   compileDiscTitles,
+  groupsFit,
   remainingTitleSpace,
   titleSpaceBalance,
   type RawDiscTitles,

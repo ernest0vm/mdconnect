@@ -1,5 +1,5 @@
 import type { EditOutcome } from './disc-reader';
-import type { GroupTracksResult } from './edit-plan';
+import type { EditPlan, GroupTracksResult, LayoutPlan } from './edit-plan';
 
 export type Selection = ReadonlySet<number>;
 
@@ -65,4 +65,12 @@ export function editFailureMessage(reason: FailureReason): string {
     case 'failed':
       return 'The device stopped answering while the change was saved. The disc is shown as the device reports it; check it before trying again.';
   }
+}
+
+/** Why a plan must not run, or null. A plan that would lose groups from the disc title field must not. */
+export function planBlocker(plan: EditPlan | LayoutPlan): string | null {
+  if ('fits' in plan && !plan.fits) {
+    return 'There is no room in the disc title area for the groups after this change, so nothing was changed. Shorten some titles and try again.';
+  }
+  return null;
 }

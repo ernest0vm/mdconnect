@@ -5,6 +5,7 @@ import {
   editFailureMessage,
   groupBlocker,
   moveDestination,
+  planBlocker,
   selectAllState,
   selectionLabel,
   toggleTrack,
@@ -76,5 +77,16 @@ describe('editFailureMessage (disc-editing: "Device rejects an edit")', () => {
     expect(editFailureMessage('rejected')).toMatch(/could not be saved/u);
     expect(editFailureMessage('failed')).toMatch(/stopped answering/u);
     expect(editFailureMessage('unsupported-title')).toMatch(/cannot store/u);
+  });
+});
+
+describe('planBlocker', () => {
+  it('stops a plan whose groups would not fit in the disc title field', () => {
+    expect(planBlocker({ commands: [], expected: {} as never, fits: false })).toMatch(/no room/u);
+  });
+
+  it('lets other plans run', () => {
+    expect(planBlocker({ commands: [], expected: {} as never, fits: true })).toBeNull();
+    expect(planBlocker({ commands: [] })).toBeNull();
   });
 });

@@ -190,4 +190,23 @@ describe('recovery after a partial delete', () => {
   it('needs no recovery when nothing was erased', () => {
     expect(deleteTracksPlan(disc([null, 'A']), [0]).recovery?.(0)).toEqual([]);
   });
+
+  describe('layout plans check the disc title field', () => {
+    it('marks a plan whose groups all fit', () => {
+      expect(moveTrackPlan(disc([null, 'A', 'A']), 0, 2).fits).toBe(true);
+    });
+
+    it('marks a plan that would lose a group as not fitting', () => {
+      const tight = disc(['A', 'A', null]);
+      const titled: Disc = {
+        ...tight,
+        groups: tight.groups.map((g) => ({
+          ...g,
+          tracks: g.tracks.map((t) => (t.index === 2 ? { ...t, title: 'x'.repeat(7 * 252) } : t)),
+        })),
+      };
+      // The track titles fill the title area, so the group entry cannot be written.
+      expect(moveTrackPlan(titled, 2, 1).fits).toBe(false);
+    });
+  });
 });

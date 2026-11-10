@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import type { Disc, Group, Track } from './content';
-import { compileDiscTitles, remainingTitleSpace, titleSpaceBalance } from './disc-titles';
+import {
+  compileDiscTitles,
+  groupsFit,
+  remainingTitleSpace,
+  titleSpaceBalance,
+} from './disc-titles';
 import { Encoding } from './interface';
 
 function track(
@@ -92,5 +97,25 @@ describe('titleSpaceBalance', () => {
     const full = disc([group(null, [track(0, 'x'.repeat(7 * 256))])]);
     // 256 cells for the track and 1 for the empty disc entry, of 255.
     expect(titleSpaceBalance(full).halfWidth).toBe(-2 * 7);
+  });
+});
+
+describe('groupsFit', () => {
+  it('is true when every group and the disc title survive compilation', () => {
+    expect(
+      groupsFit(disc([group(null, [track(2)]), group('Side A', [track(0), track(1)])], 'Mix')),
+    ).toBe(true);
+  });
+
+  it('is false when the compiler would leave a group out', () => {
+    // 253 cells of track titles leave too little room for "1-10;A//" once compiled.
+    const tracks = Array.from({ length: 10 }, (_, i) =>
+      track(i, i === 0 ? 'x'.repeat(7 * 253) : ''),
+    );
+    expect(groupsFit(disc([group('A', tracks)]))).toBe(false);
+  });
+
+  it('is true for a disc without groups', () => {
+    expect(groupsFit(disc([group(null, [track(0)])], 'Mix'))).toBe(true);
   });
 });

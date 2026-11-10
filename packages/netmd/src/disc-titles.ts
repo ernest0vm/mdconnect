@@ -14,7 +14,7 @@
 import type { Disc, Track } from './content';
 import { Encoding } from './interface';
 import { halfWidthTitleLength } from './sanitize';
-import { toFullWidthRange } from './titles';
+import { discDisplayTitle, parseGroups, toFullWidthRange } from './titles';
 
 /** The disc's title area: 255 cells of 7 bytes (see https://www.minidisc.org/md_toc.html). */
 const CELL_LIMIT = 255;
@@ -125,4 +125,23 @@ export function compileDiscTitles(disc: Disc): RawDiscTitles {
   if (cells(fullWidthTitle.length * 2) * CELL_BYTES > available.fullWidth) fullWidthTitle = '';
 
   return { title, fullWidthTitle: useFullWidth ? fullWidthTitle : '' };
+}
+
+/**
+ * Whether writing `disc` keeps all of it: every titled group and the disc title survive
+ * `compileDiscTitles`, which leaves out what does not fit. Use it before any change to the
+ * groups or the track order, since group ranges change length too.
+ */
+export function groupsFit(disc: Disc): boolean {
+  const compiled = compileDiscTitles(disc);
+  const expected = disc.groups.filter((g) => g.title !== null && g.tracks.length > 0).length;
+  const kept = parseGroups(compiled.title, compiled.fullWidthTitle, disc.trackCount).filter(
+    (g) => g.title !== null,
+  ).length;
+  if (kept !== expected) return false;
+  if (discDisplayTitle(compiled.title, false) !== disc.title) return false;
+  return (
+    disc.fullWidthTitle === '' ||
+    discDisplayTitle(compiled.fullWidthTitle, true) === disc.fullWidthTitle
+  );
 }

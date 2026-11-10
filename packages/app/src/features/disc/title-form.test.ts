@@ -156,4 +156,18 @@ describe('titleForm', () => {
       titleForm(disc(tracks), { kind: 'disc' }, { halfWidth: '', fullWidth: '' }).missingTitle,
     ).toBe(false);
   });
+
+  it('does not fit a group the disc title field would leave out', () => {
+    // The space balance says it fits, but compiled as "1-2;A//" it no longer does.
+    const tracks = [track(0, 'x'.repeat(7 * 253)), track(1)];
+    const form = titleForm(
+      disc(tracks),
+      { kind: 'new-group', tracks: [0, 1] },
+      {
+        halfWidth: 'A',
+        fullWidth: '',
+      },
+    );
+    expect(form.fits).toBe(false);
+  });
 });

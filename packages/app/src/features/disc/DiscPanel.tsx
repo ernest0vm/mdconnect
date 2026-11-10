@@ -25,6 +25,7 @@ import {
   editBlocker,
   editFailureMessage,
   groupBlocker,
+  planBlocker,
   moveDestination,
   selectAllState,
   selectionLabel,
@@ -497,6 +498,11 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   const runEdit = useCallback(
     (plan: EditPlan) => {
       if (plan.commands.length === 0) return;
+      const blocked = planBlocker(plan);
+      if (blocked !== null) {
+        setEditState({ kind: 'failed', message: blocked });
+        return;
+      }
       setEditState({ kind: 'saving' });
       void reader.edit(plan).then(({ outcome, result: next }) => {
         if (!mounted.current) return;

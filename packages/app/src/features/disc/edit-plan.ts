@@ -1,4 +1,4 @@
-import type { Disc, Group, Track } from '@mdconnect/netmd';
+import { groupsFit, type Disc, type Group, type Track } from '@mdconnect/netmd';
 
 /** One change to send to the device, in the order a plan lists them. */
 export type EditCommand =
@@ -30,6 +30,11 @@ export interface EditPlan {
 /** A plan that changes the track order or the groups, with the disc it should leave. */
 export interface LayoutPlan extends EditPlan {
   readonly expected: Disc;
+  /**
+   * Whether the disc title field can hold every group and the disc title afterwards. The
+   * compiler leaves out what does not fit, so a plan that does not fit must not run.
+   */
+  readonly fits: boolean;
 }
 
 export function renameDiscPlan(title: string, fullWidthTitle?: string): EditPlan {
@@ -96,7 +101,11 @@ function discOf({ disc, slots, names }: Layout): Disc {
 
 function layoutPlan(commands: EditCommand[], layout: Layout): LayoutPlan {
   const expected = discOf(layout);
-  return { commands: [...commands, { kind: 'rewriteGroups', disc: expected }], expected };
+  return {
+    commands: [...commands, { kind: 'rewriteGroups', disc: expected }],
+    expected,
+    fits: groupsFit(expected),
+  };
 }
 
 /** Erases tracks from the highest index down, so the indexes still to erase stay valid. */
@@ -125,10 +134,10 @@ export function deleteTracksPlan(disc: Disc, tracks: readonly number[]): LayoutP
  */
 export function moveTrackPlan(disc: Disc, from: number, to: number): LayoutPlan {
   const layout = layoutOf(disc);
-  if (from === to) return { commands: [], expected: disc };
+  if (from === to) return { commands: [], expected: disc, fits: true };
   const slots = [...layout.slots];
   const [moved] = slots.splice(from, 1);
-  if (moved === undefined) return { commands: [], expected: disc };
+  if (moved === undefined) return { commands: [], expected: disc, fits: true };
   slots.splice(to, 0, moved);
   const left = slots[to - 1]?.group ?? null;
   const right = slots[to + 1]?.group ?? null;
