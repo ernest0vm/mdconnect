@@ -62,8 +62,11 @@ export function playerBlocker(state: {
   status: DeviceStatus | null;
   reading: boolean;
   saving: boolean;
+  /** False when the last read failed: in use, in Hi-MD mode, or not answering. */
+  readable: boolean;
 }): string | null {
   if (state.reading) return 'Wait until the disc is read.';
+  if (!state.readable) return 'The device cannot be read, so it cannot play.';
   if (state.saving) return 'Wait for the current change to finish.';
   if (state.status !== null && !state.status.discPresent) return 'Insert a disc to play it.';
   return null;

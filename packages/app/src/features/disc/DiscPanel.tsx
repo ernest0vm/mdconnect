@@ -536,10 +536,14 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
           .sort((a, b) => a.number - b.number)
           .map((track) => (track.untitled ? '' : track.title))
       : [];
+  // A failed read (in use, Hi-MD mode, not answering) makes any earlier status stale.
+  const readable = result === 'reading' || pollable;
+  const shownStatus = readable ? deviceStatus : null;
   const blocker = playerBlocker({
-    status: deviceStatus,
+    status: shownStatus,
     reading: status.kind === 'reading',
     saving,
+    readable,
   });
   /** Sends a playback control and shows the status or failure it leads to. */
   const runControl = (command: PlaybackCommand) => {
@@ -554,7 +558,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   };
   const player = (
     <PlayerBar
-      view={playerView(deviceStatus, titles)}
+      view={playerView(shownStatus, titles)}
       blocker={blocker}
       error={controlError}
       onControl={runControl}
@@ -565,7 +569,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
     return (
       <DiscEditor
         player={player}
-        deviceStatus={deviceStatus}
+        deviceStatus={shownStatus}
         playBlocked={blocker !== null}
         onControl={runControl}
         disc={status.disc}

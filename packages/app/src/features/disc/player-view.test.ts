@@ -56,19 +56,33 @@ describe('playerView', () => {
 
 describe('playerBlocker (playback: "No disc")', () => {
   it('explains why the controls are unavailable', () => {
-    expect(playerBlocker({ status: at('ready', 0), reading: false, saving: false })).toBeNull();
+    expect(
+      playerBlocker({ status: at('ready', 0), reading: false, saving: false, readable: true }),
+    ).toBeNull();
     expect(
       playerBlocker({
         status: { discPresent: false, state: 'noDisc', track: null, time: null },
         reading: false,
         saving: false,
+        readable: true,
       }),
     ).toBe('Insert a disc to play it.');
-    expect(playerBlocker({ status: at('ready', 0), reading: true, saving: false })).toBe(
-      'Wait until the disc is read.',
-    );
-    expect(playerBlocker({ status: at('ready', 0), reading: false, saving: true })).toBe(
-      'Wait for the current change to finish.',
+    expect(
+      playerBlocker({ status: at('ready', 0), reading: true, saving: false, readable: true }),
+    ).toBe('Wait until the disc is read.');
+    expect(
+      playerBlocker({ status: at('ready', 0), reading: false, saving: true, readable: true }),
+    ).toBe('Wait for the current change to finish.');
+  });
+});
+
+describe('playerBlocker when the device cannot be read', () => {
+  it('disables the controls whatever status was seen before (device in use, Hi-MD mode, failed read)', () => {
+    expect(
+      playerBlocker({ status: at('playing', 2), reading: false, saving: false, readable: false }),
+    ).toBe('The device cannot be read, so it cannot play.');
+    expect(playerBlocker({ status: null, reading: false, saving: false, readable: false })).toBe(
+      'The device cannot be read, so it cannot play.',
     );
   });
 });
