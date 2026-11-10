@@ -161,4 +161,21 @@ describe('DiscReader.status', () => {
     expect(await reader.status()).toBeNull();
     expect(opened).toBe(1);
   });
+
+  it('does not open a NetMD session on a device in Hi-MD mode', async () => {
+    let opened = 0;
+    const reader = new DiscReader(
+      () => {
+        opened += 1;
+        return Promise.reject(new Error('not used'));
+      },
+      { hiMdMode: () => true, sleep: () => Promise.resolve() },
+    );
+    expect(await reader.status()).toBeNull();
+    expect((await reader.control({ kind: 'play' }, { track: 0, trackCount: 1 })).outcome).toEqual({
+      kind: 'failed',
+      reason: 'failed',
+    });
+    expect(opened).toBe(0);
+  });
 });

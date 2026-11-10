@@ -32,7 +32,7 @@ export function playerView(status: DeviceStatus | null, titles: readonly string[
       track: null,
       title: null,
       time: null,
-      state: 'Waiting for the device',
+      state: 'No status from the device',
       announcement: '',
       playing: false,
     };

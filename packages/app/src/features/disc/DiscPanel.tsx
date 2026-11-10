@@ -419,8 +419,12 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   const [controlError, setControlError] = useState<string | null>(null);
   const mounted = useRef(true);
 
-  // Keep the player current while the app is visible; reads share the device queue.
+  // Keep the player current while the app is visible; reads share the device queue. Only a
+  // device whose disc could be read (or that has no disc) is polled: one in use, in Hi-MD mode or
+  // failing would be reopened every second.
+  const pollable = result !== 'reading' && (result.kind === 'disc' || result.kind === 'no-disc');
   useEffect(() => {
+    if (!pollable) return;
     const poller = new StatusPoller(
       () => reader.status(),
       setDeviceStatus,
@@ -431,7 +435,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
     return () => {
       poller.stop();
     };
-  }, [reader]);
+  }, [reader, pollable]);
 
   useEffect(() => {
     mounted.current = true;

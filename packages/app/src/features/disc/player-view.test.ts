@@ -46,10 +46,10 @@ describe('playerView', () => {
     );
   });
 
-  it('shows nothing before the first status read', () => {
+  it('says when the device gives no status', () => {
     expect(playerView(null, titles)).toMatchObject({
       track: null,
-      state: 'Waiting for the device',
+      state: 'No status from the device',
     });
   });
 });

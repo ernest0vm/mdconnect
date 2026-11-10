@@ -201,7 +201,13 @@ export class DiscReader {
     return this.statusInFlight;
   }
 
+  /** Positive evidence of Hi-MD mode: never open a NetMD session on such a device. */
+  private inHiMdMode(): boolean {
+    return this.options.hiMdMode?.() ?? false;
+  }
+
   private async readStatus(): Promise<DeviceStatus | null> {
+    if (this.inHiMdMode()) return null;
     try {
       this.session ??= this.openSession();
       return await (await this.session).deviceStatus();
@@ -216,6 +222,7 @@ export class DiscReader {
     command: PlaybackCommand,
     at: PlaybackPosition,
   ): Promise<ControlOutcome> {
+    if (this.inHiMdMode()) return { kind: 'failed', reason: 'failed' };
     try {
       this.session ??= this.openSession();
       const session = await this.session;
