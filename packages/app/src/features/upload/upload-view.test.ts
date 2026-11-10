@@ -5,6 +5,7 @@ import {
   addTracksBlocker,
   audioFiles,
   fitView,
+  formatSeconds,
   initialMode,
   moveItem,
   preparedTitles,
@@ -201,6 +202,14 @@ describe('result messages', () => {
         titles,
       ),
     ).toEqual(['2 tracks uploaded.', 'Cancelled before “Three”.']);
+  });
+});
+
+describe('formatSeconds', () => {
+  it('rounds the total, so 119.6 seconds reads 2:00, not 1:60', () => {
+    expect(formatSeconds(119.6)).toBe('2:00');
+    expect(formatSeconds(61.2)).toBe('1:01');
+    expect(formatSeconds(0)).toBe('0:00');
   });
 });
 

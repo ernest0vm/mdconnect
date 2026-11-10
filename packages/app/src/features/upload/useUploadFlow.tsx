@@ -108,6 +108,22 @@ export function useUploadFlow({
     };
   }, []);
 
+  // A file dropped outside the disc panel (on a dialog or the page) would otherwise open in the
+  // tab and end the session; the panel's own handlers still decide what a drop on it does.
+  useEffect(() => {
+    const guard = (event: globalThis.DragEvent) => {
+      if (event.defaultPrevented || event.dataTransfer?.types.includes('Files') !== true) return;
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'none';
+    };
+    window.addEventListener('dragover', guard);
+    window.addEventListener('drop', guard);
+    return () => {
+      window.removeEventListener('dragover', guard);
+      window.removeEventListener('drop', guard);
+    };
+  }, []);
+
   const uploading = progress !== null && progress.finished === null;
   const blocker = addTracksBlocker({
     writeProtected: disc?.writeProtected ?? false,

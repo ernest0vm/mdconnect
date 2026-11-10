@@ -55,3 +55,15 @@ export async function loadItem(
     return { tags, durationSeconds: 0, atrac: null, problem: 'not-decodable' };
   }
 }
+
+/** Like `loadItem`, but a file that cannot be read is marked unreadable instead of failing. */
+export async function loadItemSafely(
+  file: File,
+  load: (file: File) => Promise<LoadedItem> = loadItem,
+): Promise<LoadedItem> {
+  try {
+    return await load(file);
+  } catch {
+    return { tags: {}, durationSeconds: 0, atrac: null, problem: 'unreadable' };
+  }
+}

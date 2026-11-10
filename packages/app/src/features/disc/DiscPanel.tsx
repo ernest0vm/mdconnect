@@ -767,6 +767,8 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
   return (
     <>
       {menu}
+      {/* The read after an upload may find no disc; the upload summary must still show. */}
+      {upload.dialogs}
       <DiscAreas
         busy={status.kind === 'reading'}
         summary={

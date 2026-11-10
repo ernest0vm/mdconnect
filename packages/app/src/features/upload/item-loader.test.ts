@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { NotDecodableError } from './decode';
-import { loadItem, type LoaderDependencies } from './item-loader';
+import { loadItem, loadItemSafely, type LoaderDependencies } from './item-loader';
 import { atracWav, omaFile } from './testing/audio-fixtures';
 
 const file = (data: Uint8Array<ArrayBuffer>, name: string) => new File([data], name);
@@ -66,5 +66,17 @@ describe('loadItem', () => {
       d,
     );
     expect(loaded).toMatchObject({ problem: 'not-supported', durationSeconds: 0 });
+  });
+});
+
+describe('loadItemSafely', () => {
+  it('marks a file whose reading fails as unreadable instead of leaving it loading', async () => {
+    const failing = () => Promise.reject(new DOMException('gone', 'NotFoundError'));
+    expect(await loadItemSafely(new File([], 'a.mp3'), failing)).toEqual({
+      tags: {},
+      durationSeconds: 0,
+      atrac: null,
+      problem: 'unreadable',
+    });
   });
 });

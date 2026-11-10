@@ -114,6 +114,12 @@ export const TITLE_SOURCE_LABELS: Readonly<Record<TitleSource, string>> = {
   'artist-album-title': 'Artist – Album – Title',
 };
 
+/** A length as m:ss, rounding the total so 59.6 seconds never shows as 0:60. */
+export function formatSeconds(seconds: number): string {
+  const total = Math.round(seconds);
+  return `${String(Math.floor(total / 60))}:${String(total % 60).padStart(2, '0')}`;
+}
+
 /** Moves item `index` by `delta` places; the list is returned as is at either end. */
 export function moveItem<T>(items: readonly T[], index: number, delta: -1 | 1): readonly T[] {
   const target = index + delta;

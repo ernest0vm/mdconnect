@@ -15,12 +15,13 @@ import { ONLINE_ENCODER_ORIGIN } from '@mdconnect/core';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import type { Encoder, RecordingMode } from './convert-track';
-import { loadItem, type LoadedItem } from './item-loader';
+import { loadItemSafely, type LoadedItem } from './item-loader';
 import { baseName, titleFromSource, type TitleSource } from './title-source';
 import type { UploadPreferences } from './upload-preferences';
 import {
   audioFiles,
   fitView,
+  formatSeconds,
   initialMode,
   MODE_LABELS,
   moveItem,
@@ -70,9 +71,6 @@ function newItem(file: File): ConvertItem {
   };
 }
 
-const formatSeconds = (seconds: number) =>
-  `${String(Math.floor(seconds / 60))}:${String(Math.round(seconds % 60)).padStart(2, '0')}`;
-
 function RadioRow<T extends string>({
   legend,
   name,
@@ -121,7 +119,7 @@ export function ConvertDialog({
   onUpload,
   onPreferences,
   onClose,
-  load = loadItem,
+  load = loadItemSafely,
 }: ConvertDialogProps) {
   const [items, setItems] = useState<readonly ConvertItem[]>(() => files.map(newItem));
   const [mode, setMode] = useState<RecordingMode>(() => initialMode(preferences.mode, modes));
@@ -199,7 +197,11 @@ export function ConvertDialog({
             name={`${id}-mode`}
             value={mode}
             options={modes.map((value) => ({ value, label: MODE_LABELS[value] }))}
-            onChange={setMode}
+            onChange={(value) => {
+              setMode(value);
+              // A pending consent prompt is about the choice that opened it.
+              setAskConsent(false);
+            }}
           />
           {lp && (
             <div className="flex flex-col gap-1.5">
@@ -211,7 +213,10 @@ export function ConvertDialog({
                   { value: 'built-in', label: 'Built-in, offline' },
                   { value: 'online', label: "Sony's encoder, online" },
                 ]}
-                onChange={setEncoder}
+                onChange={(value) => {
+                  setEncoder(value);
+                  setAskConsent(false);
+                }}
               />
               <p className="text-xs opacity-80">
                 {encoder === 'built-in'
