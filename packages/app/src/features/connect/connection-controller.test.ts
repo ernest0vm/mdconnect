@@ -100,6 +100,31 @@ describe('ConnectionController', () => {
     expect(a.calls).toEqual(['open', 'close']);
   });
 
+  it('closes a device that finishes opening after Exit, and stays on the Connect screen', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    const b = controllableDevice(MZ_RH1);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const first = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await first;
+    usb.nextRequest = () => Promise.resolve(b.handle);
+    const switching = controller.request(() => false);
+    await flush();
+    controller.exit();
+    a.finishClose();
+    b.finishOpen();
+    await flush();
+    a.finishClose(); // switchDevice closes the previous device again
+    await flush();
+    b.finishClose();
+    await switching;
+    expect(b.calls).toEqual(['open', 'close']);
+    expect(actions.at(-1)).toBe('exited');
+    expect(controller.openDevice()).toBeNull();
+  });
+
   it('waits for the Exit close to finish before opening the device again', async () => {
     const { usb, actions, controller } = setup();
     const a = controllableDevice(MZ_N510);

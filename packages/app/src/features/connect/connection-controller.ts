@@ -15,6 +15,8 @@ export class ConnectionController {
   private switchingTo: UsbDeviceHandle | null = null;
   /** The close Exit started; an open waits for it, since a device cannot open while closing. */
   private closing: Promise<void> | null = null;
+  /** Counts Exits, so an open that was in progress when the user chose Exit is abandoned. */
+  private exits = 0;
   /** Devices unplugged while they were being switched to. */
   private readonly unplugged = new WeakSet<UsbDeviceHandle>();
   /** The chooser filters for the platform's device kinds; reconnects honour the same set. */
@@ -92,6 +94,7 @@ export class ConnectionController {
   exit(): void {
     const handle = this.openHandle;
     this.openHandle = null;
+    this.exits += 1;
     this.dispatch({ type: 'exited' });
     if (handle === null) return;
     const closing: Promise<void> = handle
@@ -130,11 +133,13 @@ export class ConnectionController {
     }
     this.switchingTo = handle;
     this.unplugged.delete(handle);
+    const exits = this.exits;
     try {
       // After the chooser, so the request keeps its user gesture.
       if (this.closing !== null) await this.closing;
       await switchDevice(this.openHandle, handle);
     } catch (error) {
+      if (this.exits !== exits) return; // The user chose Exit meanwhile: nothing to report.
       if (this.unplugged.has(handle) && this.openHandle === null) {
         // The open failed because the device left; with nothing else open, that is an unplug.
         this.dispatch({ type: 'device-disconnected', device });
@@ -144,6 +149,13 @@ export class ConnectionController {
       return;
     } finally {
       this.switchingTo = null;
+    }
+    if (this.exits !== exits) {
+      // The user chose Exit while this device was opening: close it and stay on Connect.
+      await handle.close().catch(() => {
+        // Unplugged meanwhile.
+      });
+      return;
     }
     if (this.unplugged.has(handle)) {
       // switchDevice already closed the previous device; the new one is gone too.

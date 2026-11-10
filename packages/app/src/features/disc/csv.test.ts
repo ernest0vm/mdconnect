@@ -96,6 +96,11 @@ describe('parseCsv', () => {
     expect(parseCsv('name,artist\nfoo,bar')).toEqual({ error: 'unsupported' });
     expect(parseCsv('')).toEqual({ error: 'empty' });
   });
+
+  it('refuses a file with a row whose index is not a number, rather than dropping the row', () => {
+    const bad = `${formatCsv(grouped)}\nx,,,,Bonus,,,,30,SPS,292`;
+    expect(parseCsv(bad)).toEqual({ error: 'unsupported' });
+  });
 });
 
 describe('reviewImport', () => {

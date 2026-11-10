@@ -55,6 +55,7 @@ A `features/disc/csv.ts` module:
 - **`parseCsv(text): ParsedCsv | { error }`**:
   - splits lines, then cells on unescaped commas, and unescapes `\,`;
   - accepts the current header, with `HIMD ALBUM` and `HIMD ARTIST` or `ALBUM` and `ARTIST`, and the 8-column one;
+  - refuses a file with a row whose index is not a number, instead of dropping the row while the rest of the file rewrites the disc title and groups;
   - refuses anything else.
 - **`reviewImport(parsed, disc): ImportReview`** lists the track-count difference and the mismatched tracks, with both descriptions. It uses webminidisc's 2-second tolerance and its codec and bitrate comparison.
 - **`importPlan(parsed, disc, skipped): LayoutPlan`** returns:
@@ -65,6 +66,8 @@ A `features/disc/csv.ts` module:
   Skipped tracks keep their titles. webminidisc clears every title first, so a track it skips ends up untitled; keeping the title is the less destructive choice.
 
   The plan carries `fits` from `groupsFit` and is refused like any other layout plan.
+
+The review is computed from the disc shown when it is displayed, and it waits while a change is saving, because the disc is read again afterwards. A new review resets the ticked mismatches. A file that cannot be read is reported apart from the edit state, so a save in progress stays locked.
 
 The download is a `Blob` and an `<a download>` click, the same on both targets. The import uses an `<input type="file" accept=".csv,text/csv">`.
 
@@ -78,7 +81,7 @@ Result of the check: an `<a download>` click on a `blob:` URL starts a download 
 
 - `DiscReader.close()` queues behind work in progress, then calls a new `DiscSession.end()`.
 - The session implements `end()` as netmd-js `finalize`: `device.reset()`, `releaseInterface(0)`, `close()`. Errors are ignored, as upstream does.
-- `ConnectionController` gains `exit()`. It clears the open device, closes it (the session usually closed it already; this covers a device whose session never opened), makes the next open wait for that close, and dispatches a state that shows the Connect screen without the "Device unplugged" hint.
+- `ConnectionController` gains `exit()`. It clears the open device, closes it (the session usually closed it already; this covers a device whose session never opened), makes the next open wait for that close, abandons an open still in progress (closing that device when it opens), and dispatches a state that shows the Connect screen without the "Device unplugged" hint.
 - The desktop app's device grant is unchanged, so Connect reconnects without a chooser. The web app keeps its grant too.
 
 ### 6. About

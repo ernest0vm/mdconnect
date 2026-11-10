@@ -179,7 +179,10 @@ export function parseCsv(text: string): ParsedCsv {
       bitrate,
     };
   });
-  return { rows: rows.filter((row) => !Number.isNaN(row.index)) };
+  // A row that cannot be placed would be dropped silently, while the rest of the file still
+  // rewrites the disc title and groups, so the whole file is refused instead.
+  if (rows.some((row) => Number.isNaN(row.index) || row.index < 0)) return { error: 'unsupported' };
+  return { rows };
 }
 
 export interface ImportReview {

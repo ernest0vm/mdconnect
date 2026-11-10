@@ -415,7 +415,7 @@ type EditState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'saving' }
   | { readonly kind: 'saved' }
-  | { readonly kind: 'failed'; readonly title?: string; readonly message: string };
+  | { readonly kind: 'failed'; readonly message: string };
 
 /** What DiscPanel needs: the open device and the header's menu slot and callbacks. */
 export interface DiscPanelProps {
@@ -450,6 +450,8 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
   const [editState, setEditState] = useState<EditState>({ kind: 'idle' });
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
   const [menuDialog, setMenuDialog] = useState<MenuDialog | null>(null);
+  /** Why a chosen CSV cannot be imported; kept apart from editState so a save stays locked. */
+  const [importError, setImportError] = useState<string | null>(null);
   const [controlError, setControlError] = useState<string | null>(null);
   const mounted = useRef(true);
 
@@ -519,6 +521,7 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
         setEditState({ kind: 'failed', message: blocked });
         return;
       }
+      setImportError(null);
       setEditState({ kind: 'saving' });
       void reader.edit(plan).then(({ outcome, result: next }) => {
         if (!mounted.current) return;
@@ -537,9 +540,9 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
 
   const status = discStatus(result);
   const saving = editState.kind === 'saving';
-  const notice =
+  const editNotice =
     editState.kind === 'failed' ? (
-      <GlassAlert tone="warning" title={editState.title ?? 'Change not saved'}>
+      <GlassAlert tone="warning" title="Change not saved">
         <p>{editState.message}</p>
       </GlassAlert>
     ) : editState.kind === 'saved' ? (
@@ -549,6 +552,16 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
     ) : saving ? (
       <GlassSpinner label="Saving changes…" size="sm" />
     ) : null;
+  const notice = (
+    <>
+      {importError !== null && (
+        <GlassAlert tone="warning" title="File not imported">
+          <p>{importError}</p>
+        </GlassAlert>
+      )}
+      {editNotice}
+    </>
+  );
 
   const refreshButton = (
     <GlassButton
@@ -617,15 +630,14 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
   /** Reads a chosen CSV and shows the review, or says why it cannot be used. */
   const startImport = (file: File) => {
     if (raw === null) return;
+    setImportError(null);
     void file.text().then((text) => {
       if (!mounted.current) return;
       const parsed = parseCsv(text);
       if ('error' in parsed) {
-        setEditState({
-          kind: 'failed',
-          title: 'File not imported',
-          message: `“${file.name}” is not a title list mdconnect can read: it needs webminidisc's CSV columns.`,
-        });
+        setImportError(
+          `“${file.name}” is not a title list mdconnect can read: it needs webminidisc's CSV columns.`,
+        );
         return;
       }
       setMenuDialog({
@@ -654,6 +666,12 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
         menuSlot,
       )
     : null;
+  // Reviewed against the disc shown now, which is what the import is applied to. While a change is
+  // saving the disc is about to be read again, so the review waits for that read.
+  const importReview =
+    menuDialog?.kind === 'import' && raw !== null && !saving
+      ? reviewImport(menuDialog.parsed, raw)
+      : null;
   const dialogs = (
     <>
       {menuDialog?.kind === 'wipe' && raw !== null && (
@@ -669,12 +687,14 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
           }}
         />
       )}
-      {menuDialog?.kind === 'import' && raw !== null && (
+      {menuDialog?.kind === 'import' && raw !== null && importReview !== null && (
         <ImportDialog
+          // A different review (the disc was read again) starts over, so a ticked mismatch never
+          // carries over to another track.
+          key={JSON.stringify(importReview)}
           returnFocus={() => menuTrigger(menuSlot)}
           fileName={menuDialog.fileName}
-          // Against the disc shown now, which the import is applied to, even if it was read again.
-          review={reviewImport(menuDialog.parsed, raw)}
+          review={importReview}
           onClose={() => {
             setMenuDialog(null);
           }}
