@@ -14,6 +14,10 @@ describe('contentSecurityPolicy', () => {
     expect(directives.get('script-src')).toEqual(["'self'", "'wasm-unsafe-eval'"]);
   });
 
+  it('connects only to the app and the online ATRAC encoder (desktop-shell: "Network destinations")', () => {
+    expect(directives.get('connect-src')).toEqual(["'self'", 'https://atrac.minidisc.wiki']);
+  });
+
   it('never allows string evaluation', () => {
     expect(contentSecurityPolicy).not.toContain("'unsafe-eval'");
   });

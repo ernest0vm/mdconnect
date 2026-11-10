@@ -53,8 +53,8 @@
 
 ## 4. Devices and network policy (`packages/core`, `apps/web`)
 
-- [ ] 4.1 Add `nativeMonoUpload` to the device table for `04dd:9014`, `054c:0081`, `04da:23b3` and `04da:23b6`. Verify with a test listing exactly those devices (track-upload: "Deck without native mono", "Deck with native mono").
-- [ ] 4.2 Add `https://atrac.minidisc.wiki` to the shared CSP `connect-src` and to `apps/web/vercel.json`. Verify with the CSP tests and the vercel-config equality test (desktop-shell: "Encoding service allowed", "Other origins blocked").
+- [x] 4.1 Add `nativeMonoUpload` to the device table for `04dd:9014`, `054c:0081`, `04da:23b3` and `04da:23b6`. Verify with a test listing exactly those devices (track-upload: "Deck without native mono", "Deck with native mono").
+- [x] 4.2 Add `https://atrac.minidisc.wiki` to the shared CSP `connect-src` and to `apps/web/vercel.json`. Verify with the CSP tests and the vercel-config equality test (desktop-shell: "Encoding service allowed", "Other origins blocked").
 
 ## 5. Audio files (`packages/app`)
 
