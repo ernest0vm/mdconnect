@@ -165,7 +165,13 @@ function TrackList({
               <span className="w-6 shrink-0 text-right font-mono tabular-nums opacity-80">
                 {track.number}
               </span>
-              <span className={track.untitled ? 'grow italic opacity-80' : 'grow'}>
+              <span
+                className={
+                  track.untitled
+                    ? 'min-w-0 grow italic opacity-80 [overflow-wrap:anywhere]'
+                    : 'min-w-0 grow [overflow-wrap:anywhere]'
+                }
+              >
                 {track.title}
                 {track.subtitle !== null && (
                   <span className="block text-xs opacity-80">{track.subtitle}</span>
@@ -222,7 +228,13 @@ function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className={disc.title === null ? 'text-lg italic' : 'text-lg font-semibold'}>
+        {/* Disc titles often have no spaces (`A/B/C`); let them wrap anywhere instead of overflowing. */}
+        <h2
+          className={[
+            'min-w-0 [overflow-wrap:anywhere]',
+            disc.title === null ? 'text-lg italic' : 'text-lg font-semibold',
+          ].join(' ')}
+        >
           {disc.title ?? 'Untitled disc'}
         </h2>
         {disc.writeProtected && <GlassBadge tone="orange">Write-protected</GlassBadge>}
