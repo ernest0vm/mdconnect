@@ -82,6 +82,15 @@ export class ConnectionController {
     }
   }
 
+  /**
+   * Forgets the open device after the user chose Exit (its NetMD session already ended) and
+   * returns to the Connect screen. The device stays granted, so Connect can reopen it.
+   */
+  exit(): void {
+    this.openHandle = null;
+    this.dispatch({ type: 'exited' });
+  }
+
   /** Whether the chooser would have offered this device (a kind this platform supports). */
   private offers({ vendorId, productId }: UsbDeviceHandle): boolean {
     return this.filters.some((f) => f.vendorId === vendorId && f.productId === productId);

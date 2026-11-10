@@ -38,7 +38,7 @@ const grouped: Disc = {
 };
 
 const HEADER =
-  'INDEX,GROUP RANGE,GROUP NAME,GROUP FULL WIDTH NAME,NAME,FULL WIDTH NAME,ALBUM,ARTIST,DURATION,ENCODING,BITRATE';
+  'INDEX,GROUP RANGE,GROUP NAME,GROUP FULL WIDTH NAME,NAME,FULL WIDTH NAME,HIMD ALBUM,HIMD ARTIST,DURATION,ENCODING,BITRATE';
 
 describe('formatCsv (disc-csv: "Export a grouped disc", "Commas in titles")', () => {
   it("writes webminidisc's columns, with zero-based group ranges and escaped commas", () => {
@@ -87,8 +87,8 @@ describe('parseCsv', () => {
     });
   });
 
-  it('accepts the Hi-MD album and artist header names', () => {
-    const text = `${HEADER.replace('ALBUM', 'HIMD ALBUM').replace('ARTIST', 'HIMD ARTIST')}\n0,0-0,,,Mix,,,,0,,`;
+  it('accepts the plain album and artist header names', () => {
+    const text = `${HEADER.replace('HIMD ALBUM', 'ALBUM').replace('HIMD ARTIST', 'ARTIST')}\n0,0-0,,,Mix,,,,0,,`;
     expect('error' in parseCsv(text)).toBe(false);
   });
 
@@ -165,7 +165,7 @@ describe('importPlan', () => {
     expect(plan.fits).toBe(true);
   });
 
-  it('leaves skipped tracks as they are', () => {
+  it('leaves skipped tracks as they are (disc-csv: "Skipped track")', () => {
     const plan = importPlan(parse(formatCsv(grouped)), ungrouped, new Set([3]));
     expect(plan.commands.flatMap((c) => (c.kind === 'setTrackTitle' ? [c.track] : []))).toEqual([
       0, 1,

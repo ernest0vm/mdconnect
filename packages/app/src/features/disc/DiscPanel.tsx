@@ -7,10 +7,25 @@ import { GlassMeter } from '@mdconnect/ui/components/glassyui/glass-meter';
 import { GlassPanel } from '@mdconnect/ui/components/glassyui/glass-panel';
 import { GlassSpinner } from '@mdconnect/ui/components/glassyui/glass-spinner';
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 
 import type { UsbDeviceHandle } from '../../platform';
 import { Action } from './Action';
+import {
+  csvFileName,
+  formatCsv,
+  importPlan,
+  parseCsv,
+  reviewImport,
+  type CsvRow,
+  type ImportReview,
+} from './csv';
 import { DeleteDialog } from './DeleteDialog';
+import { DiscMenu, menuTrigger } from './DiscMenu';
+import { downloadText } from './download';
+import { ImportDialog } from './ImportDialog';
+import { menuAvailability } from './menu-view';
+import { WipeDialog } from './WipeDialog';
 import {
   DiscReader,
   openNetMdSession,
@@ -27,6 +42,7 @@ import {
   renameGroupPlan,
   renameTrackPlan,
   ungroupPlan,
+  wipeDiscPlan,
   type EditPlan,
 } from './edit-plan';
 import {
@@ -407,10 +423,30 @@ type EditState =
   | { readonly kind: 'idle' }
   | { readonly kind: 'saving' }
   | { readonly kind: 'saved' }
-  | { readonly kind: 'failed'; readonly message: string };
+  | { readonly kind: 'failed'; readonly title?: string; readonly message: string };
 
-/** Reads the disc in the open device, shows it, and edits it. */
-export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
+/** What DiscPanel needs: the open device and the header's menu slot and callbacks. */
+export interface DiscPanelProps {
+  readonly device: UsbDeviceHandle;
+  /** Where the More menu goes: a slot in the page header. */
+  readonly menuSlot?: HTMLElement | null;
+  /** Called when the user chooses About in the menu. */
+  readonly onAbout?: () => void;
+  /** Called once the session with the device has ended after Exit. */
+  readonly onExit?: () => void;
+}
+
+type MenuDialog =
+  | { readonly kind: 'wipe' }
+  | {
+      readonly kind: 'import';
+      readonly fileName: string;
+      readonly parsed: { readonly rows: readonly CsvRow[] };
+      readonly review: ImportReview;
+    };
+
+/** Reads the disc in the open device, shows it, and edits it; puts the More menu in the header. */
+export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPanelProps) {
   const reader = useMemo(
     () =>
       new DiscReader(() => openNetMdSession(device), {
@@ -422,6 +458,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   const [generation, setGeneration] = useState(0);
   const [editState, setEditState] = useState<EditState>({ kind: 'idle' });
   const [deviceStatus, setDeviceStatus] = useState<DeviceStatus | null>(null);
+  const [menuDialog, setMenuDialog] = useState<MenuDialog | null>(null);
   const [controlError, setControlError] = useState<string | null>(null);
   const mounted = useRef(true);
 
@@ -511,7 +548,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   const saving = editState.kind === 'saving';
   const notice =
     editState.kind === 'failed' ? (
-      <GlassAlert tone="warning" title="Change not saved">
+      <GlassAlert tone="warning" title={editState.title ?? 'Change not saved'}>
         <p>{editState.message}</p>
       </GlassAlert>
     ) : editState.kind === 'saved' ? (
@@ -580,41 +617,127 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
     />
   );
 
+  const raw = status.kind === 'disc' ? status.raw : null;
+  const availability = menuAvailability({
+    discRead: raw !== null,
+    writeProtected: raw?.writeProtected ?? false,
+    busy: saving || status.kind === 'reading',
+  });
+  /** Reads a chosen CSV and shows the review, or says why it cannot be used. */
+  const startImport = (file: File) => {
+    if (raw === null) return;
+    void file.text().then((text) => {
+      if (!mounted.current) return;
+      const parsed = parseCsv(text);
+      if ('error' in parsed) {
+        setEditState({
+          kind: 'failed',
+          title: 'File not imported',
+          message: `“${file.name}” is not a title list mdconnect can read: it needs webminidisc's CSV columns.`,
+        });
+        return;
+      }
+      setMenuDialog({
+        kind: 'import',
+        fileName: file.name,
+        parsed,
+        review: reviewImport(parsed, raw),
+      });
+    });
+  };
+  const menu = menuSlot
+    ? createPortal(
+        <DiscMenu
+          availability={availability}
+          onExport={() => {
+            if (raw !== null) downloadText(csvFileName(raw), formatCsv(raw));
+          }}
+          onImport={startImport}
+          onWipe={() => {
+            setMenuDialog({ kind: 'wipe' });
+          }}
+          onAbout={() => onAbout?.()}
+          onExit={() => {
+            void reader.close().then(() => onExit?.());
+          }}
+        />,
+        menuSlot,
+      )
+    : null;
+  const dialogs = (
+    <>
+      {menuDialog?.kind === 'wipe' && raw !== null && (
+        <WipeDialog
+          returnFocus={() => menuTrigger(menuSlot)}
+          discName={status.kind === 'disc' ? (status.disc.title ?? 'Untitled disc') : 'this disc'}
+          onClose={() => {
+            setMenuDialog(null);
+          }}
+          onConfirm={() => {
+            setMenuDialog(null);
+            runEdit(wipeDiscPlan());
+          }}
+        />
+      )}
+      {menuDialog?.kind === 'import' && raw !== null && (
+        <ImportDialog
+          returnFocus={() => menuTrigger(menuSlot)}
+          fileName={menuDialog.fileName}
+          review={menuDialog.review}
+          onClose={() => {
+            setMenuDialog(null);
+          }}
+          onConfirm={(skipped) => {
+            setMenuDialog(null);
+            runEdit(importPlan(menuDialog.parsed, raw, skipped));
+          }}
+        />
+      )}
+    </>
+  );
+
   if (status.kind === 'disc') {
     return (
-      <DiscEditor
-        player={player}
-        deviceStatus={shownStatus}
-        playBlocked={blocker !== null}
-        onControl={runControl}
-        disc={status.disc}
-        raw={status.raw}
-        busy={saving}
-        onEdit={runEdit}
-        notice={notice}
-        refresh={refreshButton}
-      />
+      <>
+        {menu}
+        {dialogs}
+        <DiscEditor
+          player={player}
+          deviceStatus={shownStatus}
+          playBlocked={blocker !== null}
+          onControl={runControl}
+          disc={status.disc}
+          raw={status.raw}
+          busy={saving}
+          onEdit={runEdit}
+          notice={notice}
+          refresh={refreshButton}
+        />
+      </>
     );
   }
   return (
-    <DiscAreas
-      busy={status.kind === 'reading'}
-      summary={
-        <>
-          <h2 className="text-lg font-semibold">Disc</h2>
-          <div>{refreshButton}</div>
-          {player}
-        </>
-      }
-      tracks={
-        status.kind === 'reading' ? (
-          <GlassSpinner label={status.title} size="sm" />
-        ) : (
-          <GlassAlert tone={status.kind === 'notice' ? 'info' : 'warning'} title={status.title}>
-            <p>{status.message}</p>
-          </GlassAlert>
-        )
-      }
-    />
+    <>
+      {menu}
+      <DiscAreas
+        busy={status.kind === 'reading'}
+        summary={
+          <>
+            <h2 className="text-lg font-semibold">Disc</h2>
+            <div>{refreshButton}</div>
+            {player}
+          </>
+        }
+        tracks={
+          status.kind === 'reading' ? (
+            <GlassSpinner label={status.title} size="sm" />
+          ) : (
+            <GlassAlert tone={status.kind === 'notice' ? 'info' : 'warning'} title={status.title}>
+              <p>{status.message}</p>
+            </GlassAlert>
+          )
+        }
+      />
+    </>
   );
 }

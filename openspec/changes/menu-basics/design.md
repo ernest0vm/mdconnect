@@ -5,7 +5,7 @@
 - The connected screen (app-layout) has a header with the device, Connect another device and Appearance.
 - `DiscReader` is the device's one queue for reads, edits, playback commands and status reads. Edits are plans (`EditPlan`) checked with `groupsFit` before they run.
 - **webminidisc's CSV:**
-  - **Columns:** `INDEX, GROUP RANGE, GROUP NAME, GROUP FULL WIDTH NAME, NAME, FULL WIDTH NAME, ALBUM, ARTIST, DURATION, ENCODING, BITRATE`. The older format has 8 columns, without ALBUM, ARTIST and BITRATE.
+  - **Columns:** `INDEX, GROUP RANGE, GROUP NAME, GROUP FULL WIDTH NAME, NAME, FULL WIDTH NAME, HIMD ALBUM, HIMD ARTIST, DURATION, ENCODING, BITRATE`. webminidisc also reads `ALBUM` and `ARTIST` in those two columns. The older format has 8 columns, without album, artist and bitrate.
   - **Values:**
     - row 0 is the disc;
     - `INDEX` is 1-based;
@@ -51,16 +51,18 @@ Alternative: a hand-built menu. Rejected: the keyboard and focus rules are easy 
 
 A `features/disc/csv.ts` module:
 
-- **`formatCsv(disc: Disc): string`** writes webminidisc's current format. Durations are seconds, rounded up. The encoding comes from `Encoding` and `Channels`. The disc row carries the used time in seconds, as webminidisc does.
+- **`formatCsv(disc: Disc): string`** writes webminidisc's current format, with the same header webminidisc writes. Durations are seconds, rounded up. The encoding comes from `Encoding` and `Channels`. The disc row carries the used time in seconds, as webminidisc does.
 - **`parseCsv(text): ParsedCsv | { error }`**:
   - splits lines, then cells on unescaped commas, and unescapes `\,`;
-  - accepts the current header, including the `HIMD ALBUM` and `HIMD ARTIST` names, and the 8-column one;
+  - accepts the current header, with `HIMD ALBUM` and `HIMD ARTIST` or `ALBUM` and `ARTIST`, and the 8-column one;
   - refuses anything else.
 - **`reviewImport(parsed, disc): ImportReview`** lists the track-count difference and the mismatched tracks, with both descriptions. It uses webminidisc's 2-second tolerance and its codec and bitrate comparison.
 - **`importPlan(parsed, disc, skipped): LayoutPlan`** returns:
   - `renameDisc`;
   - `setTrackTitle` for each kept track whose titles differ;
-  - one `rewriteGroups` for the groups in the file. Group ranges are zero-based, and rows outside the disc are ignored.
+  - one `rewriteGroups` for the disc title and the groups in the file. Group ranges are zero-based, and rows outside the disc and ranges that overlap an earlier group are ignored.
+
+  Skipped tracks keep their titles. webminidisc clears every title first, so a track it skips ends up untitled; keeping the title is the less destructive choice.
 
   The plan carries `fits` from `groupsFit` and is refused like any other layout plan.
 
@@ -69,6 +71,8 @@ The download is a `Blob` and an `<a download>` click, the same on both targets. 
 ### 4. Desktop download
 
 Electron shows a save dialog for downloads by default. The navigation lock (desktop-shell) must not block the `blob:` URL. If it does, the download is allowed for same-origin `blob:` URLs only, and a main-process test covers it. This is checked in task 4.1 before any code is added.
+
+Result of the check: an `<a download>` click on a `blob:` URL starts a download without a `will-navigate` event, so the lock needs no change. With the download path set through the DevTools protocol, the built app wrote the file and stayed on its page.
 
 ### 5. Exit
 
@@ -79,8 +83,13 @@ Electron shows a save dialog for downloads by default. The navigation lock (desk
 
 ### 6. About
 
-- `AboutDialog` shows `platform.buildCommit`, a version from `package.json` injected at build (as the commit is), the GPL-2.0 notice, the source link and the credits.
+- `AboutDialog` shows the build commit (`platform.buildCommit`), or "Development build" without one, the GPL-2.0 notice, the source link and the credits.
+- No version number: every package is `0.0.0` until releases are versioned, so the commit is what identifies a build.
 - It reuses `SourceFooter`'s link target, so the two never disagree.
+
+### 7. Focus after a dialog opened from the menu
+
+Wipe, Import and About open from a menu item that is gone once the dialog closes, so Radix would return focus to the page body. `GlassDialogContent` gains a `returnFocus` option, and these dialogs return focus to More.
 
 ## New dependencies
 
@@ -91,5 +100,5 @@ Electron shows a save dialog for downloads by default. The navigation lock (desk
 ## Risks / Trade-offs
 
 - **Wiping a disc is destructive and cannot be verified without a working device.** A confirmation names the disc, focus starts on Cancel, and query tests check the bytes. The hardware check is listed in #8.
-- **Exit's USB reset did not make the MZ-NE410 write its TOC** (edit-disc findings). Exit only ends the session; the screen says changes are written when the device stops or the disc is ejected.
+- **Exit's USB reset did not make the MZ-NE410 write its TOC** (edit-disc findings). Exit only ends the session; the TOC issue stays in #8.
 - **A CSV from another tool may have a slightly different format.** Only webminidisc's two headers are accepted, and other files are refused with a message.

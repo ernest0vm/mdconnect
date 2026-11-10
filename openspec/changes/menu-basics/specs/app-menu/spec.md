@@ -15,6 +15,11 @@ When a device is connected, the header SHALL offer a "More" menu with Export tit
 - **WHEN** the user focuses More, presses Enter and moves with the arrow keys
 - **THEN** each item can be reached and chosen, and Escape closes the menu and returns focus to More
 
+#### Scenario: Focus after a dialog
+
+- **WHEN** the user closes a dialog opened from the menu, such as About
+- **THEN** focus returns to More
+
 #### Scenario: Unavailable item
 
 - **WHEN** the disc is write-protected
@@ -22,12 +27,12 @@ When a device is connected, the header SHALL offer a "More" menu with Export tit
 
 ### Requirement: About
 
-About SHALL show the app version and build commit, state that mdconnect is free software under GPL-2.0 with a link to its source, and credit webminidisc and netmd-js with their authors.
+About SHALL show the build commit, or say that it is a development build, state that mdconnect is free software under GPL-2.0 with a link to its source, and credit webminidisc and netmd-js with their authors.
 
 #### Scenario: About
 
 - **WHEN** the user chooses About
-- **THEN** a dialog shows the version and commit, the GPL-2.0 notice with the source link, and the credits
+- **THEN** a dialog shows the build commit, the GPL-2.0 notice with the source link, and the credits
 
 ### Requirement: Exit
 

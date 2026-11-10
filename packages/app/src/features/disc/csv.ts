@@ -28,16 +28,16 @@ const HEADER = [
   'GROUP FULL WIDTH NAME',
   'NAME',
   'FULL WIDTH NAME',
-  'ALBUM',
-  'ARTIST',
+  'HIMD ALBUM',
+  'HIMD ARTIST',
   'DURATION',
   'ENCODING',
   'BITRATE',
 ] as const;
 /** Header names webminidisc also accepts in a column. */
 const ALTERNATIVES: Readonly<Record<string, string>> = {
-  'HIMD ALBUM': 'ALBUM',
-  'HIMD ARTIST': 'ARTIST',
+  ALBUM: 'HIMD ALBUM',
+  ARTIST: 'HIMD ARTIST',
 };
 /** webminidisc's older format: no album, artist or bitrate. */
 const OLD_HEADER = [

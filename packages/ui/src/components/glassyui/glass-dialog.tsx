@@ -12,6 +12,7 @@ export const GlassDialogTrigger = DialogPrimitive.Trigger;
 
 export const GlassDialogPortal = DialogPrimitive.Portal;
 
+/** The dimmed backdrop behind a dialog. */
 export function GlassDialogOverlay(
   props: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>,
 ) {
@@ -26,18 +27,38 @@ export type GlassDialogContentProps = React.ComponentPropsWithoutRef<
   closeLabel?: string;
   /** How thick the glass is, as a multiple of regular. See GlassSurface. */
   thickness?: number;
+  /**
+   * Where focus goes when the dialog closes, for a dialog opened from something that is gone by
+   * then, such as a menu item. Radix's default (the element focused when it opened) applies when
+   * this returns nothing.
+   */
+  returnFocus?: () => HTMLElement | null | undefined;
 };
 
+/** The dialog panel, with a close button, rendered in a portal over the overlay. */
 export function GlassDialogContent({
   className,
   children,
   closeLabel = 'Close dialog',
+  returnFocus,
+  onCloseAutoFocus,
   ...props
 }: GlassDialogContentProps) {
   return (
     <GlassDialogPortal>
       <GlassDialogOverlay />
-      <DialogPrimitive.Content {...props} {...radixSlotProps}>
+      <DialogPrimitive.Content
+        {...props}
+        {...radixSlotProps}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          const target = returnFocus?.();
+          if (target && !event.defaultPrevented) {
+            event.preventDefault();
+            target.focus();
+          }
+        }}
+      >
         <GlassPanel
           lens
           preset="prominent"

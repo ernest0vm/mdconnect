@@ -75,7 +75,7 @@ export function editFailureMessage(reason: FailureReason): string {
 /** Why a plan must not run, or null. A plan that would lose groups from the disc title field must not. */
 export function planBlocker(plan: EditPlan | LayoutPlan): string | null {
   if ('fits' in plan && !plan.fits) {
-    return 'There is no room in the disc title area for the groups after this change, so nothing was changed. Shorten some titles and try again.';
+    return 'There is no room on the disc for these titles and groups, so nothing was changed. Shorten some titles and try again.';
   }
   return null;
 }

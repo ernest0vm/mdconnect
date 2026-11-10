@@ -10,7 +10,7 @@ Defines how mdconnect exports a disc's titles and groups to a CSV file and impor
 
 Export titles to CSV SHALL save a CSV file in webminidisc's format, named after the disc title. It SHALL have:
 
-- a header row;
+- the header row webminidisc writes;
 - a row for the disc (index 0);
 - one row per track with its index, group range, group names, track names, duration and mode.
 
@@ -51,7 +51,12 @@ The user SHALL be able to skip the listed tracks or cancel. A file that is not a
 #### Scenario: Different track count
 
 - **WHEN** the file describes 12 tracks and the disc has 10
-- **THEN** the review says so; tracks 11 and 12 of the file are ignored if the user continues
+- **THEN** the review says so and that tracks 11 and 12 of the file will be ignored
+
+#### Scenario: Skipped track
+
+- **WHEN** the user imports without ticking a mismatched track
+- **THEN** that track keeps its title
 
 #### Scenario: Mismatched track
 

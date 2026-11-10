@@ -3,10 +3,12 @@ import { GlassBadge } from '@mdconnect/ui/components/glassyui/glass-badge';
 import { GlassButton } from '@mdconnect/ui/components/glassyui/glass-button';
 import { GlassPanel } from '@mdconnect/ui/components/glassyui/glass-panel';
 import { GlassSpinner } from '@mdconnect/ui/components/glassyui/glass-spinner';
-import { useEffect, useMemo, useReducer, useRef } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import type { Platform, UsbConnectionEventLike } from '../../platform';
 import { PageShell } from '../../PageShell';
+import { AboutDialog } from '../about/AboutDialog';
+import { menuTrigger } from '../disc/DiscMenu';
 import { DiscPanel } from '../disc/DiscPanel';
 import { ChooserDialog } from './ChooserDialog';
 import { connectReducer, formatUsbId, initialConnectState } from './connect-state';
@@ -20,6 +22,8 @@ import { connectPrompt, guidanceFor, replugHint } from './guidance';
 export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   const [state, dispatch] = useReducer(connectReducer, initialConnectState);
   const chooserCancelled = useRef(false);
+  const [menuSlot, setMenuSlot] = useState<HTMLElement | null>(null);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const controller = useMemo(
     () => new ConnectionController(platform.usb, platform.deviceKinds, dispatch),
     [platform.usb, platform.deviceKinds],
@@ -127,17 +131,39 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
                 {formatUsbId(state.device.vendorId, state.device.productId)}
               </GlassBadge>
             </span>
-            <span className="sm:ml-auto">{connectButton}</span>
+            <span className="flex items-center gap-2 sm:ml-auto">
+              {connectButton}
+              <span ref={setMenuSlot} className="contents" />
+            </span>
           </>
         }
       >
         <div className="flex h-full min-h-0 flex-col gap-3 pb-2">
           {alerts}
           <div className="flex min-h-0 flex-1 flex-col gap-4 lg:grid lg:grid-cols-[minmax(18rem,22rem)_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)]">
-            <DiscPanel key={deviceKey(openDevice)} device={openDevice} />
+            <DiscPanel
+              key={deviceKey(openDevice)}
+              device={openDevice}
+              menuSlot={menuSlot}
+              onAbout={() => {
+                setAboutOpen(true);
+              }}
+              onExit={() => {
+                controller.exit();
+              }}
+            />
           </div>
         </div>
         {chooser}
+        {aboutOpen && (
+          <AboutDialog
+            returnFocus={() => menuTrigger(menuSlot)}
+            commit={platform.buildCommit}
+            onClose={() => {
+              setAboutOpen(false);
+            }}
+          />
+        )}
       </PageShell>
     );
   }

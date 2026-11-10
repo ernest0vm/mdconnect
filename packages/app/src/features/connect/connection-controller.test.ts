@@ -75,6 +75,19 @@ describe('ConnectionController', () => {
     expect(actions).toEqual(['request-started', 'connected']);
   });
 
+  it('returns to the Connect screen on Exit, without the unplug hint (app-menu: "Exit")', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const done = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await done;
+    controller.exit();
+    expect(actions.at(-1)).toBe('exited');
+    expect(controller.openDevice()).toBeNull();
+  });
+
   it('classifies a cancelled in-app chooser', async () => {
     const { actions, controller } = setup();
     await controller.request(() => true);
