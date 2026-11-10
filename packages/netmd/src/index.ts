@@ -17,6 +17,7 @@ export {
   DiscFlag,
   Encoding,
   NetMdInterface,
+  TrackFlag,
   type CommandChannel,
   type InterfaceOptions,
 } from './interface';

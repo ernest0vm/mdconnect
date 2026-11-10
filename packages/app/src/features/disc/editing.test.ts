@@ -1,8 +1,11 @@
+import type { Disc } from '@mdconnect/netmd';
 import { describe, expect, it } from 'vitest';
 
+import { deleteTracksPlan, renameTrackPlan } from './edit-plan';
 import {
   editBlocker,
   editFailureMessage,
+  erasesProtectedTracks,
   groupBlocker,
   moveDestination,
   selectAllState,
@@ -73,7 +76,51 @@ describe('groupBlocker (disc-editing: "Non-consecutive selection")', () => {
 
 describe('editFailureMessage (disc-editing: "Device rejects an edit")', () => {
   it('explains a rejected change without a raw error', () => {
-    expect(editFailureMessage('rejected')).toMatch(/could not be saved/u);
-    expect(editFailureMessage('failed')).toMatch(/stopped answering/u);
+    expect(editFailureMessage('rejected', false)).toMatch(/could not be saved/u);
+    expect(editFailureMessage('failed', false)).toMatch(/stopped answering/u);
+  });
+
+  it('names protection when the device refuses to erase protected tracks (disc-editing: "Protected tracks")', () => {
+    expect(editFailureMessage('rejected', true)).toMatch(/protected/u);
+    expect(editFailureMessage('rejected', true)).toMatch(/SonicStage/u);
+    // A timeout is not explained by protection.
+    expect(editFailureMessage('failed', true)).toMatch(/stopped answering/u);
+  });
+});
+
+describe('erasesProtectedTracks', () => {
+  const disc = (flags: number[]): Disc => ({
+    title: '',
+    fullWidthTitle: '',
+    writable: true,
+    writeProtected: false,
+    used: 0,
+    left: 0,
+    total: 0,
+    trackCount: flags.length,
+    groups: [
+      {
+        title: null,
+        fullWidthTitle: null,
+        tracks: flags.map((f, index) => ({
+          index,
+          title: '',
+          fullWidthTitle: '',
+          duration: 0,
+          channel: 0,
+          encoding: 0x90,
+          flags: f,
+        })),
+      },
+    ],
+  });
+
+  it('is true when a plan erases a protected track', () => {
+    expect(erasesProtectedTracks(deleteTracksPlan(disc([0, 3]), [1]), disc([0, 3]))).toBe(true);
+  });
+
+  it('is false for unprotected tracks and for plans that erase nothing', () => {
+    expect(erasesProtectedTracks(deleteTracksPlan(disc([0, 3]), [0]), disc([0, 3]))).toBe(false);
+    expect(erasesProtectedTracks(renameTrackPlan(1, 'x'), disc([0, 3]))).toBe(false);
   });
 });

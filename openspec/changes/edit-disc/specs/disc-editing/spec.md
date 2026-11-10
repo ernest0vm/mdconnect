@@ -156,6 +156,11 @@ When the device rejects or does not answer an edit, the app SHALL show a readabl
 - **WHEN** the device rejects a rename
 - **THEN** the screen says the change could not be saved and shows the disc as read again
 
+#### Scenario: Protected tracks
+
+- **WHEN** the device refuses to erase tracks marked as protected, such as tracks transferred with SonicStage
+- **THEN** the message says the tracks are protected and that the device does not let them be erased over USB
+
 #### Scenario: Unplugged while editing
 
 - **WHEN** the device is unplugged while an edit is being written

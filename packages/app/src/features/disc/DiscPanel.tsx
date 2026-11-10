@@ -24,6 +24,7 @@ import {
 import {
   editBlocker,
   editFailureMessage,
+  erasesProtectedTracks,
   groupBlocker,
   moveDestination,
   selectAllState,
@@ -191,7 +192,8 @@ interface EditorProps {
   readonly disc: DiscView;
   readonly raw: Disc;
   readonly busy: boolean;
-  readonly onEdit: (plan: EditPlan, selectAfter?: Selection) => void;
+  /** Runs a plan made from `disc`, the disc as last read. */
+  readonly onEdit: (plan: EditPlan, disc: Disc) => void;
   readonly notice: ReactNode;
 }
 
@@ -214,7 +216,7 @@ function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
 
   const edit = (plan: EditPlan, selectAfter?: Selection) => {
     setDialog(null);
-    onEdit(plan, selectAfter);
+    onEdit(plan, raw);
     if (selectAfter) setSelection(selectAfter);
   };
   const move = (from: number, to: number) => {
@@ -497,7 +499,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   }, []);
 
   const runEdit = useCallback(
-    (plan: EditPlan) => {
+    (plan: EditPlan, before: Disc) => {
       if (plan.commands.length === 0) return;
       setEditState({ kind: 'saving' });
       void reader.edit(plan).then(({ outcome, result: next }) => {
@@ -506,7 +508,10 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
         setEditState(
           outcome.kind === 'saved'
             ? { kind: 'saved' }
-            : { kind: 'failed', message: editFailureMessage(outcome.reason) },
+            : {
+                kind: 'failed',
+                message: editFailureMessage(outcome.reason, erasesProtectedTracks(plan, before)),
+              },
         );
       });
     },

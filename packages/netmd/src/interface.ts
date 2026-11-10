@@ -44,6 +44,12 @@ export enum Channels {
   mono = 0x01,
 }
 
+/** Track protection: tracks transferred with SonicStage (OpenMG) are protected. */
+export enum TrackFlag {
+  unprotected = 0x00,
+  protected = 0x03,
+}
+
 export enum DiscFlag {
   writable = 0x10,
   writeProtected = 0x40,
