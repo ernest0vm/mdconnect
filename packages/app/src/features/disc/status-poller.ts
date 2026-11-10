@@ -17,16 +17,13 @@ export const POLL_MS = 1000;
 /**
  * Reads the device status about once a second while the app is visible, and stops while it is
  * hidden. A tick is skipped while the previous read is still running, and a read that finishes
- * after `stop()` is not reported.
+ * after `stop()` is not reported. Deciding what to show is the caller's (see `mergeStatus`).
  */
 export class StatusPoller {
   private cancelTimer: (() => void) | null = null;
   private stopListening: (() => void) | null = null;
   private reading = false;
   private active = false;
-  /** The last status reported, serialized; undefined before the first report. */
-  private lastKey: string | undefined;
-  private known = false;
 
   constructor(
     private readonly read: () => Promise<DeviceStatus | null>,
@@ -69,26 +66,13 @@ export class StatusPoller {
     this.cancelTimer = null;
   }
 
-  /**
-   * Reports a status only when it changed, so a stopped device does not re-render the app every
-   * second. A failed read keeps the last known status instead of blanking the player.
-   */
-  private reportChange(status: DeviceStatus | null): void {
-    if (status === null && this.known) return;
-    const key = JSON.stringify(status);
-    if (key === this.lastKey) return;
-    this.lastKey = key;
-    this.known = status !== null;
-    this.report(status);
-  }
-
   /** Reads the status unless the previous read is still running. */
   private tick(): void {
     if (this.reading) return;
     this.reading = true;
     void this.read()
       .then((status) => {
-        if (this.active) this.reportChange(status);
+        if (this.active) this.report(status);
       })
       .finally(() => {
         this.reading = false;

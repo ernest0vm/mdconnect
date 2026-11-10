@@ -1,7 +1,13 @@
 import type { DeviceStatus } from '@mdconnect/netmd';
 import { describe, expect, it } from 'vitest';
 
-import { playerBlocker, playerView, statusAfterRead, trackPlayState } from './player-view';
+import {
+  mergeStatus,
+  playerBlocker,
+  playerView,
+  statusAfterRead,
+  trackPlayState,
+} from './player-view';
 
 const titles = ['Intro', '', 'Outro'];
 const at = (state: DeviceStatus['state'], track: number | null, second = 0): DeviceStatus => ({
@@ -122,6 +128,27 @@ describe('statusAfterRead', () => {
     expect(statusAfterRead(at('playing', 3), { kind: 'failed' })).toBeNull();
     const kept = at('playing', 3);
     expect(statusAfterRead(kept, { kind: 'disc' })).toBe(kept);
+  });
+});
+
+describe('mergeStatus', () => {
+  it('keeps the same object for an unchanged status, so nothing re-renders', () => {
+    const shown = at('playing', 3);
+    expect(mergeStatus(shown, at('playing', 3))).toBe(shown);
+  });
+
+  it('keeps the shown status when a read fails', () => {
+    const shown = at('playing', 3);
+    expect(mergeStatus(shown, null)).toBe(shown);
+  });
+
+  it('shows a status equal to one cleared by a no-disc read (reinserted disc)', () => {
+    const before = at('ready', 0);
+    const cleared = statusAfterRead(before, { kind: 'no-disc' });
+    // A failed poll leaves it cleared; then the same status as before comes back.
+    const afterFailure = mergeStatus(cleared, null);
+    expect(afterFailure).toBeNull();
+    expect(mergeStatus(afterFailure, at('ready', 0))).toEqual(before);
   });
 });
 

@@ -108,3 +108,17 @@ export function statusAfterRead(
 ): DeviceStatus | null {
   return read.kind === 'disc' ? previous : null;
 }
+
+/**
+ * The status to show after a poll. A failed read (null) keeps what is shown, and a status equal
+ * to it keeps the same object, so an unchanged device does not re-render the app every second.
+ * It compares with what is shown, not with an earlier poll, so a status cleared by
+ * `statusAfterRead` always comes back with the next successful read.
+ */
+export function mergeStatus(
+  shown: DeviceStatus | null,
+  next: DeviceStatus | null,
+): DeviceStatus | null {
+  if (next === null) return shown;
+  return shown !== null && JSON.stringify(shown) === JSON.stringify(next) ? shown : next;
+}

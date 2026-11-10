@@ -44,6 +44,7 @@ import { isHiMdMode } from './hi-md-mode';
 import { PlayerBar } from './PlayerBar';
 import {
   controlFailureMessage,
+  mergeStatus,
   playerBlocker,
   playerView,
   statusAfterRead,
@@ -433,7 +434,9 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
     if (!pollable) return;
     const poller = new StatusPoller(
       () => reader.status(),
-      setDeviceStatus,
+      (next) => {
+        setDeviceStatus((shown) => mergeStatus(shown, next));
+      },
       browserClock,
       documentVisibility,
     );

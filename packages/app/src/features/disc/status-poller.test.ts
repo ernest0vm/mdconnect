@@ -152,43 +152,4 @@ describe('StatusPoller (playback: "Playback advances", "Hidden window")', () => 
     await flush();
     expect(seen).toEqual([]);
   });
-
-  it('reports only changes, and keeps the last status when a read fails', async () => {
-    const c = clock();
-    const seen: (number | null)[] = [];
-    const reads = [status(1), status(1), null, status(2)];
-    const poller = new StatusPoller(
-      () => Promise.resolve(reads.shift() ?? null),
-      (s) => seen.push(s?.track ?? null),
-      c.fake,
-      visibility().fake,
-    );
-    poller.start();
-    for (let i = 0; i < 4; i++) {
-      c.tick();
-      await flush();
-    }
-    expect(seen).toEqual([1, 2]);
-    poller.stop();
-  });
-
-  it('reports a device without status once, not every second', async () => {
-    const c = clock();
-    let reports = 0;
-    const poller = new StatusPoller(
-      () => Promise.resolve(null),
-      () => {
-        reports += 1;
-      },
-      c.fake,
-      visibility().fake,
-    );
-    poller.start();
-    for (let i = 0; i < 3; i++) {
-      c.tick();
-      await flush();
-    }
-    expect(reports).toBe(1);
-    poller.stop();
-  });
 });
