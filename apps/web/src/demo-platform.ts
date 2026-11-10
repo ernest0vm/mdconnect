@@ -28,6 +28,7 @@ export function withDemoDevice(platform: Platform): Platform {
     claimInterface: (number) => device.claimInterface(number),
     controlTransferIn: (setup, length) => device.controlTransferIn(setup, length),
     controlTransferOut: (setup, data) => device.controlTransferOut(setup, data),
+    transferOut: (endpoint, data) => device.transferOut(endpoint, data),
   };
   return {
     ...platform,

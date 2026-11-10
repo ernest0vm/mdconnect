@@ -52,6 +52,7 @@ function replay(transfers: readonly Transfer[]): NetMdUsbDevice & { remaining: (
       expect(toHex(data)).toBe(recorded.data);
       return Promise.resolve({});
     },
+    transferOut: () => Promise.reject(new Error('Unexpected bulk transfer')),
     remaining: () => transfers.length - next,
   };
 }

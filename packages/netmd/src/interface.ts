@@ -17,17 +17,52 @@
  * - `stop` ignores only a rejected or not-implemented reply and an unexpected echo (the LAM-1
  *   fix); a timeout or a transfer error, such as an unplugged device, is passed on. Upstream
  *   ignores every error.
+ * - Upload commands take the session key as bytes, not hex text. `sendTrack` takes packets that
+ *   are already framed (see packets.ts), reports bytes written including the packet header, waits
+ *   for its final reply without a time limit, and returns the UUID and content ID as bytes;
+ *   upstream decodes them as UTF-8 text, which can lose bytes. Its 200 ms pauses for Sharp decks
+ *   use the injected `sleep`.
  */
 
-import { NetMdNotImplementedError, NetMdRejectedError } from './errors';
+import { Des } from './des';
+import { NetMdError, NetMdNotImplementedError, NetMdRejectedError } from './errors';
 import { formatQuery, scanQuery, type ScannedValue } from './query';
 import { encodeSjis } from './sjis';
 import { decodeSjis } from './titles';
+import type { ReadReplyOptions } from './transport';
 
-/** Sends one framed command and reads the device's reply. */
+/** Sends one framed command and reads the device's reply. `NetMdTransport` implements it. */
 export interface CommandChannel {
   sendCommand(command: Uint8Array<ArrayBuffer>): Promise<void>;
-  readReply(): Promise<Uint8Array>;
+  readReply(options?: ReadReplyOptions): Promise<Uint8Array>;
+  /** Writes track data to the bulk endpoint; only uploads need it. */
+  bulkWrite?(data: Uint8Array<ArrayBuffer>): Promise<void>;
+}
+
+export interface QueryOptions {
+  /** Return an "interim" reply instead of retrying it (the track command answers that way). */
+  readonly acceptInterim?: boolean;
+}
+
+/** What `sendTrack` tells the device about the track that follows. */
+export interface TrackTransfer {
+  readonly wireFormat: number;
+  readonly discFormat: number;
+  readonly frames: number;
+  /** The audio's length once padded to whole frames, without the packet header. */
+  readonly dataLength: number;
+}
+
+export interface TrackTransferProgress {
+  readonly writtenBytes: number;
+  readonly totalBytes: number;
+}
+
+/** The new track's number (zero-based) and the identity the device gave it. */
+export interface SentTrack {
+  readonly track: number;
+  readonly uuid: Uint8Array;
+  readonly contentId: Uint8Array;
 }
 
 enum Status {
@@ -62,6 +97,13 @@ const Descriptor = {
   operatingStatusBlock: '80 00',
 } as const;
 type Descriptor = (typeof Descriptor)[keyof typeof Descriptor];
+
+const SECURE = '1800 080046 f0030103';
+/** The header before the audio in the first packet: zeros, length, key and IV. */
+const PACKET_HEADER_LENGTH = 24;
+/** Sharp decks need a pause before the track command and before its data. */
+const SHARP_PAUSE_MS = 200;
+const ZERO_BLOCK = new Uint8Array(8);
 
 const OPEN_READ = '01';
 const OPEN_WRITE = '03';
@@ -110,14 +152,22 @@ export class NetMdInterface {
   }
 
   /** Sends a query with the "control" status byte and returns the reply without its status. */
-  async sendQuery(query: Uint8Array): Promise<Uint8Array> {
+  async sendQuery(query: Uint8Array, options: QueryOptions = {}): Promise<Uint8Array> {
     await this.channel.sendCommand(new Uint8Array([Status.control, ...query]));
+    return this.readQueryReply(options);
+  }
+
+  /** Reads a reply and checks its status byte, retrying interim replies unless accepted. */
+  private async readQueryReply(
+    options: QueryOptions,
+    readOptions?: ReadReplyOptions,
+  ): Promise<Uint8Array> {
     for (let attempt = 0; attempt < MAX_INTERIM_ATTEMPTS; attempt++) {
-      const reply = await this.channel.readReply();
+      const reply = await this.channel.readReply(readOptions);
       const status = reply[0];
       if (status === Status.notImplemented) throw new NetMdNotImplementedError('Not implemented');
       if (status === Status.rejected) throw new NetMdRejectedError('Rejected');
-      if (status === Status.interim) {
+      if (status === Status.interim && options.acceptInterim !== true) {
         await this.sleep(INTERIM_RETRY_MS * (2 ** attempt - 1));
         continue;
       }
@@ -461,5 +511,153 @@ export class NetMdInterface {
       ).map(num);
       return [track ?? 0, hours ?? 0, minutes ?? 0, seconds ?? 0, frames ?? 0] as const;
     });
+  }
+
+  /** Takes control of the device for an upload. */
+  async acquire(): Promise<void> {
+    const reply = await this.sendQuery(formatQuery('ff 010c ffff ffff ffff ffff ffff ffff'));
+    scanQuery(reply, 'ff 010c ffff ffff ffff ffff ffff ffff');
+  }
+
+  /** Gives control of the device back after an upload. */
+  async release(): Promise<void> {
+    const reply = await this.sendQuery(formatQuery('ff 0100 ffff ffff ffff ffff ffff ffff'));
+    scanQuery(reply, 'ff 0100 ffff ffff ffff ffff ffff ffff');
+  }
+
+  /** Lets uploaded tracks be changed later; Sharp decks reject it. */
+  async disableNewTrackProtection(value: number): Promise<void> {
+    const reply = await this.sendQuery(formatQuery(`${SECURE} 2b ff %w`, value));
+    scanQuery(reply, `${SECURE} 2b 00 %?%?`);
+  }
+
+  async enterSecureSession(): Promise<void> {
+    scanQuery(await this.sendQuery(formatQuery(`${SECURE} 80 ff`)), `${SECURE} 80 00`);
+  }
+
+  async leaveSecureSession(): Promise<void> {
+    scanQuery(await this.sendQuery(formatQuery(`${SECURE} 81 ff`)), `${SECURE} 81 00`);
+  }
+
+  /** The device's leaf ID, which picks the EKB to send. */
+  async getLeafId(): Promise<Uint8Array> {
+    const reply = await this.sendQuery(formatQuery(`${SECURE} 11 ff`));
+    return buf(scanQuery(reply, `${SECURE} 11 00 %*`)[0]);
+  }
+
+  /** Sends the EKB: its key chain (16 bytes per key), tree depth, ID and 24-byte signature. */
+  async sendKeyData(
+    ekbId: number,
+    chain: readonly Uint8Array[],
+    depth: number,
+    signature: Uint8Array,
+  ): Promise<void> {
+    if (chain.some((link) => link.length !== 16)) throw new NetMdError('EKB keys are 16 bytes');
+    if (depth < 1 || depth > 63) throw new NetMdError('EKB depth must be 1 to 63');
+    if (signature.length !== 24) throw new NetMdError('The EKB signature is 24 bytes');
+    const length = 16 + 16 * chain.length + 24;
+    const keys = new Uint8Array(chain.flatMap((link) => [...link]));
+    const reply = await this.sendQuery(
+      formatQuery(
+        `${SECURE} 12 ff %w 0000 %w %d %d %d 00000000 %* %*`,
+        length,
+        length,
+        chain.length,
+        depth,
+        ekbId,
+        keys,
+        signature,
+      ),
+    );
+    scanQuery(reply, `${SECURE} 12 01 %?%? %?%?%?%?`);
+  }
+
+  /** Sends the host's 8-byte nonce and returns the device's. */
+  async sessionKeyExchange(hostNonce: Uint8Array): Promise<Uint8Array> {
+    if (hostNonce.length !== 8) throw new NetMdError('The host nonce is 8 bytes');
+    const reply = await this.sendQuery(formatQuery(`${SECURE} 20 ff 000000 %*`, hostNonce));
+    // Any status byte: the Panasonic SJ-MR270 does not answer 00.
+    return buf(scanQuery(reply, `${SECURE} 20 %? 000000 %*`)[0]);
+  }
+
+  async sessionKeyForget(): Promise<void> {
+    const reply = await this.sendQuery(formatQuery(`${SECURE} 21 ff 000000`));
+    scanQuery(reply, `${SECURE} 21 00 000000`);
+  }
+
+  /** Announces a download: the content ID and key-encryption key, encrypted with the session key. */
+  async setupDownload(
+    contentId: Uint8Array,
+    keyEncryptionKey: Uint8Array,
+    sessionKey: Uint8Array,
+  ): Promise<void> {
+    if (contentId.length !== 20) throw new NetMdError('The content ID is 20 bytes');
+    if (keyEncryptionKey.length !== 8) throw new NetMdError('The key-encryption key is 8 bytes');
+    const message = new Uint8Array([1, 1, 1, 1, ...contentId, ...keyEncryptionKey]);
+    const encrypted = new Des(sessionKey).encryptCbc(message, ZERO_BLOCK);
+    const reply = await this.sendQuery(formatQuery(`${SECURE} 22 ff 0000 %*`, encrypted));
+    scanQuery(reply, `${SECURE} 22 00 0000`);
+  }
+
+  /**
+   * Sends one track: announces it, writes the packets to the bulk endpoint, then waits, without
+   * a time limit, for the device to finish storing it.
+   */
+  async sendTrack(
+    transfer: TrackTransfer,
+    packets: AsyncIterable<Uint8Array<ArrayBuffer>>,
+    sessionKey: Uint8Array,
+    onProgress?: (progress: TrackTransferProgress) => void,
+  ): Promise<SentTrack> {
+    const channel = this.channel;
+    if (channel.bulkWrite === undefined) {
+      throw new NetMdError('This channel cannot write bulk data');
+    }
+    const totalBytes = transfer.dataLength + PACKET_HEADER_LENGTH;
+    await this.sleep(SHARP_PAUSE_MS);
+    const reply = await this.sendQuery(
+      formatQuery(
+        `${SECURE} 28 ff 000100 1001 ffff 00 %b %b %d %d`,
+        transfer.wireFormat,
+        transfer.discFormat,
+        transfer.frames,
+        totalBytes,
+      ),
+      { acceptInterim: true },
+    );
+    scanQuery(reply, `${SECURE} 28 00 000100 1001 %?%? 00 %*`);
+    await this.sleep(SHARP_PAUSE_MS);
+
+    let writtenBytes = 0;
+    for await (const packet of packets) {
+      await channel.bulkWrite(packet);
+      writtenBytes += packet.length;
+      onProgress?.({ writtenBytes, totalBytes });
+    }
+
+    const done = await this.readQueryReply({}, { timeoutMs: Number.POSITIVE_INFINITY });
+    const [track, encrypted] = scanQuery(
+      done,
+      `${SECURE} 28 00 000100 1001 %w 00 %?%? %?%?%?%? %?%?%?%? %*`,
+    );
+    const sealed = buf(encrypted);
+    const identity = new Des(sessionKey).decryptCbc(
+      sealed.subarray(0, sealed.length - (sealed.length % 8)),
+      ZERO_BLOCK,
+    );
+    return {
+      track: num(track),
+      uuid: identity.slice(0, 8),
+      contentId: identity.slice(12, 32),
+    };
+  }
+
+  /** Makes an uploaded track permanent, authenticated with the session key. */
+  async commitTrack(track: number, sessionKey: Uint8Array): Promise<void> {
+    const authentication = new Des(sessionKey).encryptEcb(ZERO_BLOCK);
+    const reply = await this.sendQuery(
+      formatQuery(`${SECURE} 48 ff 00 1001 %w %*`, track, authentication),
+    );
+    scanQuery(reply, `${SECURE} 48 00 00 1001 %?%?`);
   }
 }
