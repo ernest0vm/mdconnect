@@ -111,3 +111,43 @@ describe('NetMdTransport', () => {
     expect(waited).toBe(1000);
   });
 });
+
+describe('a transfer that never completes (a hung device)', () => {
+  /** A device whose transfers never settle, as a device that stopped answering at the USB level. */
+  const hung: NetMdUsbDevice = {
+    opened: true,
+    open: () => Promise.resolve(),
+    selectConfiguration: () => Promise.resolve(),
+    claimInterface: () => Promise.resolve(),
+    controlTransferIn: () => new Promise(() => undefined),
+    controlTransferOut: () => new Promise(() => undefined),
+  };
+  /** A timer that fires at once, so the test does not wait. */
+  const firesNow = (_ms: number, onTimeout: () => void) => {
+    queueMicrotask(onTimeout);
+    return () => undefined;
+  };
+
+  it('fails a reply read with a timeout instead of waiting forever', async () => {
+    const transport = new NetMdTransport(hung, { sleep: () => Promise.resolve(), timer: firesNow });
+    await expect(transport.readReply()).rejects.toThrow(NetMdTimeoutError);
+  });
+
+  it('fails a command send with a timeout instead of waiting forever', async () => {
+    const transport = new NetMdTransport(hung, { sleep: () => Promise.resolve(), timer: firesNow });
+    await expect(transport.sendCommand(new Uint8Array([0]))).rejects.toThrow(NetMdTimeoutError);
+  });
+
+  it('cancels the timer when the transfer completes', async () => {
+    let cancelled = 0;
+    const { device } = scriptedDevice([0], []);
+    const transport = new NetMdTransport(device, {
+      sleep: () => Promise.resolve(),
+      timer: () => () => {
+        cancelled += 1;
+      },
+    });
+    await transport.sendCommand(new Uint8Array([0]));
+    expect(cancelled).toBe(1);
+  });
+});

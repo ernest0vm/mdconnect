@@ -5,6 +5,8 @@
  * Changes from upstream:
  * - Works on a minimal device interface instead of `USBDevice`, so it stays platform-agnostic.
  * - `readReply` gives up after `timeoutMs` (upstream polls forever).
+ * - Every control transfer fails after `transferTimeoutMs` (5 s) if it does not complete, so a
+ *   device that stops answering at the USB level cannot leave a read waiting forever.
  * - No DES/3DES loading, factory commands, bulk transfers or logging: reading needs none of them.
  * - An input transfer whose status is not "ok" (stall, babble) is an error; upstream uses its bytes.
  */
@@ -35,10 +37,19 @@ export interface NetMdUsbDevice {
   controlTransferOut(setup: ControlSetup, data: BufferSource): Promise<unknown>;
 }
 
+/** Starts a timer that calls `onTimeout` after `ms`; returns a function that cancels it. */
+export type TransferTimer = (ms: number, onTimeout: () => void) => () => void;
+
 export interface TransportOptions {
   /** Total time to wait for a reply before failing; upstream has no limit. */
   readonly timeoutMs?: number;
+  /**
+   * Time one USB control transfer may take. A device that stops answering at the USB level
+   * never completes a transfer, and WebUSB has no timeout of its own; upstream has none either.
+   */
+  readonly transferTimeoutMs?: number;
   readonly sleep?: (ms: number) => Promise<void>;
+  readonly timer?: TransferTimer;
 }
 
 const REQUEST_REPLY_LENGTH = 0x01;
@@ -46,6 +57,7 @@ const REQUEST_SEND = 0x80;
 const REQUEST_READ = 0x81;
 const FIRST_RETRY_MS = 10;
 const DEFAULT_TIMEOUT_MS = 10_000;
+const DEFAULT_TRANSFER_TIMEOUT_MS = 5_000;
 
 const setup = (request: number): ControlSetup => ({
   requestType: 'vendor',
@@ -55,6 +67,13 @@ const setup = (request: number): ControlSetup => ({
   index: 0,
 });
 
+const realTimer: TransferTimer = (ms, onTimeout) => {
+  const id = setTimeout(onTimeout, ms);
+  return () => {
+    clearTimeout(id);
+  };
+};
+
 const realSleep = (ms: number) =>
   new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
@@ -63,14 +82,18 @@ const realSleep = (ms: number) =>
 /** Low-level NetMD framing over vendor control transfers on interface 0. */
 export class NetMdTransport {
   private readonly timeoutMs: number;
+  private readonly transferTimeoutMs: number;
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly timer: TransferTimer;
 
   constructor(
     private readonly device: NetMdUsbDevice,
     options: TransportOptions = {},
   ) {
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.transferTimeoutMs = options.transferTimeoutMs ?? DEFAULT_TRANSFER_TIMEOUT_MS;
     this.sleep = options.sleep ?? realSleep;
+    this.timer = options.timer ?? realTimer;
   }
 
   /** Claims the NetMD interface and discards any reply left over from an earlier session. */
@@ -82,7 +105,7 @@ export class NetMdTransport {
   }
 
   async sendCommand(command: Uint8Array<ArrayBuffer>): Promise<void> {
-    await this.device.controlTransferOut(setup(REQUEST_SEND), command);
+    await this.limited(this.device.controlTransferOut(setup(REQUEST_SEND), command), 'output');
   }
 
   /** Waits for the device's reply, doubling the poll interval each time, up to `timeoutMs`. */
@@ -112,10 +135,39 @@ export class NetMdTransport {
 
   /** An input transfer that only counts when WebUSB reports it as "ok" (no status means ok). */
   private async transferIn(request: number, length: number) {
-    const result = await this.device.controlTransferIn(setup(request), length);
+    const result = await this.limited(
+      this.device.controlTransferIn(setup(request), length),
+      `input ${String(request)}`,
+    );
     if (result.status !== undefined && result.status !== 'ok') {
       throw new NetMdError(`USB input transfer ${String(request)} ended with ${result.status}`);
     }
     return result;
+  }
+
+  /**
+   * Fails a transfer that does not complete in time. WebUSB cannot cancel it: the transfer is
+   * abandoned, and the caller reopens the session (initialising drains any late reply).
+   */
+  private limited<T>(transfer: Promise<T>, what: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const cancel = this.timer(this.transferTimeoutMs, () => {
+        reject(
+          new NetMdTimeoutError(
+            `USB ${what} transfer did not complete in ${String(this.transferTimeoutMs)} ms`,
+          ),
+        );
+      });
+      transfer.then(
+        (value) => {
+          cancel();
+          resolve(value);
+        },
+        (error: unknown) => {
+          cancel();
+          reject(error instanceof Error ? error : new Error(String(error)));
+        },
+      );
+    });
   }
 }

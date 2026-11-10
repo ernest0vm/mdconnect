@@ -89,6 +89,11 @@ describe('DiscReader', () => {
     expect(await reader.read()).toEqual({ kind: 'failed', reason: 'not-netmd' });
   });
 
+  it('reports a device that stops answering while the session opens as a failed read, not as in use', async () => {
+    const hung = new DiscReader(() => Promise.reject(new NetMdTimeoutError('no transfer')));
+    expect(await hung.read()).toEqual({ kind: 'failed', reason: 'read-failed' });
+  });
+
   it('treats a timeout on the first query as a failed read with Retry, not as Hi-MD mode (disc-contents: "Command fails")', async () => {
     const silent = new DiscReader(() =>
       Promise.resolve(
