@@ -1,4 +1,4 @@
-import { findDevice } from '@mdconnect/core';
+import { findDevice, ONLINE_ENCODER_ORIGIN } from '@mdconnect/core';
 import {
   remainingTitleSpace,
   sanitizeFullWidthTitle,
@@ -9,7 +9,7 @@ import {
 } from '@mdconnect/netmd';
 
 import { formatDuration } from '../disc/disc-view';
-import type { ConversionFailure, RecordingMode } from './convert-track';
+import type { ConversionFailure, Encoder, RecordingMode } from './convert-track';
 import type { AudioTags } from './tags';
 import { titleFromSource, type TitleSource } from './title-source';
 import { fitTitles, timeFit, type TrackTitles } from './upload-plan';
@@ -85,10 +85,18 @@ export function addTracksBlocker(state: {
   return null;
 }
 
+/** Every mode mdconnect records, in display order. */
+export const RECORDING_MODES: readonly RecordingMode[] = ['sp', 'spMono', 'lp2', 'lp4'];
+
+export const ENCODERS: readonly Encoder[] = ['built-in', 'online'];
+
+/** The host audio is sent to by the online encoder, as shown to the user. */
+export const ONLINE_ENCODER_HOST = new URL(ONLINE_ENCODER_ORIGIN).host;
+
 /** The recording modes a deck offers: SP mono only where the deck records it natively. */
 export function recordingModes(vendorId: number, productId: number): RecordingMode[] {
   const mono = findDevice(vendorId, productId)?.nativeMonoUpload === true;
-  return mono ? ['sp', 'spMono', 'lp2', 'lp4'] : ['sp', 'lp2', 'lp4'];
+  return RECORDING_MODES.filter((mode) => mono || mode !== 'spMono');
 }
 
 /** The remembered mode when this deck offers it, otherwise SP. */
@@ -103,6 +111,11 @@ export const MODE_LABELS: Readonly<Record<UploadMode, string>> = {
   lp2: 'LP2',
   lp105: 'LP105',
   lp4: 'LP4',
+};
+
+export const ENCODER_LABELS: Readonly<Record<Encoder, string>> = {
+  'built-in': 'Built-in, offline',
+  online: "Sony's encoder, online",
 };
 
 export const TITLE_SOURCE_LABELS: Readonly<Record<TitleSource, string>> = {

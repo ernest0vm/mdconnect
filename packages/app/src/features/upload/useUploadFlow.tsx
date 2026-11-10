@@ -1,15 +1,6 @@
 import type { Disc } from '@mdconnect/netmd';
 import { GlassAlert } from '@mdconnect/ui/components/glassyui/glass-alert';
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  type DragEvent,
-  type ReactNode,
-} from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 
 import type { UsbDeviceHandle } from '../../platform';
 import { Action } from '../disc/Action';
@@ -18,7 +9,7 @@ import { ConvertDialog, type UploadJob } from './ConvertDialog';
 import { convertTrack } from './convert-track';
 import { UploadDialog, type UploadProgress } from './UploadDialog';
 import { runUpload } from './upload-pipeline';
-import { createUploadPreferencesStore, type UploadPreferences } from './upload-preferences';
+import { useUploadPreferences } from './UploadPreferencesContext';
 import {
   addTracksBlocker,
   audioFiles,
@@ -32,14 +23,6 @@ import {
 
 /** How often progress reaches the screen: one event arrives per 1 KB packet. */
 const PROGRESS_INTERVAL_MS = 150;
-
-function browserStorage() {
-  try {
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
 
 /** Keeps the screen on while an upload runs, where the platform allows it. */
 async function holdWakeLock(): Promise<() => void> {
@@ -91,8 +74,7 @@ export function useUploadFlow({
   busy,
   onFinished,
 }: UploadFlowOptions): UploadFlow {
-  const store = useMemo(() => createUploadPreferencesStore(browserStorage()), []);
-  const [preferences, setPreferences] = useState<UploadPreferences>(() => store.load());
+  const { preferences, setPreferences: remember } = useUploadPreferences();
   const [files, setFiles] = useState<readonly File[] | null>(null);
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -130,14 +112,6 @@ export function useUploadFlow({
     busy: busy || uploading,
   });
   const modes = useMemo(() => recordingModes(device.vendorId, device.productId), [device]);
-
-  const remember = useCallback(
-    (next: UploadPreferences) => {
-      setPreferences(next);
-      store.save(next);
-    },
-    [store],
-  );
 
   /** Opens the convert dialog with the audio among `picked`, or says why it cannot. */
   const offer = (picked: readonly File[]) => {

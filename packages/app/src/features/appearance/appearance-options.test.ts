@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_APPEARANCE_CHOICE } from './appearance-choice';
-import { appearanceGroups, appearanceTriggerLabel, withOption } from './appearance-options';
+import { appearanceGroups, withOption } from './appearance-options';
 
 describe('appearanceGroups (ui-theme: "Appearance control")', () => {
   it('offers Theme and Transparency, each starting with System', () => {
@@ -14,17 +14,6 @@ describe('appearanceGroups (ui-theme: "Appearance control")', () => {
   it('explains what each transparency option does', () => {
     const [, transparency] = appearanceGroups();
     expect(transparency?.options.find((o) => o.value === 'reduced')?.hint).toMatch(/opaque/i);
-  });
-});
-
-describe('appearanceTriggerLabel (ui-theme: "Change theme from the control")', () => {
-  it('announces the current choice of each group', () => {
-    expect(appearanceTriggerLabel(DEFAULT_APPEARANCE_CHOICE)).toBe(
-      'Appearance: theme System, transparency System',
-    );
-    expect(appearanceTriggerLabel({ theme: 'dark', transparency: 'reduced' })).toBe(
-      'Appearance: theme Dark, transparency Reduced',
-    );
   });
 });
 

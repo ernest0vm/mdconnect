@@ -11,7 +11,6 @@ import {
 } from '@mdconnect/ui/components/glassyui/glass-dialog';
 import { GlassInput } from '@mdconnect/ui/components/glassyui/glass-input';
 import { GlassMeter } from '@mdconnect/ui/components/glassyui/glass-meter';
-import { ONLINE_ENCODER_ORIGIN } from '@mdconnect/core';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import type { Encoder, RecordingMode } from './convert-track';
@@ -20,11 +19,14 @@ import { baseName, titleFromSource, type TitleSource } from './title-source';
 import type { UploadPreferences } from './upload-preferences';
 import {
   audioFiles,
+  ENCODER_LABELS,
+  ENCODERS,
   fitView,
   formatSeconds,
   initialMode,
   MODE_LABELS,
   moveItem,
+  ONLINE_ENCODER_HOST,
   removeItem,
   retitle,
   skipReasonText,
@@ -45,13 +47,12 @@ export interface ConvertDialogProps {
   readonly modes: readonly RecordingMode[];
   readonly preferences: UploadPreferences;
   readonly onUpload: (job: UploadJob) => void;
-  /** Called when the user agrees to the online encoder, so the consent is kept. */
+  /** Saves a shared choice made in the dialog: consent to the online encoder, Full-width titles. */
   readonly onPreferences: (preferences: UploadPreferences) => void;
   readonly onClose: () => void;
   readonly load?: (file: File) => Promise<LoadedItem>;
 }
 
-const ONLINE_HOST = new URL(ONLINE_ENCODER_ORIGIN).host;
 const radioClass =
   'size-4 shrink-0 cursor-pointer accent-indigo-600 dark:accent-indigo-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600';
 
@@ -125,7 +126,8 @@ export function ConvertDialog({
   const [mode, setMode] = useState<RecordingMode>(() => initialMode(preferences.mode, modes));
   const [encoder, setEncoder] = useState<Encoder>(preferences.encoder);
   const [titleSource, setTitleSource] = useState<TitleSource>(preferences.titleSource);
-  const [fullWidth, setFullWidth] = useState(preferences.fullWidth);
+  // Shared with Settings and the rename dialogs, so it follows changes made elsewhere.
+  const { fullWidth } = preferences;
   const [replayGain, setReplayGain] = useState(preferences.replayGain);
   const [askConsent, setAskConsent] = useState(false);
   const [rejected, setRejected] = useState<readonly string[]>([]);
@@ -215,10 +217,7 @@ export function ConvertDialog({
                 legend="LP encoder"
                 name={`${id}-encoder`}
                 value={encoder}
-                options={[
-                  { value: 'built-in', label: 'Built-in, offline' },
-                  { value: 'online', label: "Sony's encoder, online" },
-                ]}
+                options={ENCODERS.map((value) => ({ value, label: ENCODER_LABELS[value] }))}
                 onChange={(value) => {
                   setEncoder(value);
                   setAskConsent(false);
@@ -227,7 +226,7 @@ export function ConvertDialog({
               <p className="text-xs opacity-80">
                 {encoder === 'built-in'
                   ? "The built-in encoder works offline, but its quality is lower than Sony's."
-                  : `Your audio files are sent to ${ONLINE_HOST} to be encoded.`}
+                  : `Your audio files are sent to ${ONLINE_ENCODER_HOST} to be encoded.`}
               </p>
             </div>
           )}
@@ -258,7 +257,7 @@ export function ConvertDialog({
               <GlassCheckbox
                 checked={fullWidth}
                 onChange={() => {
-                  setFullWidth((value) => !value);
+                  onPreferences({ ...preferences, fullWidth: !fullWidth });
                 }}
               />
               Full-width titles
@@ -417,11 +416,11 @@ export function ConvertDialog({
           </div>
 
           {consentPending && (
-            <GlassAlert tone="info" title={`Send your files to ${ONLINE_HOST}?`}>
+            <GlassAlert tone="info" title={`Send your files to ${ONLINE_ENCODER_HOST}?`}>
               <p>
-                Sony's encoder runs on {ONLINE_HOST}, a service run by MiniDisc enthusiasts. Your{' '}
-                {sentCount === 1 ? 'file is' : `${String(sentCount)} files are`} uploaded there,
-                encoded and sent back. Nothing else leaves your computer.
+                Sony's encoder runs on {ONLINE_ENCODER_HOST}, a service run by MiniDisc enthusiasts.
+                Your {sentCount === 1 ? 'file is' : `${String(sentCount)} files are`} uploaded
+                there, encoded and sent back. Nothing else leaves your computer.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <GlassButton

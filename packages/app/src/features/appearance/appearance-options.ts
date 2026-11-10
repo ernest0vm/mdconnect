@@ -40,20 +40,12 @@ const TRANSPARENCY: readonly AppearanceOption<TransparencyOption>[] = [
   { value: 'glass', label: 'Glass', hint: 'Translucent glass panels.' },
 ];
 
-/** The two choice groups of the Appearance dialog, in display order. */
+/** The two choice groups of the Appearance section, in display order. */
 export function appearanceGroups(): readonly AppearanceGroup[] {
   return [
     { field: 'theme', legend: 'Theme', options: THEME },
     { field: 'transparency', legend: 'Transparency', options: TRANSPARENCY },
   ];
-}
-
-const labelOf = <V extends string>(options: readonly AppearanceOption<V>[], value: V) =>
-  options.find((o) => o.value === value)?.label ?? value;
-
-/** Accessible name of the Appearance trigger, naming the current choice of each group. */
-export function appearanceTriggerLabel(choice: AppearanceChoice): string {
-  return `Appearance: theme ${labelOf(THEME, choice.theme)}, transparency ${labelOf(TRANSPARENCY, choice.transparency)}`;
 }
 
 const isOneOf = <T extends string>(options: readonly T[], value: string): value is T =>
