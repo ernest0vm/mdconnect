@@ -15,7 +15,7 @@ import { ONLINE_ENCODER_ORIGIN } from '@mdconnect/core';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import type { Encoder, RecordingMode } from './convert-track';
-import { loadItemSafely, type LoadedItem } from './item-loader';
+import { loadItem, loadItemSafely, type LoadedItem } from './item-loader';
 import { baseName, titleFromSource, type TitleSource } from './title-source';
 import type { UploadPreferences } from './upload-preferences';
 import {
@@ -119,7 +119,7 @@ export function ConvertDialog({
   onUpload,
   onPreferences,
   onClose,
-  load = loadItemSafely,
+  load = loadItem,
 }: ConvertDialogProps) {
   const [items, setItems] = useState<readonly ConvertItem[]>(() => files.map(newItem));
   const [mode, setMode] = useState<RecordingMode>(() => initialMode(preferences.mode, modes));
@@ -140,7 +140,8 @@ export function ConvertDialog({
     for (const item of items) {
       if (item.tags !== null || loading.current.has(item.id)) continue;
       loading.current.add(item.id);
-      void load(item.file).then((loaded) => {
+      // Any loader, the default or one passed in, ends with a result: a failure marks the file.
+      void loadItemSafely(item.file, load).then((loaded) => {
         setItems((current) =>
           current.map((entry) =>
             entry.id !== item.id
