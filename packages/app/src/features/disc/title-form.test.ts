@@ -1,7 +1,7 @@
 import { FRAMES_PER_SECOND, type Disc, type Track } from '@mdconnect/netmd';
 import { describe, expect, it } from 'vitest';
 
-import { titleForm } from './title-form';
+import { currentTitles, titleForm } from './title-form';
 
 function track(index: number, title = ''): Track {
   return {
@@ -105,6 +105,29 @@ describe('titleForm', () => {
     );
     expect(form.halfWidthChanged).toBe(false);
     expect(form.fullWidthChanged).toBe(false);
+  });
+
+  it('keeps the stored full-width title when the dialog hides its field (app-settings: "Turned off")', () => {
+    const named = disc([{ ...track(0, 'Yoake'), fullWidthTitle: '夜明け' }]);
+    const target = { kind: 'track', index: 0 } as const;
+    // With Full-width titles off, only the half-width field is edited.
+    const input = { ...currentTitles(named, target), halfWidth: 'Dawn' };
+    const form = titleForm(named, target, input);
+    expect(form.halfWidthChanged).toBe(true);
+    expect(form.fullWidthChanged).toBe(false);
+    expect(form.fullWidth).toBe('夜明け');
+  });
+
+  it('leaves a stored full-width title that sanitising would change when its field is hidden', () => {
+    // ASCII in a stored full-width title is remapped to full-width forms when sanitised.
+    const named = disc([{ ...track(0, 'Dawn'), fullWidthTitle: 'Dawn 2' }]);
+    const target = { kind: 'track', index: 0 } as const;
+    const input = { ...currentTitles(named, target), halfWidth: 'Dusk' };
+    expect(titleForm(named, target, input).fullWidthChanged).toBe(true);
+    const hidden = titleForm(named, target, input, { editFullWidth: false });
+    expect(hidden.fullWidthChanged).toBe(false);
+    expect(hidden.fullWidth).toBe('Dawn 2');
+    expect(hidden.halfWidthChanged).toBe(true);
   });
 
   it('removes slashes that would read as the group delimiter from disc and group titles', () => {

@@ -18,7 +18,8 @@ export const UPLOAD_PREFERENCES_KEY = 'mdconnect.upload';
 export const DEFAULT_UPLOAD_PREFERENCES: UploadPreferences = {
   mode: 'sp',
   titleSource: 'file',
-  fullWidth: false,
+  // The rename dialogs showed a full-width field before it became a setting, so it stays on.
+  fullWidth: true,
   replayGain: false,
   encoder: 'built-in',
   onlineConsent: false,
@@ -65,10 +66,44 @@ export interface UploadPreferencesStore {
   load(): UploadPreferences;
   /** False when the browser refuses to store them (private browsing, blocked storage). */
   save(preferences: UploadPreferences): boolean;
+  /** Reports preferences saved by another tab of the same app. */
+  subscribe(listener: (preferences: UploadPreferences) => void): () => void;
+}
+
+/** The preferences without the online-encoder consent, so the next online upload asks again. */
+export const withdrawConsent = (preferences: UploadPreferences): UploadPreferences => ({
+  ...preferences,
+  onlineConsent: false,
+});
+
+export interface ConsentGuard {
+  /** Records a change this tab saved, and whether the browser stored it. */
+  afterSave(previous: UploadPreferences, next: UploadPreferences, stored: boolean): void;
+  /**
+   * Preferences saved by another tab, as this tab applies them. A withdrawal this tab could not
+   * store stays in effect, so another tab's stored consent cannot bring it back.
+   */
+  fromOtherTab(incoming: UploadPreferences): UploadPreferences;
+}
+
+/** Keeps a consent withdrawal the browser refused to store in effect for this tab. */
+export function createConsentGuard(): ConsentGuard {
+  let withdrawalUnsaved = false;
+  return {
+    afterSave(previous, next, stored) {
+      // Consenting again, or a stored withdrawal, ends the need to override other tabs.
+      if (next.onlineConsent || stored) withdrawalUnsaved = false;
+      else if (previous.onlineConsent) withdrawalUnsaved = true;
+    },
+    fromOtherTab: (incoming) => (withdrawalUnsaved ? withdrawConsent(incoming) : incoming),
+  };
 }
 
 /** Keeps upload preferences in `localStorage`, like the Appearance choice. */
-export function createUploadPreferencesStore(storage: StorageLike | null): UploadPreferencesStore {
+export function createUploadPreferencesStore(
+  storage: StorageLike | null,
+  events: EventTarget | null = null,
+): UploadPreferencesStore {
   return {
     load() {
       try {
@@ -85,6 +120,18 @@ export function createUploadPreferencesStore(storage: StorageLike | null): Uploa
       } catch {
         return false;
       }
+    },
+    subscribe(listener) {
+      if (events === null) return () => undefined;
+      const onStorage = (event: Event) => {
+        const { key, newValue } = event as Partial<StorageEvent>;
+        // A null key means another tab cleared the whole storage.
+        if (key === UPLOAD_PREFERENCES_KEY || key === null) listener(parse(newValue ?? null));
+      };
+      events.addEventListener('storage', onStorage);
+      return () => {
+        events.removeEventListener('storage', onStorage);
+      };
     },
   };
 }
