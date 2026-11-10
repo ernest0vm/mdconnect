@@ -1,0 +1,207 @@
+{
+  "device": "Sony MZ-N510/N610 (054c:00c9)",
+  "recorded": "2026-11-10, desktop app (Electron) on macOS 27, one upload each: a 2-second SP track and a 3-second LP2 track encoded by the built-in encoder",
+  "note": "Only the upload session is kept, from forgetting an old session key to releasing the device. The leaf ID is replaced (it identifies the device). Bulk transfers keep their length only: the audio is encrypted with a random data key, so its bytes cannot be replayed.",
+  "uploads": {
+    "sp": [
+      {
+        "command": "001800080046f003010321ff000000",
+        "replies": ["091800080046f00301032100000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010381ff",
+        "replies": ["091800080046f00301038100"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "00ff010cffffffffffffffffffffffff",
+        "replies": ["09ff010cffffffffffffffffffffffff"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f00301032bff0001",
+        "replies": ["091800080046f00301032b000001"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010380ff",
+        "replies": ["091800080046f00301038000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010311ff",
+        "replies": ["091800080046f003010311000102030405060708"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010312ff004800000048000000020000000926422642000000002545064deaca14f996bdc8a406c22b81fb60bddd0dbcab848a005e03194d3eda8f2bc352e86c5ed306dcae18d2f38c7f89b5e18555a105ea",
+        "replies": ["091800080046f00301031201004800000048"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010320ff000000e683a4c5d48c5e2b",
+        "replies": ["091800080046f00301032000000000e3dc7665a99cafbf"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010322ff00007195d101725316a7a03dad51c78fef52e397d3360428c0bb84d22c45782bb638",
+        "replies": ["091800080046f003010322000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010328ff0001001001ffff000006000000ad00056818",
+        "replies": [
+          "0f1800080046f0030103280000010010010001000006000000ad00056818",
+          "091800080046f003010328000001001001003c000006000000ad0005681830ff2116e754b94e14c53aa0075e9ca74584adfaa298bcfe1722d9fee32f7695"
+        ],
+        "bulkBytes": 354328
+      },
+      {
+        "command": "0018081018020100",
+        "replies": ["0918081018020100"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "00180602201802003c30000a00ff0000000000",
+        "replies": ["0a180602201802003c30000a00ff0000000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "0018081018020300",
+        "replies": ["0918081018020300"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "00180702201802003c30000a0050000011000000006d64636f6e6e6563742053502074657374",
+        "replies": ["09180702201802003c30000a005000001100000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "0018081018020000",
+        "replies": ["0918081018020000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010348ff001001003c762553042b0dab55",
+        "replies": ["091800080046f00301034800001001003c"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010321ff000000",
+        "replies": ["091800080046f00301032100000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010381ff",
+        "replies": ["091800080046f00301038100"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "00ff0100ffffffffffffffffffffffff",
+        "replies": ["09ff0100ffffffffffffffffffffffff"],
+        "bulkBytes": 0
+      }
+    ],
+    "lp2": [
+      {
+        "command": "001800080046f003010321ff000000",
+        "replies": ["091800080046f00301032100000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010381ff",
+        "replies": ["091800080046f00301038100"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "00ff010cffffffffffffffffffffffff",
+        "replies": ["09ff010cffffffffffffffffffffffff"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f00301032bff0001",
+        "replies": ["091800080046f00301032b000001"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010380ff",
+        "replies": ["091800080046f00301038000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010311ff",
+        "replies": ["091800080046f003010311000102030405060708"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010312ff004800000048000000020000000926422642000000002545064deaca14f996bdc8a406c22b81fb60bddd0dbcab848a005e03194d3eda8f2bc352e86c5ed306dcae18d2f38c7f89b5e18555a105ea",
+        "replies": ["091800080046f00301031201004800000048"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010320ff0000005e3644931f2d34f7",
+        "replies": ["091800080046f0030103200000000000e119072f149b4a"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010322ff00008698b6196b50e416e6f36b2688dc1121bbb67c1473b7996c50cac8929ad32e9d",
+        "replies": ["091800080046f003010322000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010328ff0001001001ffff009402000001060000c498",
+        "replies": [
+          "0f1800080046f003010328000001001001003d009402000001060000c498",
+          "091800080046f003010328000001001001003d009402000001060000c498916184232d2cb977b2b25d9b4f248ed3b0a91be656621ec36352734428010a7b"
+        ],
+        "bulkBytes": 50328
+      },
+      {
+        "command": "0018081018020100",
+        "replies": ["0918081018020100"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "00180602201802003d30000a00ff0000000000",
+        "replies": ["0a180602201802003d30000a00ff0000000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "0018081018020300",
+        "replies": ["0918081018020300"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "00180702201802003d30000a0050000012000000006d64636f6e6e656374204c50322074657374",
+        "replies": ["09180702201802003d30000a005000001200000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "0018081018020000",
+        "replies": ["0918081018020000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010348ff001001003ddcf0f57323e18e9c",
+        "replies": ["091800080046f00301034800001001003d"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010321ff000000",
+        "replies": ["091800080046f00301032100000000"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "001800080046f003010381ff",
+        "replies": ["091800080046f00301038100"],
+        "bulkBytes": 0
+      },
+      {
+        "command": "00ff0100ffffffffffffffffffffffff",
+        "replies": ["09ff0100ffffffffffffffffffffffff"],
+        "bulkBytes": 0
+      }
+    ]
+  }
+}
