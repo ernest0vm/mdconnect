@@ -1,0 +1,781 @@
+{
+  "device": "Sony MZ-NE410/NF520D (054c:00ca)",
+  "recorded": "2026-11-09, desktop app (Electron) on macOS 27.0.1, 37 LP2 tracks, no groups before the edits",
+  "note": "Only the edit commands are kept; the read that follows each edit is in mz-ne410-refresh-lp2.json. Letters in every half-width disc and track title are replaced with x (same byte length). The device accepted every command; the disc did not keep the changes after unplugging (see issue #8).",
+  "edits": [
+    {
+      "edit": "Rename of track 14 from \"xx xxxx  xx xxx\" to \"xx xxxxx xx xxx\" (half-width only)",
+      "transfers": [
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018020100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018020100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "00180602201802000d30000a00ff0000000000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01812800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 40,
+          "data": "09180602201802000d30000a001000001500000013000a000f787820787878782020787820787878"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018020000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018020000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018020300"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018020300"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "00180702201802000d30000a005000000f0000000f787820787878787820787820787878"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01811500"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 21,
+          "data": "09180702201802000d30000a005000000f0000000f"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018020000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018020000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        }
+      ]
+    },
+    {
+      "edit": "Move up of track 16 to position 15 (moveTrack 15 -> 14), then the group rewrite, which leaves both unchanged disc titles alone",
+      "transfers": [
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "001843ff0000201001000f201001000e"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01811000"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 16,
+          "data": "091843000000201001000f201001000e"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081010010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081010010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "00180602201801000030000a00ff0000000000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01815200"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 82,
+          "data": "09180602201801000030000a001000003f0000003d000a003978787878787878782f7878787878782e78787878787878782e2f787878787878782e78787878782e2d7878787827782e787878787878787878"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081010010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081010010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081010010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081010010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "00180602201801000130000a00ff0000000000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01811900"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 25,
+          "data": "09180602201801000130000a001000000600000004000a0000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081010010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081010010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        }
+      ]
+    },
+    {
+      "edit": "Grouping tracks 1 and 2 as \"xxxx xxxxx\": the half-width disc title is rewritten, the empty full-width title is left alone",
+      "transfers": [
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081010010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081010010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "00180602201801000030000a00ff0000000000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01815200"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 82,
+          "data": "09180602201801000030000a001000003f0000003d000a003978787878787878782f7878787878782e78787878787878782e2f787878787878782e78787878782e2d7878787827782e787878787878787878"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081010010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081010010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010300"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010300"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "00180702201801000030000a005000004d00000039303b78787878787878782f7878787878782e78787878787878782e2f787878787878782e78787878782e2d7878787827782e7878787878787878782f2f312d323b787878782078787878782f2f"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01811500"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 21,
+          "data": "09180702201801000030000a005000004d00000039"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081010010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081010010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010100"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "00180602201801000130000a00ff0000000000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01811900"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 25,
+          "data": "09180602201801000130000a001000000600000004000a0000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081018010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        },
+        {
+          "dir": "out",
+          "request": 128,
+          "data": "0018081010010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "01810800"
+        },
+        {
+          "dir": "in",
+          "request": 129,
+          "length": 8,
+          "data": "0918081010010000"
+        },
+        {
+          "dir": "in",
+          "request": 1,
+          "length": 4,
+          "data": "00000000"
+        }
+      ]
+    }
+  ]
+}

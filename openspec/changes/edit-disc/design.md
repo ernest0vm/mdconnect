@@ -121,4 +121,5 @@ None.
 
 ## Open Questions
 
-- Whether the MZ-NE410 needs the TOC flushed explicitly before unplugging, or a stop is enough. To be checked during hardware verification. It only affects the wording of the notice in the screen.
+- What makes a device write the TOC after a NetMD session. Guides for webminidisc say Stop or unplugging. The MZ-NE410 tested here stayed in "Edit" after Stop and a USB reset, and lost every change after unplugging, including one made with webminidisc, so that device's TOC write looks faulty. To be confirmed with another device (#8). It only affects the wording of the notice and whether the app should end the session itself.
+- Why the MZ-NE410 rejected an erase after other edits in the same session, but accepted one in a fresh session. The app already shows the refusal and reads the disc again, so this does not block the change.
