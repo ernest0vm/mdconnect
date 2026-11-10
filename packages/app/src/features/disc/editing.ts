@@ -1,7 +1,5 @@
-import { TrackFlag, type Disc } from '@mdconnect/netmd';
-
 import type { EditOutcome } from './disc-reader';
-import type { EditPlan, GroupTracksResult } from './edit-plan';
+import type { GroupTracksResult } from './edit-plan';
 
 export type Selection = ReadonlySet<number>;
 
@@ -53,27 +51,8 @@ export function groupBlocker(reason: GroupProblem): string {
 
 type FailureReason = Extract<EditOutcome, { kind: 'failed' }>['reason'];
 
-/**
- * Whether a plan erases a track marked as protected. Tracks transferred with SonicStage carry
- * this mark, and devices may refuse to erase them over USB.
- */
-export function erasesProtectedTracks(plan: EditPlan, disc: Disc): boolean {
-  const protectedTracks = new Set(
-    disc.groups
-      .flatMap((g) => g.tracks)
-      .filter((t) => t.flags === PROTECTED)
-      .map((t) => t.index),
-  );
-  return plan.commands.some((c) => c.kind === 'eraseTrack' && protectedTracks.has(c.track));
-}
-
-const PROTECTED: number = TrackFlag.protected;
-
-export function editFailureMessage(reason: FailureReason, erasedProtected: boolean): string {
-  if (reason === 'failed') {
-    return 'The device stopped answering while the change was saved. The disc is shown as the device reports it; check it before trying again.';
-  }
-  return erasedProtected
-    ? 'The device refused to erase these tracks. They are marked as protected, as tracks transferred with SonicStage are, and this device does not let them be erased over USB.'
-    : 'The device refused the change, so it could not be saved. The disc is shown as the device reports it.';
+export function editFailureMessage(reason: FailureReason): string {
+  return reason === 'rejected'
+    ? 'The device refused the change, so it could not be saved. The disc is shown as the device reports it.'
+    : 'The device stopped answering while the change was saved. The disc is shown as the device reports it; check it before trying again.';
 }
