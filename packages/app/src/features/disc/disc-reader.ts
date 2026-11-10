@@ -8,11 +8,14 @@ import {
   renameDisc,
   rewriteDiscGroups,
   NetMdNotImplementedError,
+  operatingStateOf,
+  UploadSession,
   type DeviceStatus,
   type Disc,
 } from '@mdconnect/netmd';
 
 import type { UsbDeviceHandle } from '../../platform';
+import type { UploadPort, UploadSummary } from '../upload/upload-pipeline';
 import { toDiscView, type DiscView } from './disc-view';
 import type { EditCommand, EditPlan } from './edit-plan';
 
@@ -28,6 +31,8 @@ export interface DiscSession {
   deviceStatus(): Promise<DeviceStatus>;
   /** Ends the session with the device, as netmd-js `finalize` does: reset, release, close. */
   end?(): Promise<void>;
+  /** A secure upload session on this device; absent where uploads are not possible. */
+  uploadSession?(): UploadPort;
 }
 
 /** A playback control. Unlike an edit, it does not change the disc, so the disc is not read again. */
@@ -81,6 +86,16 @@ export interface EditResult {
   readonly result: DiscReadResult;
 }
 
+/** `failed`: the session could not be opened, so nothing was uploaded. */
+export type UploadOutcome =
+  { readonly kind: 'done'; readonly summary: UploadSummary } | { readonly kind: 'failed' };
+
+export interface UploadResult {
+  readonly outcome: UploadOutcome;
+  /** The disc as read after the upload. */
+  readonly result: DiscReadResult;
+}
+
 /** Opens a NetMD session on a connected device: claims its interface and drains stale replies. */
 export async function openNetMdSession(handle: UsbDeviceHandle): Promise<DiscSession> {
   const transport = new NetMdTransport(handle);
@@ -106,6 +121,13 @@ export async function openNetMdSession(handle: UsbDeviceHandle): Promise<DiscSes
     },
     playback: (command) => runPlayback(md, command),
     deviceStatus: () => getDeviceStatus(md),
+    uploadSession: () =>
+      new UploadSession(md, {
+        vendorId: handle.vendorId,
+        productId: handle.productId,
+        operatingState: operatingStateOf(md),
+        random: (length) => crypto.getRandomValues(new Uint8Array(length)),
+      }),
   };
 }
 
@@ -311,6 +333,50 @@ export class DiscReader {
     });
     this.inFlight = this.share(done.then(({ result }) => result));
     return done;
+  }
+
+  /**
+   * Uploads tracks as one queued step: stops playback, runs `upload` on the device's upload
+   * session, then reads the disc again. Status polls, edits and reads wait for all of it.
+   */
+  upload(upload: (session: UploadPort) => Promise<UploadSummary>): Promise<UploadResult> {
+    const done = this.exclusive(async () => {
+      const outcome = await this.runUpload(upload);
+      return { outcome, result: await this.readOnce() };
+    });
+    this.inFlight = this.share(done.then(({ result }) => result));
+    return done;
+  }
+
+  private async runUpload(
+    upload: (session: UploadPort) => Promise<UploadSummary>,
+  ): Promise<UploadOutcome> {
+    let session: DiscSession;
+    try {
+      this.session ??= this.openNewSession();
+      session = await this.session;
+    } catch {
+      this.session = null;
+      return { kind: 'failed' };
+    }
+    const port = session.uploadSession?.();
+    if (port === undefined) return { kind: 'failed' };
+    try {
+      await session.playback({ kind: 'stop' });
+    } catch {
+      // A device that refuses to stop is not playing.
+    }
+    let summary: UploadSummary;
+    try {
+      summary = await upload(port);
+    } catch {
+      // The upload broke off unexpectedly; the read after it shows what reached the disc.
+      this.session = null;
+      return { kind: 'failed' };
+    }
+    // Reopen before reading again: initialising the transport drains a stale reply.
+    if (summary.failure !== null) this.session = null;
+    return { kind: 'done', summary };
   }
 
   /** Makes a read the one later read() calls share until it settles. */

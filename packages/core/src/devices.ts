@@ -14,19 +14,33 @@ export interface SupportedDevice {
   readonly productId: number;
   readonly name: string;
   readonly kind: DeviceKind;
+  /** The deck records SP mono from a stereo upload by itself (netmd-js `nativeMonoUpload`). */
+  readonly nativeMonoUpload?: true;
 }
 
 export const SUPPORTED_DEVICES: readonly SupportedDevice[] = [
   // netmd-js 4.4.1
   { vendorId: 0x04dd, productId: 0x7202, name: 'Sharp IM-MT899H', kind: 'netmd' },
   { vendorId: 0x04dd, productId: 0x9013, name: 'Sharp IM-DR400', kind: 'netmd' },
-  { vendorId: 0x04dd, productId: 0x9014, name: 'Sharp IM-DR80', kind: 'netmd' },
+  {
+    vendorId: 0x04dd,
+    productId: 0x9014,
+    name: 'Sharp IM-DR80',
+    kind: 'netmd',
+    nativeMonoUpload: true,
+  },
   { vendorId: 0x054c, productId: 0x0034, name: 'Sony PCLK-XX', kind: 'netmd' },
   { vendorId: 0x054c, productId: 0x0036, name: 'Sony', kind: 'netmd' },
   { vendorId: 0x054c, productId: 0x0075, name: 'Sony MZ-N1', kind: 'netmd' },
   { vendorId: 0x054c, productId: 0x007c, name: 'Sony', kind: 'netmd' },
   { vendorId: 0x054c, productId: 0x0080, name: 'Sony LAM-1', kind: 'netmd' },
-  { vendorId: 0x054c, productId: 0x0081, name: 'Sony MDS-JB980/MDS-NT1/MDS-JE780', kind: 'netmd' },
+  {
+    vendorId: 0x054c,
+    productId: 0x0081,
+    name: 'Sony MDS-JB980/MDS-NT1/MDS-JE780',
+    kind: 'netmd',
+    nativeMonoUpload: true,
+  },
   { vendorId: 0x054c, productId: 0x0084, name: 'Sony MZ-N505', kind: 'netmd' },
   { vendorId: 0x054c, productId: 0x0085, name: 'Sony MZ-S1', kind: 'netmd' },
   { vendorId: 0x054c, productId: 0x0086, name: 'Sony MZ-N707', kind: 'netmd' },
@@ -62,8 +76,20 @@ export const SUPPORTED_DEVICES: readonly SupportedDevice[] = [
   { vendorId: 0x054c, productId: 0x011a, name: 'Sony CMT-SE7', kind: 'netmd' },
   { vendorId: 0x054c, productId: 0x0148, name: 'Sony MDS-A1', kind: 'netmd' },
   { vendorId: 0x0b28, productId: 0x1004, name: 'Kenwood MDX-J9', kind: 'netmd' },
-  { vendorId: 0x04da, productId: 0x23b3, name: 'Panasonic SJ-MR250', kind: 'netmd' },
-  { vendorId: 0x04da, productId: 0x23b6, name: 'Panasonic SJ-MR270', kind: 'netmd' },
+  {
+    vendorId: 0x04da,
+    productId: 0x23b3,
+    name: 'Panasonic SJ-MR250',
+    kind: 'netmd',
+    nativeMonoUpload: true,
+  },
+  {
+    vendorId: 0x04da,
+    productId: 0x23b6,
+    name: 'Panasonic SJ-MR270',
+    kind: 'netmd',
+    nativeMonoUpload: true,
+  },
   { vendorId: 0x0411, productId: 0x0083, name: 'Buffalo MD-HUSB', kind: 'netmd' },
   // himd-js 0.2.15 (Hi-MD mode: USB mass storage)
   { vendorId: 0x5341, productId: 0x5256, name: 'Exploit-Unrestricted', kind: 'himd' },

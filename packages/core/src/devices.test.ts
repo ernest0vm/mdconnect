@@ -14,6 +14,20 @@ describe('SUPPORTED_DEVICES', () => {
   });
 });
 
+describe('native mono upload', () => {
+  it('is flagged on exactly the decks netmd-js marks (track-upload: "Deck with native mono")', () => {
+    const flagged = SUPPORTED_DEVICES.filter((d) => d.nativeMonoUpload === true).map(
+      (d) =>
+        `${d.vendorId.toString(16).padStart(4, '0')}:${d.productId.toString(16).padStart(4, '0')}`,
+    );
+    expect(flagged).toEqual(['04dd:9014', '054c:0081', '04da:23b3', '04da:23b6']);
+  });
+
+  it('is not flagged on the MZ-NE410 (track-upload: "Deck without native mono")', () => {
+    expect(findDevice(SONY, 0x00ca)?.nativeMonoUpload).toBeUndefined();
+  });
+});
+
 describe('findDevice', () => {
   it('identifies an MZ-RH1 in NetMD mode', () => {
     expect(findDevice(SONY, 0x0286)).toMatchObject({ name: 'Sony MZ-RH1', kind: 'netmd' });

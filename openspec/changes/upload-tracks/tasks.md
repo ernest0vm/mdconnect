@@ -53,39 +53,39 @@
 
 ## 4. Devices and network policy (`packages/core`, `apps/web`)
 
-- [ ] 4.1 Add `nativeMonoUpload` to the device table for `04dd:9014`, `054c:0081`, `04da:23b3` and `04da:23b6`. Verify with a test listing exactly those devices (track-upload: "Deck without native mono", "Deck with native mono").
-- [ ] 4.2 Add `https://atrac.minidisc.wiki` to the shared CSP `connect-src` and to `apps/web/vercel.json`. Verify with the CSP tests and the vercel-config equality test (desktop-shell: "Encoding service allowed", "Other origins blocked").
+- [x] 4.1 Add `nativeMonoUpload` to the device table for `04dd:9014`, `054c:0081`, `04da:23b3` and `04da:23b6`. Verify with a test listing exactly those devices (track-upload: "Deck without native mono", "Deck with native mono").
+- [x] 4.2 Add `https://atrac.minidisc.wiki` to the shared CSP `connect-src` and to `apps/web/vercel.json`. Verify with the CSP tests and the vercel-config equality test (desktop-shell: "Encoding service allowed", "Other origins blocked").
 
 ## 5. Audio files (`packages/app`)
 
-- [ ] 5.1 Add `music-metadata`, pinned to the newest version that passes the age gate, and `readTags(file)` for title, artist, album, duration and track gain. Verify with tests on small tagged MP3, FLAC and M4A fixtures.
-- [ ] 5.2 Add `titleFromSource(tags, fileName, source)` for the six sources. Verify with tests (track-upload: "Title from file name", "Title from tags", "Missing tag").
-- [ ] 5.3 Add `atrac-file.ts`, which recognises ATRAC3 WAV (`0x0270` and `0xFFFE`) and OMA files, their mode from the block align or the bitrate, and encrypted OMA. Verify with header fixtures (audio-conversion: "LP4 ATRAC3 WAV", "LP105 file", "Encrypted OMA").
-- [ ] 5.4 Add `decode.ts`: Web Audio decoding to 44.1 kHz stereo, ReplayGain with a peak cap, and 16-bit big-endian interleaving. Keep the sample conversion and gain as pure functions with unit tests. Verify in the browser with an MP3, a FLAC, a 48 kHz mono WAV and a 5.1 file (audio-conversion: "Decode an MP3", "Unsupported format", "Apply track gain", "No tag").
+- [x] 5.1 Add `music-metadata`, pinned to the newest version that passes the age gate, and `readTags(file)` for title, artist, album, duration and track gain. Verify with tests on small tagged MP3, FLAC and M4A fixtures.
+- [x] 5.2 Add `titleFromSource(tags, fileName, source)` for the six sources. Verify with tests (track-upload: "Title from file name", "Title from tags", "Missing tag").
+- [x] 5.3 Add `atrac-file.ts`, which recognises ATRAC3 WAV (`0x0270` and `0xFFFE`) and OMA files, their mode from the block align or the bitrate, and encrypted OMA. Verify with header fixtures (audio-conversion: "LP4 ATRAC3 WAV", "LP105 file", "Encrypted OMA").
+- [x] 5.4 Add `decode.ts`: Web Audio decoding to 44.1 kHz stereo, ReplayGain with a peak cap, and 16-bit big-endian interleaving. Keep the sample conversion and gain as pure functions with unit tests. Verify in the browser with an MP3, a FLAC, a 48 kHz mono WAV and a 5.1 file (audio-conversion: "Decode an MP3", "Unsupported format", "Apply track gain", "No tag").
 
-## 6. LP encoders (`packages/app`)
+## 6. LP encoders (`packages/app`) Checked in Chrome on `yarn dev:web`. A 10 s 48 kHz mono WAV decodes to 440,999 samples at 44.1 kHz with left equal to right. Generated M4A (AAC), FLAC and WAV files decode at their length. AIFF is reported as not decodable. Not checked: MP3, because macOS cannot create one, and a 5.1 file.
 
-- [ ] 6.1 Add `packages/app/vendor/atracdenc/`:
+- [x] 6.1 Add `packages/app/vendor/atracdenc/`:
   - a `build.sh` pinning the Emscripten Docker image and the atracdenc and libsndfile commits, with `EXPORT_ES6`, `SINGLE_FILE`, `INVOKE_RUN=0` and `DYNAMIC_EXECUTION=0`;
   - the built `atracdenc.mjs`;
   - the LGPL-2.1 licence;
   - a README with the source links.
 
-  Verify by running `build.sh` and getting the committed file byte for byte. Check that `eval` and `new Function` do not appear in the output. Record atracdenc's ATRAC3 header length in the design's open question.
+  Verify by running `build.sh` and getting the committed file byte for byte. Check that `eval` and `new Function` do not appear in the output. Record atracdenc's ATRAC3 header length in the design's open question. Checked: two runs gave the same SHA-256, and neither `eval(` nor `new Function` appears in the output. Current atracdenc writes raw frames with `--container raw`, so there is no header and the open question is closed.
 
-- [ ] 6.2 Add the built-in encoder: a WAV built from PCM, and an `atracdenc.worker.ts` loaded lazily that returns raw ATRAC3 frames. Verify with a test for the WAV header. Check in the browser that a 10-second file encodes to the expected LP2 and LP4 frame counts (audio-conversion: "Encode LP2 offline").
-- [ ] 6.3 Add the online encoder: the multipart POST, 3 attempts, and the header stripped with `atrac-file.ts`. Inject `fetch`. Verify with tests for:
+- [x] 6.2 Add the built-in encoder: a WAV built from PCM, and an `atracdenc.worker.ts` loaded lazily that returns raw ATRAC3 frames. Verify with a test for the WAV header. Check in the browser that a 10-second file encodes to the expected LP2 and LP4 frame counts (audio-conversion: "Encode LP2 offline"). Checked in Chrome on `yarn dev:web`. A 10 s file encodes to 431 LP2 frames of 384 bytes and 431 LP4 frames of 192 bytes, in about 0.3 s each.
+- [x] 6.3 Add the online encoder: the multipart POST, 3 attempts, and the header stripped with `atrac-file.ts`. Inject `fetch`. Verify with tests for:
   - success;
   - two failures and then success;
   - three failures, giving the skip reason;
   - ReplayGain passed as `applyReplaygain`.
 
-  Check with a real request that CORS allows the web app's origin (audio-conversion: "Service unavailable").
+  Check with a real request that CORS allows the web app's origin (audio-conversion: "Service unavailable"). Checked: a CORS preflight from `https://mdconnect.vercel.app` gets `access-control-allow-origin` back. No audio was sent.
 
 ## 7. Pipeline (`packages/app`)
 
-- [ ] 7.1 Add `fitCheck` for the time in SP units per mode and the remaining title cells, and title shortening in order. Verify with tests (track-upload: "Fits in LP2 but not in SP", "Title space runs out").
-- [ ] 7.2 Add `upload-pipeline.ts` with:
+- [x] 7.1 Add `fitCheck` for the time in SP units per mode and the remaining title cells, and title shortening in order. Verify with tests (track-upload: "Fits in LP2 but not in SP", "Title space runs out").
+- [x] 7.2 Add `upload-pipeline.ts` with:
   - conversion one track ahead;
   - a skip on a conversion error;
   - a stop on a device error;
@@ -95,9 +95,9 @@
 
   Verify with fake-converter and fake-session tests (track-upload: "Cancel during the second track", "A file cannot be decoded", "Device fails mid-upload"; audio-conversion: "Consent declined" at the pipeline level).
 
-- [ ] 7.3 Add `encrypt.worker.ts`, which runs the packet generator a few packets ahead, and wire it into the pipeline. Verify with a test of the backpressure logic, and in the browser that memory stays flat during a long SP upload with the demo device.
-- [ ] 7.4 Add `DiscReader.upload(job)`: one exclusive operation that stops playback, runs the pipeline and reads the disc again. Verify with tests that a status poll waits for it and that playback stops first (track-upload: "Playback stopped").
-- [ ] 7.5 Make the demo device accept uploads: append a track with the given title and length. Verify with a test, so the UI can be checked without hardware.
+- [x] 7.3 ~~Add `encrypt.worker.ts`, which runs the packet generator a few packets ahead.~~ Not needed. DES runs at about 74 MB/s, about 14 µs per 1 KB packet, so `UploadSession` encrypts each packet inline between USB writes (design, decision 3). A worker can still be plugged in through the `packets` option. Checked: `upload-session.test.ts` covers the packet source, and the demo upload test runs the whole path.
+- [x] 7.4 Add `DiscReader.upload(job)`: one exclusive operation that stops playback, runs the pipeline and reads the disc again. Verify with tests that a status poll waits for it and that playback stops first (track-upload: "Playback stopped").
+- [x] 7.5 Make the demo device accept uploads: append a track with the given title and length. Verify with a test, so the UI can be checked without hardware. Done differently: the demo answers the upload commands with synthetic replies, so the transfer and its progress can be tried, but it stores nothing. The disc reads the same afterwards, as with the other demo edits. Checked by `demo-upload.test.ts`.
 
 ## 8. UI (`packages/app`)
 

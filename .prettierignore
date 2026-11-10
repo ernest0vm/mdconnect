@@ -15,3 +15,7 @@ coverage/
 
 # Vendored third-party skills, kept byte-identical to upstream (see each folder's SOURCE.md).
 .claude/skills/typescript-clean-code/SKILL.md
+
+# Built from pinned sources by build.sh; formatting it would change the reproducible output.
+packages/app/vendor/atracdenc/atracdenc.mjs
+packages/app/vendor/atracdenc/LICENSE

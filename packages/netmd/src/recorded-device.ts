@@ -1,3 +1,4 @@
+import { DemoUploads } from './demo-upload';
 import type { NetMdUsbDevice } from './transport';
 
 /** One control transfer as the recorder in the fixtures stores it. */
@@ -33,7 +34,17 @@ const fromHex = (hex: string) =>
  *
  * For development and tests only: it is not a protocol implementation.
  */
-export function recordedDevice(transfers: readonly RecordedTransfer[]): NetMdUsbDevice {
+export interface RecordedDeviceOptions {
+  /** Accept uploads with synthetic replies (see demo-upload.ts), appending after this many tracks. */
+  readonly uploadsAfterTrack?: number;
+}
+
+export function recordedDevice(
+  transfers: readonly RecordedTransfer[],
+  options: RecordedDeviceOptions = {},
+): NetMdUsbDevice {
+  const uploads =
+    options.uploadsAfterTrack === undefined ? null : new DemoUploads(options.uploadsAfterTrack);
   const replies = new Map<string, string>();
   let command: string | null = null;
   for (const transfer of transfers) {
@@ -59,12 +70,20 @@ export function recordedDevice(transfers: readonly RecordedTransfer[]): NetMdUsb
     controlTransferOut: (setup, data) => {
       if (setup.request === REQUEST_SEND) {
         const sent = toHex(data);
-        pending = fromHex(replies.get(sent) ?? STATUS_REJECTED + sent.slice(2));
+        pending = fromHex(
+          replies.get(sent) ?? uploads?.reply(sent) ?? STATUS_REJECTED + sent.slice(2),
+        );
       }
       return Promise.resolve({ status: 'ok' });
     },
-    // The recordings hold no track data, so a bulk write is refused like an unknown command.
-    transferOut: () => Promise.resolve({ status: 'stall' }),
+    // The recordings hold no track data: a bulk write is refused unless uploads are synthetic.
+    transferOut: (_endpoint, data) => {
+      if (uploads === null) return Promise.resolve({ status: 'stall' });
+      const length = data.byteLength;
+      const reply = uploads.bulk(length);
+      if (reply !== undefined) pending = fromHex(reply);
+      return Promise.resolve({ status: 'ok', bytesWritten: length });
+    },
     controlTransferIn: (setup) => {
       let bytes: Uint8Array<ArrayBuffer> = new Uint8Array(4);
       if (setup.request === REQUEST_REPLY_LENGTH && pending !== null) {

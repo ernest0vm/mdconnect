@@ -12,7 +12,14 @@ export { recordedDevice, type RecordedTransfer } from './recorded-device';
 export const DEMO_VENDOR_ID = 0x054c;
 export const DEMO_PRODUCT_ID = 0x00ca;
 
-/** A NetMD device that answers the recorded commands of the demo disc. */
+const DEMO_TRACKS = 60;
+
+/**
+ * A NetMD device that answers the recorded commands of the demo disc. It also takes uploads, with
+ * synthetic replies, so the upload screens can be tried; nothing is stored on the demo disc.
+ */
 export function demoDevice(): NetMdUsbDevice {
-  return recordedDevice(grouped.transfers as RecordedTransfer[]);
+  return recordedDevice(grouped.transfers as RecordedTransfer[], {
+    uploadsAfterTrack: DEMO_TRACKS,
+  });
 }

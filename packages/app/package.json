@@ -17,7 +17,8 @@
   "dependencies": {
     "@mdconnect/core": "workspace:^",
     "@mdconnect/netmd": "workspace:^",
-    "@mdconnect/ui": "workspace:^"
+    "@mdconnect/ui": "workspace:^",
+    "music-metadata": "^12.3.4"
   },
   "devDependencies": {
     "@mdconnect/tsconfig": "workspace:^",
