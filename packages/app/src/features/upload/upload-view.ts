@@ -1,4 +1,4 @@
-import { findDevice } from '@mdconnect/core';
+import { findDevice, ONLINE_ENCODER_ORIGIN } from '@mdconnect/core';
 import {
   remainingTitleSpace,
   sanitizeFullWidthTitle,
@@ -85,10 +85,18 @@ export function addTracksBlocker(state: {
   return null;
 }
 
+/** Every mode mdconnect records, in display order. */
+export const RECORDING_MODES: readonly RecordingMode[] = ['sp', 'spMono', 'lp2', 'lp4'];
+
+export const ENCODERS: readonly Encoder[] = ['built-in', 'online'];
+
+/** The host audio is sent to by the online encoder, as shown to the user. */
+export const ONLINE_ENCODER_HOST = new URL(ONLINE_ENCODER_ORIGIN).host;
+
 /** The recording modes a deck offers: SP mono only where the deck records it natively. */
 export function recordingModes(vendorId: number, productId: number): RecordingMode[] {
   const mono = findDevice(vendorId, productId)?.nativeMonoUpload === true;
-  return mono ? ['sp', 'spMono', 'lp2', 'lp4'] : ['sp', 'lp2', 'lp4'];
+  return RECORDING_MODES.filter((mode) => mono || mode !== 'spMono');
 }
 
 /** The remembered mode when this deck offers it, otherwise SP. */

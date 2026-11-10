@@ -14,8 +14,14 @@ import type { Encoder, RecordingMode } from '../upload/convert-track';
 import type { TitleSource } from '../upload/title-source';
 import { withdrawConsent } from '../upload/upload-preferences';
 import { useUploadPreferences } from '../upload/UploadPreferencesContext';
-import { ENCODER_LABELS, MODE_LABELS, TITLE_SOURCE_LABELS } from '../upload/upload-view';
-import { consentStatus, SETTINGS_ENCODERS, SETTINGS_MODES } from './settings-view';
+import {
+  ENCODER_LABELS,
+  ENCODERS,
+  MODE_LABELS,
+  RECORDING_MODES,
+  TITLE_SOURCE_LABELS,
+} from '../upload/upload-view';
+import { consentStatus } from './settings-view';
 
 const selectClass =
   'rounded-lg border border-[var(--lg-border)] bg-[var(--lg-control-surface)] px-2 py-1.5 text-sm';
@@ -112,7 +118,7 @@ function UploadsSection() {
         label="Recording mode"
         hint="Decks that cannot record SP mono use SP."
         value={preferences.mode}
-        options={SETTINGS_MODES.map((value) => ({ value, label: MODE_LABELS[value] }))}
+        options={RECORDING_MODES.map((value) => ({ value, label: MODE_LABELS[value] }))}
         onChange={(mode) => {
           setPreferences({ ...preferences, mode });
         }}
@@ -131,7 +137,7 @@ function UploadsSection() {
       <Select<Encoder>
         label="LP encoder"
         value={preferences.encoder}
-        options={SETTINGS_ENCODERS.map((value) => ({ value, label: ENCODER_LABELS[value] }))}
+        options={ENCODERS.map((value) => ({ value, label: ENCODER_LABELS[value] }))}
         onChange={(encoder) => {
           setPreferences({ ...preferences, encoder });
         }}
@@ -181,7 +187,6 @@ export function SettingsDialog() {
       </GlassDialogTrigger>
       <GlassDialogContent
         closeLabel="Close"
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
         onOpenAutoFocus={(event) => {
           // Start on the checked Appearance option, as a radio group does, not on the first one.
           const checked = (
@@ -197,7 +202,8 @@ export function SettingsDialog() {
         <GlassDialogDescription className="mt-1 text-sm opacity-80">
           Changes apply right away and are remembered on this device.
         </GlassDialogDescription>
-        <div className="mt-4 flex flex-col gap-6">
+        {/* Only the sections scroll, so the title and the close button stay in view. */}
+        <div className="mt-4 -mr-2 flex max-h-[calc(100dvh-12rem)] flex-col gap-6 overflow-y-auto pr-2">
           <Section title="Appearance">
             <AppearanceSection />
           </Section>

@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_UPLOAD_PREFERENCES } from '../upload/upload-preferences';
-import { initialMode, recordingModes } from '../upload/upload-view';
-import { consentStatus, SETTINGS_MODES } from './settings-view';
+import { initialMode, RECORDING_MODES, recordingModes } from '../upload/upload-view';
+import { consentStatus } from './settings-view';
 
 /** Sony MZ-N510/N610, which has no native mono upload. */
 const N510 = { vendorId: 0x054c, productId: 0x00c9 };
 
 describe('Settings view', () => {
   it('offers every recording mode a deck can record', () => {
-    expect(SETTINGS_MODES).toEqual(['sp', 'spMono', 'lp2', 'lp4']);
+    expect(RECORDING_MODES).toEqual(['sp', 'spMono', 'lp2', 'lp4']);
   });
 
   it('starts the convert dialog in the mode picked in Settings (app-settings: "Default mode from Settings")', () => {

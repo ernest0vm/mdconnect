@@ -97,16 +97,30 @@ function withTitles(disc: Disc, target: TitleTarget, titles: TitleInput): Disc {
   }
 }
 
+export interface TitleFormOptions {
+  /**
+   * False when the dialog hides the full-width field (Full-width titles off): the stored
+   * full-width title is then kept exactly as it is, even where sanitising would change it.
+   */
+  readonly editFullWidth?: boolean;
+}
+
 /** Converts what the user typed, and checks that it fits in the disc's title space. */
-export function titleForm(disc: Disc, target: TitleTarget, input: TitleInput): TitleForm {
+export function titleForm(
+  disc: Disc,
+  target: TitleTarget,
+  input: TitleInput,
+  { editFullWidth = true }: TitleFormOptions = {},
+): TitleForm {
   const inDiscTitle = STORED_IN_DISC_TITLE.has(target.kind);
+  const current = currentTitles(disc, target);
   const halfWidth = inDiscTitle
     ? withoutDelimiters(sanitizeHalfWidthTitle(input.halfWidth), '/')
     : sanitizeHalfWidthTitle(input.halfWidth);
-  const fullWidth = inDiscTitle
+  const sanitizedFullWidth = inDiscTitle
     ? withoutDelimiters(sanitizeFullWidthTitle(input.fullWidth), '／')
     : sanitizeFullWidthTitle(input.fullWidth);
-  const current = currentTitles(disc, target);
+  const fullWidth = editFullWidth ? sanitizedFullWidth : current.fullWidth;
   const changedDisc = withTitles(disc, target, { halfWidth, fullWidth });
   // A track rename leaves the stored disc title field as it is, so measure it as stored; edits
   // that rewrite the field are checked against the compiled field below.

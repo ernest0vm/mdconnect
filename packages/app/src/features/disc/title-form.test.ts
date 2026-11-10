@@ -118,6 +118,18 @@ describe('titleForm', () => {
     expect(form.fullWidth).toBe('夜明け');
   });
 
+  it('leaves a stored full-width title that sanitising would change when its field is hidden', () => {
+    // ASCII in a stored full-width title is remapped to full-width forms when sanitised.
+    const named = disc([{ ...track(0, 'Dawn'), fullWidthTitle: 'Dawn 2' }]);
+    const target = { kind: 'track', index: 0 } as const;
+    const input = { ...currentTitles(named, target), halfWidth: 'Dusk' };
+    expect(titleForm(named, target, input).fullWidthChanged).toBe(true);
+    const hidden = titleForm(named, target, input, { editFullWidth: false });
+    expect(hidden.fullWidthChanged).toBe(false);
+    expect(hidden.fullWidth).toBe('Dawn 2');
+    expect(hidden.halfWidthChanged).toBe(true);
+  });
+
   it('removes slashes that would read as the group delimiter from disc and group titles', () => {
     const form = titleForm(
       disc([track(0)]),

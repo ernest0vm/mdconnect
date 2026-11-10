@@ -71,10 +71,13 @@ export function TitleDialog({
   onSave,
   onClose,
 }: TitleDialogProps) {
-  // With Full-width titles off, the full-width title keeps its current value and is not saved.
+  // With Full-width titles off, the stored full-width title is kept exactly as it is.
   const showFullWidth = useUploadPreferences().preferences.fullWidth;
   const [input, setInput] = useState(() => currentTitles(disc, target));
-  const form = useMemo(() => titleForm(disc, target, input), [disc, target, input]);
+  const form = useMemo(
+    () => titleForm(disc, target, input, { editFullWidth: showFullWidth }),
+    [disc, target, input, showFullWidth],
+  );
   const changed = form.halfWidthChanged || form.fullWidthChanged || target.kind === 'new-group';
   const canSave = form.fits && changed && !form.missingTitle;
 
