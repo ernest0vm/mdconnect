@@ -12,11 +12,21 @@ describe('mainWindowSize (app-layout: "First open", "Resize")', () => {
     });
   });
 
-  it('fits a smaller work area, never below the minimum', () => {
-    expect(mainWindowSize({ width: 1024, height: 700 })).toMatchObject({
+  it('fits a smaller work area', () => {
+    expect(mainWindowSize({ width: 1024, height: 700 })).toEqual({
       width: 1024,
       height: 700,
+      minWidth: 480,
+      minHeight: 560,
     });
-    expect(mainWindowSize({ width: 400, height: 500 })).toMatchObject({ width: 480, height: 560 });
+  });
+
+  it('stays inside a work area smaller than the minimum, and lowers the minimum to match', () => {
+    expect(mainWindowSize({ width: 400, height: 500 })).toEqual({
+      width: 400,
+      height: 500,
+      minWidth: 400,
+      minHeight: 500,
+    });
   });
 });

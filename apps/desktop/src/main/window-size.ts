@@ -9,14 +9,18 @@ export interface WindowSize {
 }
 
 /**
- * The main window's size: 1200 × 800, or the screen's work area when that is smaller, but never
- * below 480 × 560, the smallest size the layout is designed for.
+ * The main window's size: 1200 × 800, or the screen's work area when that is smaller. The
+ * minimum is 480 × 560, the smallest size the layout is designed for, except on a work area
+ * smaller than that: then the window and its minimum fit the work area, so no part of it is
+ * off screen and out of reach.
  */
 export function mainWindowSize(workArea: { width: number; height: number }): WindowSize {
+  const minWidth = Math.min(MINIMUM.width, workArea.width);
+  const minHeight = Math.min(MINIMUM.height, workArea.height);
   return {
-    width: Math.max(MINIMUM.width, Math.min(PREFERRED.width, workArea.width)),
-    height: Math.max(MINIMUM.height, Math.min(PREFERRED.height, workArea.height)),
-    minWidth: MINIMUM.width,
-    minHeight: MINIMUM.height,
+    width: Math.max(minWidth, Math.min(PREFERRED.width, workArea.width)),
+    height: Math.max(minHeight, Math.min(PREFERRED.height, workArea.height)),
+    minWidth,
+    minHeight,
   };
 }

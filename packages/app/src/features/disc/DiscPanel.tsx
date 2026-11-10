@@ -401,6 +401,16 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
     };
   }, [reader, generation]);
 
+  // The disc and reading states render different trees, so the Refresh button is a new element
+  // after each transition. When the user pressed it, focus moves to each new one until the read ends.
+  const keepRefreshFocus = useRef(false);
+  const focusNewRefresh = useCallback((button: HTMLButtonElement | null) => {
+    if (button !== null && keepRefreshFocus.current) button.focus();
+  }, []);
+  useEffect(() => {
+    if (result !== 'reading') keepRefreshFocus.current = false;
+  }, [result]);
+
   const refresh = useCallback(() => {
     setResult('reading');
     setEditState({ kind: 'idle' });
@@ -444,14 +454,16 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
       <GlassSpinner label="Saving changes…" size="sm" />
     ) : null;
 
-  // The button stays mounted while reading, so keyboard focus is not lost on Refresh.
   const refreshButton = (
     <GlassButton
+      ref={focusNewRefresh}
       variant="soft"
       size="sm"
       aria-disabled={status.kind === 'reading' || saving}
-      onClick={() => {
-        if (status.kind !== 'reading' && !saving) refresh();
+      onClick={(event) => {
+        if (status.kind === 'reading' || saving) return;
+        keepRefreshFocus.current = document.activeElement === event.currentTarget;
+        refresh();
       }}
     >
       {status.kind === 'disc' || status.kind === 'reading' ? 'Refresh' : status.action}

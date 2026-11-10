@@ -63,12 +63,17 @@ The disc summary SHALL show the used and free recording time as a bar, together 
 
 ### Requirement: Desktop window size
 
-The desktop app SHALL open its main window at 1200 × 800 pixels, or smaller when the screen is smaller. The window SHALL NOT shrink below 480 × 560 pixels.
+The desktop app SHALL open its main window at 1200 × 800 pixels, or smaller when the screen is smaller. The window SHALL NOT shrink below 480 × 560 pixels, except on a screen whose work area is smaller than that, where the window and its minimum SHALL fit the work area.
 
 #### Scenario: First open
 
 - **WHEN** the desktop app opens on a 1440 × 900 screen
 - **THEN** the main window is 1200 × 800
+
+#### Scenario: Very small screen
+
+- **WHEN** the desktop app opens on a work area of 400 × 500
+- **THEN** the main window is 400 × 500 and fits on the screen
 
 #### Scenario: Resize
 
