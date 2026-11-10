@@ -83,12 +83,17 @@ export class ConnectionController {
   }
 
   /**
-   * Forgets the open device after the user chose Exit (its NetMD session already ended) and
-   * returns to the Connect screen. The device stays granted, so Connect can reopen it.
+   * Closes the open device after the user chose Exit and returns to the Connect screen. The NetMD
+   * session usually closed it already; closing again covers a device with no session open, and
+   * errors are ignored. The device stays granted, so Connect can reopen it.
    */
   exit(): void {
+    const handle = this.openHandle;
     this.openHandle = null;
     this.dispatch({ type: 'exited' });
+    handle?.close().catch(() => {
+      // Already closed by the session, or unplugged.
+    });
   }
 
   /** Whether the chooser would have offered this device (a kind this platform supports). */

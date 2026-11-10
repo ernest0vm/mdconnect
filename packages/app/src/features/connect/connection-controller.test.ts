@@ -88,6 +88,18 @@ describe('ConnectionController', () => {
     expect(controller.openDevice()).toBeNull();
   });
 
+  it('closes the device on Exit even when no NetMD session was open (app-menu: "Exit")', async () => {
+    const { usb, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const done = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await done;
+    controller.exit();
+    expect(a.calls).toEqual(['open', 'close']);
+  });
+
   it('classifies a cancelled in-app chooser', async () => {
     const { actions, controller } = setup();
     await controller.request(() => true);

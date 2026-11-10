@@ -78,7 +78,7 @@ Result of the check: an `<a download>` click on a `blob:` URL starts a download 
 
 - `DiscReader.close()` queues behind work in progress, then calls a new `DiscSession.end()`.
 - The session implements `end()` as netmd-js `finalize`: `device.reset()`, `releaseInterface(0)`, `close()`. Errors are ignored, as upstream does.
-- `ConnectionController` gains `exit()`. It ends the session, clears the open device and dispatches a state that shows the Connect screen without the "Device unplugged" hint.
+- `ConnectionController` gains `exit()`. It clears the open device, closes it (the session usually closed it already; this covers a device whose session never opened) and dispatches a state that shows the Connect screen without the "Device unplugged" hint.
 - The desktop app's device grant is unchanged, so Connect reconnects without a chooser. The web app keeps its grant too.
 
 ### 6. About
@@ -101,4 +101,5 @@ Wipe, Import and About open from a menu item that is gone once the dialog closes
 
 - **Wiping a disc is destructive and cannot be verified without a working device.** A confirmation names the disc, focus starts on Cancel, and query tests check the bytes. The hardware check is listed in #8.
 - **Exit's USB reset did not make the MZ-NE410 write its TOC** (edit-disc findings). Exit only ends the session; the TOC issue stays in #8.
+- **Spreadsheet formulas in exported titles (CSV injection, CWE-1236).** A title that starts with `=`, `+`, `-` or `@` can be read as a formula when the file is opened in a spreadsheet. Cells are written exactly as webminidisc writes them, without a `'` prefix. Such a prefix would end up in the titles when webminidisc imports the file ("-Intro" would become "'-Intro"), which breaks the goal of moving files between the two apps. A title only reaches the file from a disc, and spreadsheets warn before running external links. If this needs to change, add the prefix on export and strip it on import in both apps.
 - **A CSV from another tool may have a slightly different format.** Only webminidisc's two headers are accepted, and other files are refused with a message.
