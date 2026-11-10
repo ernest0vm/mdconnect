@@ -21,7 +21,7 @@ import {
   RECORDING_MODES,
   TITLE_SOURCE_LABELS,
 } from '../upload/upload-view';
-import { consentStatus } from './settings-view';
+import { consentStatus, SAVE_FAILED_TEXT } from './settings-view';
 
 const selectClass =
   'rounded-lg border border-[var(--lg-border)] bg-[var(--lg-control-surface)] px-2 py-1.5 text-sm';
@@ -177,6 +177,7 @@ function UploadsSection() {
 
 /** The header's Settings control: Appearance, Titles and Uploads, applied as they change. */
 export function SettingsDialog() {
+  const { saved } = useUploadPreferences();
   return (
     <GlassDialog>
       {/* The trigger is where Radix returns focus when the dialog closes. */}
@@ -202,6 +203,11 @@ export function SettingsDialog() {
         <GlassDialogDescription className="mt-1 text-sm opacity-80">
           Changes apply right away and are remembered on this device.
         </GlassDialogDescription>
+        {!saved && (
+          <p role="alert" className="mt-3 text-sm font-semibold text-red-800 dark:text-red-200">
+            {SAVE_FAILED_TEXT}
+          </p>
+        )}
         {/* Only the sections scroll, so the title and the close button stay in view. */}
         <div className="mt-4 -mr-2 flex max-h-[calc(100dvh-12rem)] flex-col gap-6 overflow-y-auto pr-2">
           <Section title="Appearance">

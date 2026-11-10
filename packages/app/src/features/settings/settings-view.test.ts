@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DEFAULT_UPLOAD_PREFERENCES } from '../upload/upload-preferences';
 import { initialMode, RECORDING_MODES, recordingModes } from '../upload/upload-view';
-import { consentStatus } from './settings-view';
+import { consentStatus, SAVE_FAILED_TEXT } from './settings-view';
 
 /** Sony MZ-N510/N610, which has no native mono upload. */
 const N510 = { vendorId: 0x054c, productId: 0x00c9 };
@@ -33,5 +33,10 @@ describe('Settings view', () => {
     const status = consentStatus(DEFAULT_UPLOAD_PREFERENCES);
     expect(status.canWithdraw).toBe(false);
     expect(status.text).toMatch(/not agreed/u);
+  });
+
+  it('says an unsaved change lasts only until a reload, and how to withdraw consent for good', () => {
+    expect(SAVE_FAILED_TEXT).toMatch(/until the app is reloaded/u);
+    expect(SAVE_FAILED_TEXT).toMatch(/clear this site’s stored data/u);
   });
 });

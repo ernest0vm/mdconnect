@@ -9,6 +9,8 @@ import {
 interface UploadPreferencesValue {
   readonly preferences: UploadPreferences;
   readonly setPreferences: (preferences: UploadPreferences) => void;
+  /** False when the browser refused to store the last change, which then lasts until a reload. */
+  readonly saved: boolean;
 }
 
 const UploadPreferencesContext = createContext<UploadPreferencesValue | null>(null);
@@ -31,6 +33,7 @@ function browserStore(): UploadPreferencesStore {
 export function UploadPreferencesProvider({ children }: { readonly children: ReactNode }) {
   const store = useMemo(() => browserStore(), []);
   const [preferences, setPreferencesState] = useState(() => store.load());
+  const [saved, setSaved] = useState(true);
 
   useEffect(() => store.subscribe(setPreferencesState), [store]);
 
@@ -39,10 +42,11 @@ export function UploadPreferencesProvider({ children }: { readonly children: Rea
       preferences,
       setPreferences: (next) => {
         setPreferencesState(next);
-        store.save(next);
+        setSaved(store.save(next));
       },
+      saved,
     }),
-    [preferences, store],
+    [preferences, saved, store],
   );
 
   return (

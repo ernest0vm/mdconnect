@@ -47,7 +47,7 @@ export interface ConvertDialogProps {
   readonly modes: readonly RecordingMode[];
   readonly preferences: UploadPreferences;
   readonly onUpload: (job: UploadJob) => void;
-  /** Called when the user agrees to the online encoder, so the consent is kept. */
+  /** Saves a shared choice made in the dialog: consent to the online encoder, Full-width titles. */
   readonly onPreferences: (preferences: UploadPreferences) => void;
   readonly onClose: () => void;
   readonly load?: (file: File) => Promise<LoadedItem>;
@@ -126,7 +126,8 @@ export function ConvertDialog({
   const [mode, setMode] = useState<RecordingMode>(() => initialMode(preferences.mode, modes));
   const [encoder, setEncoder] = useState<Encoder>(preferences.encoder);
   const [titleSource, setTitleSource] = useState<TitleSource>(preferences.titleSource);
-  const [fullWidth, setFullWidth] = useState(preferences.fullWidth);
+  // Shared with Settings and the rename dialogs, so it follows changes made elsewhere.
+  const { fullWidth } = preferences;
   const [replayGain, setReplayGain] = useState(preferences.replayGain);
   const [askConsent, setAskConsent] = useState(false);
   const [rejected, setRejected] = useState<readonly string[]>([]);
@@ -256,7 +257,7 @@ export function ConvertDialog({
               <GlassCheckbox
                 checked={fullWidth}
                 onChange={() => {
-                  setFullWidth((value) => !value);
+                  onPreferences({ ...preferences, fullWidth: !fullWidth });
                 }}
               />
               Full-width titles
