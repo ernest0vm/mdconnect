@@ -14,4 +14,4 @@
 
 ## 3. Menu links
 
-- [ ] 3.1 Add Support and FAQ, Source code on GitHub and Donate to the More menu as links. Verify with a menu test of the hrefs. In the desktop app, check that each opens in the default browser and that the window keeps the app (app-menu: "Open a link").
+- [x] 3.1 Add Support and FAQ, Source code on GitHub and Donate to the More menu as links. Verify with a menu test of the hrefs. In the desktop app, check that each opens in the default browser and that the window keeps the app (app-menu: "Open a link"). Desktop app (macOS): Support and FAQ opened minidisc.wiki in the default browser, and the window kept the app with no new Electron window. Source code on GitHub and Donate use the same `GlassMenuLinkItem`, and their hrefs are covered by the menu test. Also checked there: What's new opens once with the 0.1.0 entry when the stored version is older, nothing opens on a first install, and About shows the version.
