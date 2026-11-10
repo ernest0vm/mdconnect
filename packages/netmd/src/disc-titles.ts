@@ -1,0 +1,122 @@
+/*
+ * Ported from netmd-js 4.4.1, src/netmd-commands.ts (`getCellsForTitle`,
+ * `getRemainingCharactersForTitles`, `compileDiscTitles`), https://github.com/cybercase/netmd-js,
+ * by Stefano Brilli and Asivery, GPL-2.0.
+ *
+ * Changes from upstream:
+ * - A one-track group's range is counted as `n`; upstream appended the text `false`, counting
+ *   5 characters too many.
+ * - A group without a full-width title counts as empty; upstream counted the text `null`.
+ * - The final full-width length check is in characters, like the half-width one (upstream
+ *   compared cells with characters).
+ */
+
+import type { Disc, Track } from './content';
+import { Encoding } from './interface';
+import { halfWidthTitleLength } from './sanitize';
+import { toFullWidthRange } from './titles';
+
+/** The disc's title area: 255 cells of 7 bytes (see https://www.minidisc.org/md_toc.html). */
+const CELL_LIMIT = 255;
+const CELL_BYTES = 7;
+
+const SP: number = Encoding.sp;
+
+const cells = (bytes: number) => Math.ceil(bytes / CELL_BYTES);
+
+function cellsForTrack(track: Track): { halfWidth: number; fullWidth: number } {
+  // Devices may prefix long-play track titles with "LP: ", even untitled ones.
+  const longPlay = track.encoding === SP ? 0 : 1;
+  return {
+    halfWidth: Math.max(longPlay, cells(halfWidthTitleLength(track.title))),
+    fullWidth: Math.max(longPlay, cells(track.fullWidthTitle.length * 2)),
+  };
+}
+
+function groupRange(indexes: readonly number[]): string {
+  const first = Math.min(...indexes) + 1;
+  return indexes.length === 1
+    ? String(first)
+    : `${String(first)}-${String(first + indexes.length - 1)}`;
+}
+
+export interface TitleSpace {
+  /** Characters still available for half-width titles. */
+  readonly halfWidth: number;
+  /** Bytes still available for full-width titles (two per character). */
+  readonly fullWidth: number;
+}
+
+/** How much title space is left on the disc, assuming the disc title and groups are rewritten. */
+export function remainingTitleSpace(disc: Disc, includeGroups = true): TitleSpace {
+  let halfWidthTitle = `${disc.title}0;//`;
+  let fullWidthTitle = `${disc.fullWidthTitle}0;//`;
+  if (includeGroups) {
+    for (const group of disc.groups) {
+      if (group.title === null || group.tracks.length === 0) continue;
+      const range = `${groupRange(group.tracks.map((t) => t.index))}//`;
+      halfWidthTitle += group.title + range;
+      fullWidthTitle += (group.fullWidthTitle ?? '') + range;
+    }
+  }
+
+  let halfWidthCells = cells(halfWidthTitleLength(halfWidthTitle));
+  let fullWidthCells = cells(fullWidthTitle.length * 2);
+  for (const track of disc.groups.flatMap((g) => g.tracks)) {
+    const used = cellsForTrack(track);
+    halfWidthCells += used.halfWidth;
+    fullWidthCells += used.fullWidth;
+  }
+  return {
+    halfWidth: Math.max(CELL_LIMIT - halfWidthCells, 0) * CELL_BYTES,
+    fullWidth: Math.max(CELL_LIMIT - fullWidthCells, 0) * CELL_BYTES,
+  };
+}
+
+export interface RawDiscTitles {
+  readonly title: string;
+  readonly fullWidthTitle: string;
+}
+
+/**
+ * The raw disc titles that store the disc title and its groups (`0;Disc//1-3;Group//`).
+ * Groups that do not fit in the remaining title space are left out.
+ */
+export function compileDiscTitles(disc: Disc): RawDiscTitles {
+  const available = remainingTitleSpace({ ...disc, title: '', fullWidthTitle: '' }, false);
+  const useFullWidth =
+    disc.fullWidthTitle !== '' ||
+    disc.groups.some((g) => (g.fullWidthTitle ?? '') !== '') ||
+    disc.groups.some((g) => g.tracks.some((t) => t.fullWidthTitle !== ''));
+
+  let title = disc.title === '' ? '' : `0;${disc.title}//`;
+  let fullWidthTitle = useFullWidth ? `０；${disc.fullWidthTitle}／／` : '';
+  let groupCount = 0;
+
+  for (const group of disc.groups) {
+    if (group.title === null || group.tracks.length === 0) continue;
+    groupCount++;
+    const range = groupRange(group.tracks.map((t) => t.index));
+
+    const withGroup = `${title}${range};${group.title}//`;
+    if (cells(halfWidthTitleLength(withGroup)) * CELL_BYTES <= available.halfWidth)
+      title = withGroup;
+
+    if (useFullWidth) {
+      const fullWithGroup = `${fullWidthTitle}${toFullWidthRange(range)}；${group.fullWidthTitle ?? ''}／／`;
+      if (cells(fullWithGroup.length * 2) * CELL_BYTES <= available.fullWidth) {
+        fullWidthTitle = fullWithGroup;
+      }
+    }
+  }
+
+  if (groupCount === 0) {
+    title = disc.title;
+    fullWidthTitle = disc.fullWidthTitle;
+  }
+  // If even the titles without groups do not fit, leave them empty rather than overflow.
+  if (cells(halfWidthTitleLength(title)) * CELL_BYTES > available.halfWidth) title = '';
+  if (cells(fullWidthTitle.length * 2) * CELL_BYTES > available.fullWidth) fullWidthTitle = '';
+
+  return { title, fullWidthTitle: useFullWidth ? fullWidthTitle : '' };
+}

@@ -9,10 +9,15 @@
  * - No logging.
  * - `parseGroups` (titles.ts) skips malformed or overlapping group entries instead of failing.
  * - Descriptor errors other than "rejected" or "not implemented" are passed on; upstream ignores all.
+ * - The title writers do not sanitise: callers pass titles already converted (see sanitize.ts), and
+ *   the lengths are computed from the exact bytes sent. Upstream measured the title before
+ *   sanitising it, so the two could differ.
+ * - `eraseTrack` and `moveTrack` fail on a rejected reply like every other command.
  */
 
 import { NetMdNotImplementedError, NetMdRejectedError } from './errors';
 import { formatQuery, scanQuery, type ScannedValue } from './query';
+import { encodeSjis, sjisLength } from './sjis';
 import { decodeSjis } from './titles';
 
 /** Sends one framed command and reads the device's reply. */
@@ -55,6 +60,7 @@ const Descriptor = {
 type Descriptor = (typeof Descriptor)[keyof typeof Descriptor];
 
 const OPEN_READ = '01';
+const OPEN_WRITE = '03';
 const CLOSE = '00';
 const MAX_INTERIM_ATTEMPTS = 4;
 const INTERIM_RETRY_MS = 100;
@@ -64,7 +70,11 @@ export type DeviceTime = readonly [number, number, number, number];
 
 export interface InterfaceOptions {
   readonly sleep?: (ms: number) => Promise<void>;
+  /** The device's USB vendor ID; Sharp devices (0x04dd) write the disc title differently. */
+  readonly vendorId?: number;
 }
+
+const SHARP_VENDOR_ID = 0x04dd;
 
 const num = (value: ScannedValue | undefined): number =>
   typeof value === 'bigint' || typeof value === 'number' ? Number(value) : 0;
@@ -74,11 +84,13 @@ const buf = (value: ScannedValue | undefined): Uint8Array =>
 /** The NetMD command layer: status handling, descriptors and the read queries. */
 export class NetMdInterface {
   private readonly sleep: (ms: number) => Promise<void>;
+  private readonly vendorId: number | undefined;
 
   constructor(
     private readonly channel: CommandChannel,
     options: InterfaceOptions = {},
   ) {
+    this.vendorId = options.vendorId;
     this.sleep =
       options.sleep ??
       ((ms) =>
@@ -252,5 +264,79 @@ export class NetMdInterface {
       ];
       return [time(0), time(4), time(8)];
     });
+  }
+
+  /**
+   * Writes the raw disc title field, groups included (`0;Title//1-3;Group//`). Writing the same
+   * title again is skipped: it causes problems on some devices.
+   */
+  async setDiscTitle(title: string, fullWidth = false): Promise<void> {
+    const current = await this.getRawDiscTitle(fullWidth);
+    if (current === title) return;
+    const sharp = this.vendorId === SHARP_VENDOR_ID;
+    if (sharp) {
+      // Sharp devices rename the disc through the track title descriptor (webminidisc issue #67).
+      await this.descriptor(Descriptor.audioUTOC1TD, OPEN_WRITE);
+    } else {
+      await this.descriptor(Descriptor.discTitleTD, CLOSE);
+      await this.descriptor(Descriptor.discTitleTD, OPEN_WRITE);
+    }
+    const encoded = encodeSjis(title);
+    const reply = await this.sendQuery(
+      formatQuery(
+        '1807 02201801 00%b 3000 0a00 5000 %w 0000 %w %*',
+        fullWidth ? 1 : 0,
+        encoded.length,
+        sjisLength(current),
+        encoded,
+      ),
+    );
+    scanQuery(reply, '1807 02201801 00%? 3000 0a00 5000 %?%? 0000 %?%?');
+    if (sharp) {
+      await this.descriptor(Descriptor.audioUTOC1TD, CLOSE);
+    } else {
+      await this.descriptor(Descriptor.discTitleTD, CLOSE);
+      await this.descriptor(Descriptor.discTitleTD, OPEN_READ);
+      await this.descriptor(Descriptor.discTitleTD, CLOSE);
+    }
+  }
+
+  /** Writes a track's half-width or full-width title. An unchanged title is not written. */
+  async setTrackTitle(track: number, title: string, fullWidth = false): Promise<void> {
+    let oldLength: number;
+    try {
+      const current = await this.getTrackTitle(track, fullWidth);
+      if (current === title) return;
+      oldLength = sjisLength(current);
+    } catch (error) {
+      // A track that never had this title is rejected; its old length is zero.
+      if (!(error instanceof NetMdRejectedError)) throw error;
+      oldLength = 0;
+    }
+    const descriptor = fullWidth ? Descriptor.audioUTOC4TD : Descriptor.audioUTOC1TD;
+    const encoded = encodeSjis(title);
+    await this.descriptor(descriptor, OPEN_WRITE);
+    const reply = await this.sendQuery(
+      formatQuery(
+        '1807 022018%b %w 3000 0a00 5000 %w 0000 %w %*',
+        fullWidth ? 3 : 2,
+        track,
+        encoded.length,
+        oldLength,
+        encoded,
+      ),
+    );
+    scanQuery(reply, '1807 022018%? %?%? 3000 0a00 5000 %?%? 0000 %?%?');
+    await this.descriptor(descriptor, CLOSE);
+  }
+
+  /** Erases a track. Later tracks move up by one. */
+  async eraseTrack(track: number): Promise<void> {
+    await this.sendQuery(formatQuery('1840 ff01 00 201001 %w', track));
+  }
+
+  /** Moves a track to `destination`; the tracks in between shift by one. */
+  async moveTrack(source: number, destination: number): Promise<void> {
+    await this.sendQuery(formatQuery('1843 ff00 00 201001 %w 201001 %w', source, destination));
   }
 }

@@ -1,7 +1,13 @@
-import { FRAMES_PER_SECOND, NetMdTimeoutError, type Disc } from '@mdconnect/netmd';
+import {
+  FRAMES_PER_SECOND,
+  NetMdRejectedError,
+  NetMdTimeoutError,
+  type Disc,
+} from '@mdconnect/netmd';
 import { describe, expect, it } from 'vitest';
 
 import { DiscReader, type DiscSession } from './disc-reader';
+import { renameTrackPlan } from './edit-plan';
 
 const blank: Disc = {
   title: '',
@@ -19,6 +25,7 @@ function session(overrides: Partial<DiscSession> = {}): DiscSession {
   return {
     isDiscPresent: () => Promise.resolve(true),
     listContent: () => Promise.resolve(blank),
+    run: () => Promise.resolve(),
     ...overrides,
   };
 }
@@ -158,5 +165,113 @@ describe('DiscReader', () => {
     fail = false;
     expect((await reader.read()).kind).toBe('disc');
     expect(opened).toBe(2);
+  });
+
+  describe('edit', () => {
+    const plan = renameTrackPlan(0, 'Intro');
+
+    it('runs the plan, then reads the disc again (disc-contents: "Read again after an edit")', async () => {
+      const log: string[] = [];
+      const reader = new DiscReader(() =>
+        Promise.resolve(
+          session({
+            run: (command) => {
+              log.push(command.kind);
+              return Promise.resolve();
+            },
+            listContent: () => {
+              log.push('list');
+              return Promise.resolve(blank);
+            },
+          }),
+        ),
+      );
+      const { outcome, result } = await reader.edit(plan);
+      expect(outcome).toEqual({ kind: 'saved' });
+      expect(result.kind).toBe('disc');
+      expect(log).toEqual(['setTrackTitle', 'list']);
+    });
+
+    it('reports a rejected edit and still reads the disc again (disc-editing: "Device rejects an edit")', async () => {
+      let opened = 0;
+      const reader = new DiscReader(() => {
+        opened += 1;
+        return Promise.resolve(
+          session({ run: () => Promise.reject(new NetMdRejectedError('no')) }),
+        );
+      });
+      const { outcome, result } = await reader.edit(plan);
+      expect(outcome).toEqual({ kind: 'failed', reason: 'rejected' });
+      expect(result.kind).toBe('disc');
+      // The session is reopened before the read, to drain any reply the failed command left.
+      expect(opened).toBe(2);
+    });
+
+    it('stops at the first failed command', async () => {
+      const ran: string[] = [];
+      const reader = new DiscReader(() =>
+        Promise.resolve(
+          session({
+            run: (command) => {
+              ran.push(command.kind);
+              return Promise.reject(new NetMdTimeoutError('silent'));
+            },
+          }),
+        ),
+      );
+      const { outcome } = await reader.edit(renameTrackPlan(0, 'A', 'エー'));
+      expect(outcome).toEqual({ kind: 'failed', reason: 'failed' });
+      expect(ran).toEqual(['setTrackTitle']);
+    });
+
+    it('waits for a read in progress before writing (disc-editing: "Edit in progress")', async () => {
+      const log: string[] = [];
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      let first = true;
+      const reader = new DiscReader(() =>
+        Promise.resolve(
+          session({
+            listContent: async () => {
+              log.push('list');
+              if (first) {
+                first = false;
+                await gate;
+              }
+              return blank;
+            },
+            run: () => {
+              log.push('run');
+              return Promise.resolve();
+            },
+          }),
+        ),
+      );
+      const reading = reader.read();
+      const editing = reader.edit(plan);
+      release();
+      await Promise.all([reading, editing]);
+      expect(log).toEqual(['list', 'run', 'list']);
+    });
+
+    it('shares the edit with a Refresh requested meanwhile', async () => {
+      let lists = 0;
+      const reader = new DiscReader(() =>
+        Promise.resolve(
+          session({
+            listContent: () => {
+              lists += 1;
+              return Promise.resolve(blank);
+            },
+          }),
+        ),
+      );
+      const editing = reader.edit(plan);
+      const refresh = reader.read();
+      expect(await refresh).toEqual((await editing).result);
+      expect(lists).toBe(1);
+    });
   });
 });

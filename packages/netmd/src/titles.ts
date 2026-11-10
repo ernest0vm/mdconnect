@@ -32,7 +32,7 @@ const FULL_WIDTH: Readonly<Record<string, string>> = {
   ';': '；',
 };
 
-function toFullWidthRange(range: string): string {
+export function toFullWidthRange(range: string): string {
   return range.replace(/./gu, (char) => FULL_WIDTH[char] ?? '');
 }
 
