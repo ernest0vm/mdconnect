@@ -47,4 +47,5 @@ Branch: feat/…, fix/…, chore/… or docs/…, targeting main.
 
 - [ ] Everything in this PR is in English (code, comments, docs, commits)
 - [ ] Docs updated where behaviour or workflow changed (`CLAUDE.md`, `README.md`, `docs/`)
+- [ ] `CHANGELOG.md` updated for user-visible changes
 - [ ] OpenSpec tasks ticked only for work verified in this PR

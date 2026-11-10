@@ -3,12 +3,13 @@ import {
   GlassMenu,
   GlassMenuContent,
   GlassMenuItem,
+  GlassMenuLinkItem,
   GlassMenuSeparator,
   GlassMenuTrigger,
 } from '@mdconnect/ui/components/glassyui/glass-menu';
 import { useRef } from 'react';
 
-import type { MenuAvailability } from './menu-view';
+import { MENU_LINKS, type MenuAvailability } from './menu-view';
 
 export interface DiscMenuProps {
   readonly availability: MenuAvailability;
@@ -16,6 +17,7 @@ export interface DiscMenuProps {
   readonly onImport: (file: File) => void;
   readonly onWipe: () => void;
   readonly onAbout: () => void;
+  readonly onChangelog: () => void;
   readonly onExit: () => void;
 }
 
@@ -27,13 +29,14 @@ export function menuTrigger(slot: HTMLElement | null): HTMLElement | null {
   return slot?.querySelector<HTMLElement>('[aria-haspopup="menu"]') ?? null;
 }
 
-/** The More menu: titles as CSV, Wipe disc, About and Exit. */
+/** The More menu: titles as CSV, Wipe disc, About, Changelog, links, and Exit. */
 export function DiscMenu({
   availability,
   onExport,
   onImport,
   onWipe,
   onAbout,
+  onChangelog,
   onExit,
 }: DiscMenuProps) {
   const fileInput = useRef<HTMLInputElement>(null);
@@ -69,6 +72,13 @@ export function DiscMenu({
           </GlassMenuItem>
           <GlassMenuSeparator />
           <GlassMenuItem onSelect={onAbout}>About</GlassMenuItem>
+          <GlassMenuItem onSelect={onChangelog}>Changelog</GlassMenuItem>
+          {MENU_LINKS.map((link) => (
+            <GlassMenuLinkItem key={link.href} href={link.href}>
+              {link.label}
+            </GlassMenuLinkItem>
+          ))}
+          <GlassMenuSeparator />
           <GlassMenuItem onSelect={onExit}>Exit</GlassMenuItem>
         </GlassMenuContent>
       </GlassMenu>
