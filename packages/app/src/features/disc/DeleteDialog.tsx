@@ -6,6 +6,8 @@ import {
   GlassDialogTitle,
 } from '@mdconnect/ui/components/glassyui/glass-dialog';
 
+import { trackCountLabel } from './editing';
+
 /** Asks before erasing tracks: erased audio cannot be recovered. */
 export function DeleteDialog({
   count,
@@ -16,7 +18,7 @@ export function DeleteDialog({
   readonly onConfirm: () => void;
   readonly onClose: () => void;
 }) {
-  const tracks = `${String(count)} ${count === 1 ? 'track' : 'tracks'}`;
+  const tracks = trackCountLabel(count);
   return (
     <GlassDialog
       open

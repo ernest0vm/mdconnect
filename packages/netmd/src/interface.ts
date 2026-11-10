@@ -10,14 +10,14 @@
  * - `parseGroups` (titles.ts) skips malformed or overlapping group entries instead of failing.
  * - Descriptor errors other than "rejected" or "not implemented" are passed on; upstream ignores all.
  * - The title writers do not sanitise: callers pass titles already converted (see sanitize.ts), and
- *   the lengths are computed from the exact bytes sent. Upstream measured the title before
- *   sanitising it, so the two could differ.
+ *   the lengths are computed from the exact bytes sent and stored. Upstream measured the new
+ *   title before sanitising it, and the old one by re-encoding its decoded text.
  * - `eraseTrack` and `moveTrack` fail on a rejected reply like every other command.
  */
 
 import { NetMdNotImplementedError, NetMdRejectedError } from './errors';
 import { formatQuery, scanQuery, type ScannedValue } from './query';
-import { encodeSjis, sjisLength } from './sjis';
+import { encodeSjis } from './sjis';
 import { decodeSjis } from './titles';
 
 /** Sends one framed command and reads the device's reply. */
@@ -167,6 +167,10 @@ export class NetMdInterface {
 
   /** The disc title field as stored, including any group entries (`0;Title//1-3;Group//`). */
   async getRawDiscTitle(fullWidth = false): Promise<string> {
+    return decodeSjis(await this.readDiscTitleBytes(fullWidth));
+  }
+
+  private async readDiscTitleBytes(fullWidth: boolean): Promise<Uint8Array> {
     await this.descriptor(Descriptor.audioContentsTD, OPEN_READ);
     await this.descriptor(Descriptor.discTitleTD, OPEN_READ);
     const chunks: Uint8Array[] = [];
@@ -203,18 +207,20 @@ export class NetMdInterface {
       joined.set(chunk, offset);
       offset += chunk.length;
     }
-    return decodeSjis(joined);
+    return joined;
   }
 
   async getTrackTitle(track: number, fullWidth = false): Promise<string> {
+    return decodeSjis(await this.readTrackTitleBytes(track, fullWidth));
+  }
+
+  private async readTrackTitleBytes(track: number, fullWidth: boolean): Promise<Uint8Array> {
     const descriptor = fullWidth ? Descriptor.audioUTOC4TD : Descriptor.audioUTOC1TD;
     return this.withDescriptor(descriptor, async () => {
       const reply = await this.sendQuery(
         formatQuery('1806 022018%b %w 3000 0a00 ff00 00000000', fullWidth ? 3 : 2, track),
       );
-      return decodeSjis(
-        buf(scanQuery(reply, '1806 022018%? %?%? %?%? %?%? 1000 00%?0000 00%?000a %x')[0]),
-      );
+      return buf(scanQuery(reply, '1806 022018%? %?%? %?%? %?%? 1000 00%?0000 00%?000a %x')[0]);
     });
   }
 
@@ -271,8 +277,8 @@ export class NetMdInterface {
    * title again is skipped: it causes problems on some devices.
    */
   async setDiscTitle(title: string, fullWidth = false): Promise<void> {
-    const current = await this.getRawDiscTitle(fullWidth);
-    if (current === title) return;
+    const stored = await this.readDiscTitleBytes(fullWidth);
+    if (decodeSjis(stored) === title) return;
     const sharp = this.vendorId === SHARP_VENDOR_ID;
     if (sharp) {
       // Sharp devices rename the disc through the track title descriptor (webminidisc issue #67).
@@ -287,7 +293,8 @@ export class NetMdInterface {
         '1807 02201801 00%b 3000 0a00 5000 %w 0000 %w %*',
         fullWidth ? 1 : 0,
         encoded.length,
-        sjisLength(current),
+        // The stored length, not a re-encoding: an undecodable byte would not round-trip.
+        stored.length,
         encoded,
       ),
     );
@@ -305,9 +312,9 @@ export class NetMdInterface {
   async setTrackTitle(track: number, title: string, fullWidth = false): Promise<void> {
     let oldLength: number;
     try {
-      const current = await this.getTrackTitle(track, fullWidth);
-      if (current === title) return;
-      oldLength = sjisLength(current);
+      const stored = await this.readTrackTitleBytes(track, fullWidth);
+      if (decodeSjis(stored) === title) return;
+      oldLength = stored.length;
     } catch (error) {
       // A track that never had this title is rejected; its old length is zero.
       if (!(error instanceof NetMdRejectedError)) throw error;

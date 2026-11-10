@@ -6,7 +6,7 @@ Port of [webminidisc](https://github.com/asivery/webminidisc) for Sony NetMD / H
 
 - `apps/desktop`, `apps/web`: thin shells. Each implements the `Platform` interface from `@mdconnect/app` and nothing else of substance.
 - `packages/core`: platform-agnostic TypeScript (device table, USB filters, error classification, later the NetMD/Hi-MD integration). No React, DOM or Node imports.
-- `packages/netmd`: NetMD protocol, a read-only TypeScript port of part of netmd-js (GPL-2.0, upstream attribution in each file). No React, DOM or Node imports, and no other workspace.
+- `packages/netmd`: NetMD protocol (reading the disc and editing titles, tracks and groups), a TypeScript port of part of netmd-js (GPL-2.0, upstream attribution in each file). No React, DOM or Node imports, and no other workspace.
 - `packages/ui`: shadcn/ui + GlassyUI components and theme tokens.
 - `packages/app`: React screens and feature logic, written against `Platform`.
 - `packages/tsconfig`, `packages/repo-policy`: shared TS config and executable repo rules.

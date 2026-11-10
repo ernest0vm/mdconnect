@@ -20,6 +20,11 @@ export type EditCommand =
 
 export interface EditPlan {
   readonly commands: readonly EditCommand[];
+  /**
+   * Commands that put the disc title back in line when the plan stops after `completed`
+   * commands, for example group ranges after some of the erases went through.
+   */
+  readonly recovery?: (completed: number) => readonly EditCommand[];
 }
 
 /** A plan that changes the track order or the groups, with the disc it should leave. */
@@ -99,10 +104,19 @@ export function deleteTracksPlan(disc: Disc, tracks: readonly number[]): LayoutP
   const doomed = [...new Set(tracks)].sort((a, b) => b - a);
   const layout = layoutOf(disc);
   const remaining = layout.slots.filter((slot) => !doomed.includes(slot.track.index));
-  return layoutPlan(
+  const plan = layoutPlan(
     doomed.map((track) => ({ kind: 'eraseTrack', track })),
     { ...layout, slots: remaining },
   );
+  return {
+    ...plan,
+    // The erased tracks are the first `completed` of `doomed`; regroup for exactly those.
+    recovery: (completed) => {
+      const erased = doomed.slice(0, Math.min(completed, doomed.length));
+      if (erased.length === 0) return [];
+      return deleteTracksPlan(disc, erased).commands.filter((c) => c.kind === 'rewriteGroups');
+    },
+  };
 }
 
 /**

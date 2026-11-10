@@ -34,9 +34,11 @@ export type DiscReadResult =
 /**
  * `rejected`: the device refused the change, for example a title it cannot store.
  * `failed`: the session could not be opened, or a command failed or timed out.
+ * `unsupported-title`: a title has a character the disc cannot store; nothing of it was sent.
  */
 export type EditOutcome =
-  { readonly kind: 'saved' } | { readonly kind: 'failed'; readonly reason: 'rejected' | 'failed' };
+  | { readonly kind: 'saved' }
+  | { readonly kind: 'failed'; readonly reason: 'rejected' | 'failed' | 'unsupported-title' };
 
 export interface EditResult {
   readonly outcome: EditOutcome;
@@ -54,6 +56,13 @@ export async function openNetMdSession(handle: UsbDeviceHandle): Promise<DiscSes
     listContent: () => listContent(md),
     run: (command) => runCommand(md, command),
   };
+}
+
+function failureReason(error: unknown): Extract<EditOutcome, { kind: 'failed' }>['reason'] {
+  if (error instanceof NetMdRejectedError) return 'rejected';
+  // encodeSjis throws RangeError before anything is sent.
+  if (error instanceof RangeError) return 'unsupported-title';
+  return 'failed';
 }
 
 async function runCommand(md: NetMdInterface, command: EditCommand): Promise<void> {
@@ -126,18 +135,35 @@ export class DiscReader {
   }
 
   private async runPlan(plan: EditPlan): Promise<EditOutcome> {
+    let session: DiscSession;
     try {
       this.session ??= this.openSession();
-      const session = await this.session;
-      for (const command of plan.commands) await session.run(command);
+      session = await this.session;
+    } catch {
+      this.session = null;
+      return { kind: 'failed', reason: 'failed' };
+    }
+    let completed = 0;
+    try {
+      for (const command of plan.commands) {
+        await session.run(command);
+        completed++;
+      }
       return { kind: 'saved' };
     } catch (error) {
+      await this.recover(session, plan, completed);
       // Reopen before reading again: initialising the transport drains a stale reply.
       this.session = null;
-      return {
-        kind: 'failed',
-        reason: error instanceof NetMdRejectedError ? 'rejected' : 'failed',
-      };
+      return { kind: 'failed', reason: failureReason(error) };
+    }
+  }
+
+  /** Best effort: if the device stopped answering, the re-read shows what it holds anyway. */
+  private async recover(session: DiscSession, plan: EditPlan, completed: number): Promise<void> {
+    try {
+      for (const command of plan.recovery?.(completed) ?? []) await session.run(command);
+    } catch {
+      // Nothing more to do here.
     }
   }
 

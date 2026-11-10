@@ -122,3 +122,17 @@ describe('eraseTrack and moveTrack', () => {
     );
   });
 });
+
+describe('titles stored with bytes the decoder cannot read', () => {
+  it('measures the old title in stored bytes, so a broken title can be replaced', async () => {
+    // "A" followed by 0xff, which Shift-JIS cannot decode: two stored bytes.
+    const write = '00 1807 022018 02 0000 3000 0a00 5000 0001 0000 0002 42';
+    const { ch, sent } = channel({
+      '00 1806 022018 02 0000 3000 0a00 ff00 00000000':
+        '09 1806 022018 02 0000 3000 0a00 1000 0000 0000 0000 000a 0002 41ff',
+      ...writeAccepted(write),
+    });
+    await new NetMdInterface(ch, { sleep: noSleep }).setTrackTitle(0, 'B');
+    expect(sent).toContain(k(write));
+  });
+});

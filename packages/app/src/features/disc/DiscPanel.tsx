@@ -29,11 +29,11 @@ import {
   selectAllState,
   selectionLabel,
   toggleTrack,
+  trackCountLabel,
   type Selection,
 } from './editing';
 import { isHiMdMode } from './hi-md-mode';
 import { TitleDialog } from './TitleDialog';
-import type { TitleForm } from './title-form';
 
 type Dialog =
   | { readonly kind: 'rename-disc' }
@@ -221,10 +221,6 @@ function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
     if (from === to || to < 0 || to >= raw.trackCount) return;
     edit(moveTrackPlan(raw, from, to), new Set([to]));
   };
-  const saveTitles = (form: TitleForm, plan: (form: TitleForm) => EditPlan) => {
-    edit(plan(form));
-  };
-
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2">
@@ -313,7 +309,9 @@ function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
             <Action
               label="Group"
               blocked={locked || grouping.kind !== 'plan'}
-              describedBy={grouping.kind === 'plan' ? reasonId : `${reasonId}-group`}
+              describedBy={
+                grouping.kind === 'invalid' && selection.size > 0 ? `${reasonId}-group` : reasonId
+              }
               onRun={() => {
                 setDialog({ kind: 'new-group', tracks: selected });
               }}
@@ -375,8 +373,8 @@ function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
             setDialog(null);
           }}
           onSave={(form) => {
-            saveTitles(form, (f) =>
-              renameDiscPlan(f.halfWidth, f.fullWidthChanged ? f.fullWidth : undefined),
+            edit(
+              renameDiscPlan(form.halfWidth, form.fullWidthChanged ? form.fullWidth : undefined),
             );
           }}
         />
@@ -391,11 +389,11 @@ function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
             setDialog(null);
           }}
           onSave={(form) => {
-            saveTitles(form, (f) =>
+            edit(
               renameTrackPlan(
                 dialog.index,
-                f.halfWidth,
-                f.fullWidthChanged ? f.fullWidth : undefined,
+                form.halfWidth,
+                form.fullWidthChanged ? form.fullWidth : undefined,
               ),
             );
           }}
@@ -405,7 +403,7 @@ function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
         <TitleDialog
           disc={raw}
           target={{ kind: 'new-group', tracks: dialog.tracks }}
-          heading={`Group ${selectionLabel(new Set(dialog.tracks)).replace(' selected', '')}`}
+          heading={`Group ${trackCountLabel(dialog.tracks.length)}`}
           saveLabel="Group"
           onClose={() => {
             setDialog(null);
@@ -426,12 +424,12 @@ function DiscEditor({ disc, raw, busy, onEdit, notice }: EditorProps) {
             setDialog(null);
           }}
           onSave={(form) => {
-            saveTitles(form, (f) =>
+            edit(
               renameGroupPlan(
                 raw,
                 dialog.track,
-                f.halfWidth,
-                f.fullWidthChanged ? f.fullWidth : undefined,
+                form.halfWidth,
+                form.fullWidthChanged ? form.fullWidth : undefined,
               ),
             );
           }}

@@ -275,3 +275,45 @@ describe('DiscReader', () => {
     });
   });
 });
+
+describe('DiscReader.edit failures', () => {
+  const blankSession = (run: DiscSession['run']): DiscSession => ({
+    isDiscPresent: () => Promise.resolve(true),
+    listContent: () => Promise.resolve(blank),
+    run,
+  });
+
+  it('runs the plan recovery for the commands that completed before a failure', async () => {
+    const ran: string[] = [];
+    const reader = new DiscReader(() =>
+      Promise.resolve(
+        blankSession((command) => {
+          ran.push(command.kind === 'eraseTrack' ? `erase ${String(command.track)}` : command.kind);
+          if (command.kind === 'eraseTrack' && command.track === 0) {
+            return Promise.reject(new NetMdRejectedError('no'));
+          }
+          return Promise.resolve();
+        }),
+      ),
+    );
+    const plan = {
+      commands: [
+        { kind: 'eraseTrack', track: 1 },
+        { kind: 'eraseTrack', track: 0 },
+      ] as const,
+      recovery: (completed: number) =>
+        completed === 1 ? [{ kind: 'rewriteGroups', disc: blank } as const] : [],
+    };
+    const { outcome } = await reader.edit(plan);
+    expect(outcome).toEqual({ kind: 'failed', reason: 'rejected' });
+    expect(ran).toEqual(['erase 1', 'erase 0', 'rewriteGroups']);
+  });
+
+  it('reports a title the disc cannot store without blaming the device', async () => {
+    const reader = new DiscReader(() =>
+      Promise.resolve(blankSession(() => Promise.reject(new RangeError('"😀" cannot be encoded')))),
+    );
+    const { outcome } = await reader.edit(renameTrackPlan(0, '😀'));
+    expect(outcome).toEqual({ kind: 'failed', reason: 'unsupported-title' });
+  });
+});

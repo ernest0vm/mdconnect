@@ -75,5 +75,6 @@ describe('editFailureMessage (disc-editing: "Device rejects an edit")', () => {
   it('explains a rejected change without a raw error', () => {
     expect(editFailureMessage('rejected')).toMatch(/could not be saved/u);
     expect(editFailureMessage('failed')).toMatch(/stopped answering/u);
+    expect(editFailureMessage('unsupported-title')).toMatch(/cannot store/u);
   });
 });

@@ -10,9 +10,14 @@ export function toggleTrack(selection: Selection, track: number): Selection {
   return new Set([...next].sort((a, b) => a - b));
 }
 
+/** "1 track", "3 tracks". */
+export function trackCountLabel(count: number): string {
+  return `${String(count)} ${count === 1 ? 'track' : 'tracks'}`;
+}
+
 export function selectionLabel(selection: Selection): string {
   if (selection.size === 0) return 'No tracks selected';
-  return `${String(selection.size)} ${selection.size === 1 ? 'track' : 'tracks'} selected`;
+  return `${trackCountLabel(selection.size)} selected`;
 }
 
 export function selectAllState(selection: Selection, trackCount: number): 'none' | 'some' | 'all' {
@@ -52,7 +57,12 @@ export function groupBlocker(reason: GroupProblem): string {
 type FailureReason = Extract<EditOutcome, { kind: 'failed' }>['reason'];
 
 export function editFailureMessage(reason: FailureReason): string {
-  return reason === 'rejected'
-    ? 'The device refused the change, so it could not be saved. The disc is shown as the device reports it.'
-    : 'The device stopped answering while the change was saved. The disc is shown as the device reports it; check it before trying again.';
+  switch (reason) {
+    case 'rejected':
+      return 'The device refused the change, so it could not be saved. The disc is shown as the device reports it.';
+    case 'unsupported-title':
+      return 'The title has characters the disc cannot store, so nothing was saved. Edit the title and try again.';
+    case 'failed':
+      return 'The device stopped answering while the change was saved. The disc is shown as the device reports it; check it before trying again.';
+  }
 }

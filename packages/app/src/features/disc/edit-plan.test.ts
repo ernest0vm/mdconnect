@@ -175,3 +175,19 @@ describe('renameGroupPlan and ungroupPlan', () => {
     expect(plan.commands).toEqual([{ kind: 'rewriteGroups', disc: plan.expected }]);
   });
 });
+
+describe('recovery after a partial delete', () => {
+  it('rewrites the groups for the tracks actually erased', () => {
+    const plan = deleteTracksPlan(disc([null, null, 'A', 'A', 'A']), [0, 1]);
+    // Track 2 (index 1) was erased, then erasing index 0 failed.
+    const recovery = plan.recovery?.(1) ?? [];
+    expect(recovery).toHaveLength(1);
+    const rewrite = recovery[0];
+    if (rewrite?.kind !== 'rewriteGroups') throw new Error('expected a group rewrite');
+    expect(layoutOf(rewrite.disc)).toEqual(['T1:-', 'T3:A', 'T4:A', 'T5:A']);
+  });
+
+  it('needs no recovery when nothing was erased', () => {
+    expect(deleteTracksPlan(disc([null, 'A']), [0]).recovery?.(0)).toEqual([]);
+  });
+});
