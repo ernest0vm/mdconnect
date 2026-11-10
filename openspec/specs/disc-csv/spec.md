@@ -40,7 +40,7 @@ Import titles from CSV SHALL read webminidisc's format, current or older, and ap
 
 ### Requirement: Import review
 
-Before writing, the app SHALL show what the import will change. It SHALL list:
+Before writing, the app SHALL show where the file and the disc disagree. It SHALL list:
 
 - a difference in track count;
 - each track whose duration differs by 2 seconds or more;
