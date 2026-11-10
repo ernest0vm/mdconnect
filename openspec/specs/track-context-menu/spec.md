@@ -22,7 +22,7 @@ Right-clicking a track row, or pressing the context-menu key or Shift+F10 while 
 
 ### Requirement: Track actions
 
-The menu SHALL offer Play (Pause while the track plays), Rename, Delete, Move up and Move down. Each SHALL do what the matching player or toolbar action does, opening the same dialogs. Delete SHALL ask for confirmation as the toolbar's Delete does.
+The menu SHALL offer Play (Pause while the track plays), Rename, Delete, Move up and Move down. Each SHALL act on the track the menu was opened on, and only on that track, even when other tracks are selected. Each SHALL otherwise do what the matching player or toolbar action does, opening the same dialogs. Delete SHALL ask for confirmation as the toolbar's Delete does.
 
 #### Scenario: Rename from the menu
 
@@ -40,7 +40,7 @@ An action that cannot run SHALL be shown as unavailable with the reason, as in t
 
 #### Scenario: Write-protected disc
 
-- **WHEN** the disc is write-protected and the user opens a track's menu
+- **WHEN** the disc is write-protected, the player can be used, and the user opens a track's menu
 - **THEN** Rename, Delete, Move up and Move down are unavailable with the write-protected reason, and Play is available
 
 #### Scenario: First track

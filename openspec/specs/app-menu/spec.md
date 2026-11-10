@@ -8,7 +8,7 @@ Defines the menu on the connected screen, the About dialog and how the user ends
 
 ### Requirement: Menu
 
-When a device is connected, the header SHALL offer a "More" menu with Export titles to CSV, Import titles from CSV, Wipe disc, About, Changelog, Support and FAQ, Source code on GitHub, Donate and Exit. Support and FAQ, Source code on GitHub and Donate SHALL open their pages in the user's default browser. The menu SHALL be operable with the keyboard alone, and an item that is unavailable SHALL say why.
+When a device is connected, the header SHALL offer a "More" menu with Export titles to CSV, Import titles from CSV, Wipe disc, About, Changelog, Support and FAQ, Source code on GitHub, Donate and Exit. The menu SHALL be operable with the keyboard alone, and an item that is unavailable SHALL say why.
 
 #### Scenario: Open with the keyboard
 
@@ -25,10 +25,19 @@ When a device is connected, the header SHALL offer a "More" menu with Export tit
 - **WHEN** the disc is write-protected
 - **THEN** Wipe disc and Import titles from CSV are unavailable, and the menu says the disc is write-protected
 
+### Requirement: Menu links
+
+Support and FAQ, Source code on GitHub and Donate SHALL open their pages outside the app: in the user's default browser in the desktop app, and in a new tab of the same browser in the web app, so the device session in the app's tab is kept.
+
 #### Scenario: Open a link
 
 - **WHEN** the user chooses Donate in the desktop app
 - **THEN** https://paypal.me/ernest0vm opens in the default browser and the app window keeps showing the app
+
+#### Scenario: Open a link on the web
+
+- **WHEN** the user chooses Support and FAQ in the web app
+- **THEN** the guide opens in a new tab, and the app's tab keeps its device session
 
 ### Requirement: About
 

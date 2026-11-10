@@ -8,7 +8,7 @@ Defines mdconnect's Settings dialog: where it is offered, which choices it holds
 
 ### Requirement: Settings dialog
 
-Every screen, in the desktop app and in the web app, SHALL offer a Settings control in the header that opens a dialog with three sections: Appearance, Titles and Uploads. A change SHALL apply immediately and be remembered, with no Save button. The dialog SHALL be operable with the keyboard alone and SHALL return focus to the Settings control when it closes.
+Every screen, in the desktop app and in the web app, SHALL offer a Settings control that opens a dialog with three sections: Appearance, Titles and Uploads. A change SHALL apply immediately and be remembered, with no Save button. The dialog SHALL be operable with the keyboard alone and SHALL return focus to the Settings control when it closes.
 
 #### Scenario: Open from the Connect screen
 
@@ -19,6 +19,15 @@ Every screen, in the desktop app and in the web app, SHALL offer a Settings cont
 
 - **WHEN** the user focuses Settings with Tab, presses Enter, changes a choice with the keyboard and presses Escape
 - **THEN** the choice applies, the dialog closes, and focus returns to Settings
+
+### Requirement: Settings location
+
+The Settings control SHALL be in the header on the disc screen, and next to the footer on screens without a header: the Connect screen and the unsupported-browser page.
+
+#### Scenario: Disc screen
+
+- **WHEN** a device is connected and its disc is shown
+- **THEN** Settings is in the header, next to More
 
 ### Requirement: Full-width titles setting
 
@@ -47,6 +56,15 @@ The Uploads section SHALL set the defaults the convert dialog starts with: recor
 
 - **WHEN** the user uploads in LP2 from the convert dialog and then opens Settings
 - **THEN** Settings shows LP2 as the default recording mode
+
+### Requirement: When convert dialog choices are stored
+
+The convert dialog SHALL store its recording mode, title source, ReplayGain and encoder as the new defaults when the user starts the upload, and a cancelled dialog SHALL leave the stored defaults unchanged. Full-width titles and consent to the online encoder SHALL be stored as soon as the user changes them in the dialog.
+
+#### Scenario: Cancelled convert dialog
+
+- **WHEN** the user picks LP4 in the convert dialog and cancels it
+- **THEN** Settings still shows the earlier default recording mode
 
 ### Requirement: Withdraw online-encoder consent
 
