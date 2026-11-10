@@ -1,9 +1,12 @@
 import type { Platform, UsbDeviceHandle } from '@mdconnect/app';
 import { DEMO_PRODUCT_ID, DEMO_VENDOR_ID, demoDevice } from '@mdconnect/netmd/demo';
 
-/** The demo device is for `yarn dev:web` only, and only when the URL asks for it with `?demo`. */
-export function demoRequested({ dev, search }: { dev: boolean; search: string }): boolean {
-  return dev && new URLSearchParams(search).has('demo');
+/**
+ * Whether the URL asks for the demo device with `?demo`. Callers only load this module in
+ * development (`import.meta.env.DEV`), which is what keeps the demo out of production builds.
+ */
+export function demoRequested(search: string): boolean {
+  return new URLSearchParams(search).has('demo');
 }
 
 /**

@@ -61,6 +61,8 @@ function DiscAreas({
       <GlassPanel
         role="region"
         aria-label="Disc"
+        // It scrolls on its own in two columns; scrollable regions must be reachable by keyboard.
+        tabIndex={0}
         className="flex shrink-0 flex-col gap-3 p-4 lg:min-h-0 lg:overflow-y-auto"
       >
         {summary}

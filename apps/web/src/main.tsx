@@ -19,7 +19,7 @@ async function platformForThisPage() {
   // `import.meta.env.DEV` is false in production builds, so the demo module is left out of them.
   if (import.meta.env.DEV) {
     const demo = await import('./demo-platform');
-    if (demo.demoRequested({ dev: true, search: window.location.search })) {
+    if (demo.demoRequested(window.location.search)) {
       return demo.withDemoDevice(platform);
     }
   }

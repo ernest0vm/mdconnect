@@ -85,13 +85,21 @@ function GroupRows({
     <tbody>
       {group.title !== null && (
         <tr>
-          <th
-            scope="rowgroup"
+          {/*
+            The header cell holds only the group title, so that is all a screen reader repeats for
+            the group's cells. It is visually hidden; the visible title sits with the buttons.
+          */}
+          <th scope="rowgroup" className="sr-only">
+            {group.title}
+          </th>
+          <td
             colSpan={COLUMNS}
-            className="border-t border-black/15 px-2 pt-3 pb-1 text-left dark:border-white/20"
+            className="border-t border-black/15 px-2 pt-3 pb-1 dark:border-white/20"
           >
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-semibold [overflow-wrap:anywhere]">{group.title}</span>
+              <span aria-hidden="true" className="text-sm font-semibold [overflow-wrap:anywhere]">
+                {group.title}
+              </span>
               <Action
                 label="Rename group"
                 blocked={locked}
@@ -109,7 +117,7 @@ function GroupRows({
                 }}
               />
             </div>
-          </th>
+          </td>
         </tr>
       )}
       {group.tracks.map((track) => (

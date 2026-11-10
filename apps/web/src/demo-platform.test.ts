@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { demoRequested, withDemoDevice } from './demo-platform';
 
 describe('demoRequested', () => {
-  it('is on only in development with ?demo', () => {
-    expect(demoRequested({ dev: true, search: '?demo' })).toBe(true);
-    expect(demoRequested({ dev: true, search: '?x=1&demo=1' })).toBe(true);
-    expect(demoRequested({ dev: false, search: '?demo' })).toBe(false);
-    expect(demoRequested({ dev: true, search: '' })).toBe(false);
+  it('is on only when the URL has ?demo', () => {
+    expect(demoRequested('?demo')).toBe(true);
+    expect(demoRequested('?x=1&demo=1')).toBe(true);
+    expect(demoRequested('')).toBe(false);
+    expect(demoRequested('?demonstration')).toBe(false);
   });
 });
 
