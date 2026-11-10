@@ -76,6 +76,15 @@ export const withdrawConsent = (preferences: UploadPreferences): UploadPreferenc
   onlineConsent: false,
 });
 
+/**
+ * Preferences saved by another tab, as this tab applies them. A withdrawal this tab could not
+ * store stays in effect, so another tab's stored consent cannot bring it back.
+ */
+export const fromOtherTab = (
+  incoming: UploadPreferences,
+  withdrawalUnsaved: boolean,
+): UploadPreferences => (withdrawalUnsaved ? withdrawConsent(incoming) : incoming);
+
 /** Keeps upload preferences in `localStorage`, like the Appearance choice. */
 export function createUploadPreferencesStore(
   storage: StorageLike | null,

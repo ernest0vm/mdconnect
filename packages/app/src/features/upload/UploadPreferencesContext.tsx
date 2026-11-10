@@ -1,7 +1,16 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 
 import {
   createUploadPreferencesStore,
+  fromOtherTab,
   type UploadPreferences,
   type UploadPreferencesStore,
 } from './upload-preferences';
@@ -34,15 +43,27 @@ export function UploadPreferencesProvider({ children }: { readonly children: Rea
   const store = useMemo(() => browserStore(), []);
   const [preferences, setPreferencesState] = useState(() => store.load());
   const [saved, setSaved] = useState(true);
+  /** A consent withdrawal the browser refused to store, which must outlast other tabs' saves. */
+  const withdrawalUnsaved = useRef(false);
 
-  useEffect(() => store.subscribe(setPreferencesState), [store]);
+  useEffect(
+    () =>
+      store.subscribe((incoming) => {
+        setPreferencesState(fromOtherTab(incoming, withdrawalUnsaved.current));
+      }),
+    [store],
+  );
 
   const value = useMemo<UploadPreferencesValue>(
     () => ({
       preferences,
       setPreferences: (next) => {
         setPreferencesState(next);
-        setSaved(store.save(next));
+        const ok = store.save(next);
+        setSaved(ok);
+        // Consenting again, or a stored withdrawal, ends the need to override other tabs.
+        if (next.onlineConsent || ok) withdrawalUnsaved.current = false;
+        else if (preferences.onlineConsent) withdrawalUnsaved.current = true;
       },
       saved,
     }),

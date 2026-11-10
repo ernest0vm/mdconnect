@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createUploadPreferencesStore,
   DEFAULT_UPLOAD_PREFERENCES,
+  fromOtherTab,
   UPLOAD_PREFERENCES_KEY,
   withdrawConsent,
 } from './upload-preferences';
@@ -110,5 +111,11 @@ describe('upload preferences', () => {
   it('withdraw the online consent and keep every other choice (app-settings: "Withdraw")', () => {
     const agreed = { ...DEFAULT_UPLOAD_PREFERENCES, mode: 'lp2' as const, onlineConsent: true };
     expect(withdrawConsent(agreed)).toEqual({ ...agreed, onlineConsent: false });
+  });
+
+  it('keep a withdrawal that could not be saved when another tab saves its consent', () => {
+    const otherTab = { ...DEFAULT_UPLOAD_PREFERENCES, mode: 'lp2' as const, onlineConsent: true };
+    expect(fromOtherTab(otherTab, true)).toEqual({ ...otherTab, onlineConsent: false });
+    expect(fromOtherTab(otherTab, false)).toEqual(otherTab);
   });
 });
