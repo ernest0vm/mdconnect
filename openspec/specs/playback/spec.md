@@ -42,7 +42,7 @@ Next and Previous SHALL move playback to the following or preceding track. When 
 #### Scenario: Last track
 
 - **WHEN** the device is on the last track and the user chooses Next
-- **THEN** nothing is sent and playback continues
+- **THEN** no playback command is sent, and playback continues
 
 ### Requirement: Play a track from the list
 

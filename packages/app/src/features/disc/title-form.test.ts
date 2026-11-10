@@ -184,4 +184,19 @@ describe('titleForm', () => {
     const form = titleForm(full, { kind: 'track', index: 0 }, { halfWidth: 'New', fullWidth: '' });
     expect(form.fits).toBe(true);
   });
+
+  it('counts the stored group entries when a track rename needs more space', () => {
+    // "0;Mix//1-50;A//" is 15 characters, 3 cells; the estimate without the ";" says 2.
+    const tracks = Array.from({ length: 50 }, (_, i) =>
+      track(i, i === 0 ? 'x'.repeat(7 * 203) : 'a'),
+    );
+    const grouped = disc(tracks, [{ title: 'A', fullWidthTitle: null, tracks }]);
+    // Track titles use 252 cells; renaming track 2 to 8 characters adds one: 256 of 255.
+    const form = titleForm(
+      grouped,
+      { kind: 'track', index: 1 },
+      { halfWidth: 'a'.repeat(8), fullWidth: '' },
+    );
+    expect(form.fits).toBe(false);
+  });
 });
