@@ -56,6 +56,34 @@ describe('getDeviceStatus', () => {
     expect(status).toMatchObject({ discPresent: false, state: 'readingTOC' });
   });
 
+  it('reads a playback status reply without the trailing byte (Sony MZ-N510/N610)', async () => {
+    // The MZ-N510/N610 (054c:00c9) ends this reply after the status block; the MZ-NE410 and MZ-RH1
+    // add one more byte. Recorded on 2026-11-10 with the desktop app.
+    const script = {
+      [STATUS_QUERY]: '09 1809 8001 0230 8800 0030 8804 00 1000 00090000 0007 8804 0003 40ff40',
+      [PLAYBACK_QUERY]:
+        '09 1809 8001 0330 8802 0030 8805 0030 8806 00 1000 00080000 0006 8806 0002 c5ff',
+      [POSITION_QUERY]: '0a 1809 8001 0430 8802 0030 8805 0030 0003 0030 0002 00 ff00 00000000',
+    };
+    const status = await getDeviceStatus(
+      new NetMdInterface(channel(script).ch, { sleep: noSleep }),
+    );
+    expect(status).toMatchObject({ discPresent: true, state: 'ready' });
+  });
+
+  it('rejects a playback status reply whose status block is cut short', async () => {
+    const script = {
+      [STATUS_QUERY]: '09 1809 8001 0230 8800 0030 8804 00 1000 00090000 0007 8804 0003 40ff40',
+      // The block declares 6 bytes but carries 5.
+      [PLAYBACK_QUERY]:
+        '09 1809 8001 0330 8802 0030 8805 0030 8806 00 1000 00080000 0006 8806 0002 c5',
+      [POSITION_QUERY]: '0a 1809 8001 0430 8802 0030 8805 0030 0003 0030 0002 00 ff00 00000000',
+    };
+    await expect(
+      getDeviceStatus(new NetMdInterface(channel(script).ch, { sleep: noSleep })),
+    ).rejects.toThrow(/shorter/);
+  });
+
   it('reports an operating status it does not know as unknown', async () => {
     expect((await getDeviceStatus(device('40', '1234', null))).state).toBe('unknown');
   });
