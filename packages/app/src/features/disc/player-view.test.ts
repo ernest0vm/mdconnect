@@ -87,6 +87,26 @@ describe('playerBlocker when the device cannot be read', () => {
   });
 });
 
+describe('playerBlocker after a read found no disc', () => {
+  it('blocks playback even when the device gives no status', () => {
+    expect(
+      playerBlocker({ status: null, reading: false, saving: false, readable: true, noDisc: true }),
+    ).toBe('Insert a disc to play it.');
+  });
+
+  it('lets a later status showing a disc enable the controls', () => {
+    expect(
+      playerBlocker({
+        status: at('ready', 0),
+        reading: false,
+        saving: false,
+        readable: true,
+        noDisc: true,
+      }),
+    ).toBeNull();
+  });
+});
+
 describe('trackPlayState (playback: "Play a chosen track")', () => {
   it('marks the playing or paused track and nothing else', () => {
     expect(trackPlayState(at('playing', 2), 2)).toBe('playing');

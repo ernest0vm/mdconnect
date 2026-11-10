@@ -544,6 +544,7 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
     reading: status.kind === 'reading',
     saving,
     readable,
+    noDisc: result !== 'reading' && result.kind === 'no-disc',
   });
   /** Sends a playback control and shows the status or failure it leads to. */
   const runControl = (command: PlaybackCommand) => {

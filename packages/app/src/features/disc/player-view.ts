@@ -64,11 +64,16 @@ export function playerBlocker(state: {
   saving: boolean;
   /** False when the last read failed: in use, in Hi-MD mode, or not answering. */
   readable: boolean;
+  /** True when the last read found no disc; a later status showing a disc overrides it. */
+  noDisc?: boolean;
 }): string | null {
   if (state.reading) return 'Wait until the disc is read.';
   if (!state.readable) return 'The device cannot be read, so it cannot play.';
   if (state.saving) return 'Wait for the current change to finish.';
-  if (state.status !== null && !state.status.discPresent) return 'Insert a disc to play it.';
+  const discSeen = state.status?.discPresent;
+  if (discSeen === false || (state.noDisc === true && discSeen !== true)) {
+    return 'Insert a disc to play it.';
+  }
   return null;
 }
 
