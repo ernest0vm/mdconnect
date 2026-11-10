@@ -38,6 +38,7 @@ export interface DeviceStatus {
 
 const DISC_ABSENT = 0x80;
 
+/** The named state for an operating status code, or `unknown`. */
 function operatingState(code: number): OperatingState {
   return code in OPERATING_STATUS
     ? OPERATING_STATUS[code as keyof typeof OPERATING_STATUS]

@@ -9,6 +9,7 @@ const ICON = {
   focusable: false,
 } as const;
 
+/** A right-pointing triangle. */
 export function PlayIcon() {
   return (
     <svg {...ICON}>
@@ -17,6 +18,7 @@ export function PlayIcon() {
   );
 }
 
+/** Two vertical bars. */
 export function PauseIcon() {
   return (
     <svg {...ICON}>
@@ -25,6 +27,7 @@ export function PauseIcon() {
   );
 }
 
+/** A square. */
 export function StopIcon() {
   return (
     <svg {...ICON}>
@@ -33,6 +36,7 @@ export function StopIcon() {
   );
 }
 
+/** A bar and a left-pointing triangle. */
 export function PreviousIcon() {
   return (
     <svg {...ICON}>
@@ -41,6 +45,7 @@ export function PreviousIcon() {
   );
 }
 
+/** A right-pointing triangle and a bar. */
 export function NextIcon() {
   return (
     <svg {...ICON}>

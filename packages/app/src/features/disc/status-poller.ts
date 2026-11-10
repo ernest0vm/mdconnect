@@ -35,6 +35,7 @@ export class StatusPoller {
     private readonly visibility: Visibility,
   ) {}
 
+  /** Starts polling, now if the app is visible and whenever it becomes visible. */
   start(): void {
     this.active = true;
     this.stopListening = this.visibility.onChange(() => {
@@ -43,6 +44,7 @@ export class StatusPoller {
     this.sync();
   }
 
+  /** Stops polling and ignores any read still running. */
   stop(): void {
     this.active = false;
     this.stopListening?.();
@@ -61,6 +63,7 @@ export class StatusPoller {
     }
   }
 
+  /** Stops the timer, keeping the poller started. */
   private pause(): void {
     this.cancelTimer?.();
     this.cancelTimer = null;
@@ -79,6 +82,7 @@ export class StatusPoller {
     this.report(status);
   }
 
+  /** Reads the status unless the previous read is still running. */
   private tick(): void {
     if (this.reading) return;
     this.reading = true;

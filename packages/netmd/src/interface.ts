@@ -158,6 +158,7 @@ export class NetMdInterface {
     });
   }
 
+  /** Whether a disc is inserted, from the operating status block. */
   async isDiscPresent(): Promise<boolean> {
     return (await this.getStatus())[4] === 0x40;
   }
@@ -224,6 +225,7 @@ export class NetMdInterface {
     return joined;
   }
 
+  /** A track's half-width or full-width title, decoded. */
   async getTrackTitle(track: number, fullWidth = false): Promise<string> {
     return decodeSjis(await this.readTrackTitleBytes(track, fullWidth));
   }
@@ -371,10 +373,12 @@ export class NetMdInterface {
     scanQuery(reply, '18c3 00 %b 000000');
   }
 
+  /** Starts or resumes playback. */
   async play(): Promise<void> {
     await this.playAction(PlayAction.play);
   }
 
+  /** Pauses playback. */
   async pause(): Promise<void> {
     await this.playAction(PlayAction.pause);
   }
@@ -407,10 +411,12 @@ export class NetMdInterface {
     scanQuery(reply, '1850 0010 00000000 %?%?');
   }
 
+  /** Moves playback to the next track. */
   async nextTrack(): Promise<void> {
     await this.changeTrack(TrackChange.next);
   }
 
+  /** Moves playback to the previous track, or to the start of the current one. */
   async previousTrack(): Promise<void> {
     await this.changeTrack(TrackChange.previous);
   }

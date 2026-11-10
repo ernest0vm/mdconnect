@@ -97,6 +97,7 @@ function isRefusal(error: unknown): boolean {
   return error instanceof NetMdRejectedError || error instanceof NetMdNotImplementedError;
 }
 
+/** Maps an error from an edit to the reason shown to the user. */
 function failureReason(error: unknown): Extract<EditOutcome, { kind: 'failed' }>['reason'] {
   if (error instanceof NetMdRejectedError) return 'rejected';
   // encodeSjis throws RangeError before anything is sent.
@@ -128,6 +129,7 @@ async function runPlayback(md: NetMdInterface, command: PlaybackCommand): Promis
   }
 }
 
+/** Sends one edit command to the device through the NetMD interface. */
 async function runCommand(md: NetMdInterface, command: EditCommand): Promise<void> {
   switch (command.kind) {
     case 'renameDisc':
@@ -206,6 +208,7 @@ export class DiscReader {
     return this.options.hiMdMode?.() ?? false;
   }
 
+  /** Reads the device's status; null when it cannot be read or the device is in Hi-MD mode. */
   private async readStatus(): Promise<DeviceStatus | null> {
     if (this.inHiMdMode()) return null;
     try {
