@@ -46,7 +46,7 @@ type NavigatorWithUaData = Navigator & {
 };
 
 /** The browser Platform: the browser's own chooser and grants, NetMD devices only. */
-export function webPlatform(commit: string): Platform {
+export function webPlatform(commit: string, version: string): Platform {
   const nav = navigator as NavigatorWithUaData;
   return {
     kind: 'web',
@@ -54,6 +54,7 @@ export function webPlatform(commit: string): Platform {
     usb: navigator.usb,
     deviceKinds: ['netmd'],
     buildCommit: commit,
+    version,
     appearance: {
       // Browsers expose no platform signal; GlassProvider reads the media queries itself.
       get: () => ({}),

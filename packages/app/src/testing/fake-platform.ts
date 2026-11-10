@@ -87,6 +87,7 @@ export function createFakePlatform(overrides: Partial<Platform> = {}): FakePlatf
     usb,
     deviceKinds: ['netmd', 'himd'],
     buildCommit: '',
+    version: '0.1.0',
     deviceChooser: {
       onChooseDevice: (callback) => {
         chooserListeners.add(callback);

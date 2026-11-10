@@ -6,14 +6,16 @@ import {
   GlassDialogTitle,
 } from '@mdconnect/ui/components/glassyui/glass-dialog';
 
-import { buildLabel } from './about-view';
+import { buildLabel, versionLabel } from './about-view';
 
 /** Credits and license: mdconnect is a port of webminidisc and uses a port of netmd-js. */
 export function AboutDialog({
+  version,
   commit,
   onClose,
   returnFocus,
 }: {
+  readonly version: string;
   readonly commit: string;
   readonly onClose: () => void;
   /** Where focus goes when the dialog closes. */
@@ -32,7 +34,10 @@ export function AboutDialog({
           Manage the discs in Sony NetMD MiniDisc devices from your computer.
         </GlassDialogDescription>
         <div className="mt-4 flex flex-col gap-3 text-sm">
-          <p className="font-mono">{buildLabel(commit)}</p>
+          <p>
+            {versionLabel(version)}
+            <span className="ml-2 font-mono opacity-80">{buildLabel(commit)}</span>
+          </p>
           <p>
             mdconnect is free software under {licenseName}.{' '}
             <a className="underline" href={sourceLink(commit)} target="_blank" rel="noreferrer">

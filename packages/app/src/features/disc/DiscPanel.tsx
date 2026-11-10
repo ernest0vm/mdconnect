@@ -478,6 +478,8 @@ export interface DiscPanelProps {
   readonly menuSlot?: HTMLElement | null;
   /** Called when the user chooses About in the menu. */
   readonly onAbout?: () => void;
+  /** Called when the user chooses Changelog in the menu. */
+  readonly onChangelog?: () => void;
   /** Called once the session with the device has ended after Exit. */
   readonly onExit?: (device: UsbDeviceHandle) => void;
 }
@@ -491,7 +493,13 @@ type MenuDialog =
     };
 
 /** Reads the disc in the open device, shows it, and edits it; puts the More menu in the header. */
-export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPanelProps) {
+export function DiscPanel({
+  device,
+  menuSlot = null,
+  onAbout,
+  onChangelog,
+  onExit,
+}: DiscPanelProps) {
   const reader = useMemo(
     () =>
       new DiscReader(() => openNetMdSession(device), {
@@ -733,6 +741,7 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
             setMenuDialog({ kind: 'wipe' });
           }}
           onAbout={() => onAbout?.()}
+          onChangelog={() => onChangelog?.()}
           onExit={() => {
             void reader.close().then(() => onExit?.(device));
           }}

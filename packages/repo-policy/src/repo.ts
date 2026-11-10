@@ -8,6 +8,7 @@ type DependencyMap = Record<string, string>;
 
 export interface PackageJson {
   name?: string;
+  version?: string;
   license?: string;
   packageManager?: string;
   workspaces?: string[];
@@ -57,6 +58,11 @@ export function workspaceManifests(): Manifest[] {
       )
       .map((entry) => readManifest(join(parent, entry.name), false));
   });
+}
+
+/** The version of the first `## [x.y.z]` heading in a Keep a Changelog file, the newest one. */
+export function newestChangelogVersion(text: string): string | undefined {
+  return /^## \[(\d+\.\d+\.\d+)\]/mu.exec(text)?.[1];
 }
 
 export function allManifests(): Manifest[] {

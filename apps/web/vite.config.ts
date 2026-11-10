@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
@@ -21,9 +22,20 @@ function buildCommit(): string {
   }
 }
 
+/** The app version from this shell's package.json, kept equal to the newest CHANGELOG.md entry. */
+function appVersion(): string {
+  const manifest = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as {
+    version: string;
+  };
+  return manifest.version;
+}
+
 export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
-  define: { __MDCONNECT_COMMIT__: JSON.stringify(command === 'build' ? buildCommit() : '') },
+  define: {
+    __MDCONNECT_COMMIT__: JSON.stringify(command === 'build' ? buildCommit() : ''),
+    __MDCONNECT_VERSION__: JSON.stringify(appVersion()),
+  },
   server: { headers: ISOLATION_HEADERS },
   preview: { headers: ISOLATION_HEADERS },
 }));
