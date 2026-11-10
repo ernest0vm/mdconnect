@@ -59,15 +59,17 @@ import {
 } from './player-view';
 import { browserClock, documentVisibility, StatusPoller } from './status-poller';
 import { TitleDialog } from './TitleDialog';
-import { TrackTable } from './TrackTable';
+import { trackActions, type TrackAction } from './track-menu';
+import { TrackTable, trackRow } from './TrackTable';
 import { useUploadFlow, type UploadFlow } from '../upload/useUploadFlow';
 
 type Dialog =
   | { readonly kind: 'rename-disc' }
-  | { readonly kind: 'rename-track'; readonly index: number }
+  /** `fromMenu`: opened from the track's context menu, so focus goes back to its row. */
+  | { readonly kind: 'rename-track'; readonly index: number; readonly fromMenu?: boolean }
   | { readonly kind: 'new-group'; readonly tracks: readonly number[] }
   | { readonly kind: 'rename-group'; readonly track: number }
-  | { readonly kind: 'delete'; readonly tracks: readonly number[] };
+  | { readonly kind: 'delete'; readonly tracks: readonly number[]; readonly fromMenu?: boolean };
 
 /** The two grid areas the disc fills in the connected layout: its summary and its tracks. */
 function DiscAreas({
@@ -123,8 +125,8 @@ interface EditorProps {
   /** The player bar, at the bottom of the summary. */
   readonly player: ReactNode;
   readonly deviceStatus: DeviceStatus | null;
-  /** Whether the player controls are unavailable. */
-  readonly playBlocked: boolean;
+  /** Why the player controls are unavailable, or null. */
+  readonly playBlocker: string | null;
   readonly onControl: (command: PlaybackCommand) => void;
   /** Adding tracks: the button, the drop target and its state. */
   readonly upload: UploadFlow;
@@ -140,7 +142,7 @@ function DiscEditor({
   refresh,
   player,
   deviceStatus,
-  playBlocked,
+  playBlocker,
   onControl,
   upload,
 }: EditorProps) {
@@ -170,6 +172,33 @@ function DiscEditor({
   const move = (from: number, to: number) => {
     if (from === to || to < 0 || to >= raw.trackCount) return;
     edit(moveTrackPlan(raw, from, to), new Set([to]));
+  };
+  /** Plays a track, or pauses or resumes it when it is the current one. */
+  const play = (track: number) => {
+    const state = trackPlayState(deviceStatus, track);
+    if (state === 'playing') onControl({ kind: 'pause' });
+    else if (state === 'paused') onControl({ kind: 'play' });
+    else onControl({ kind: 'playTrack', track });
+  };
+  /** Runs a track's context menu action, the same as the matching player or toolbar action. */
+  const runTrackAction = (track: number, action: TrackAction['id']) => {
+    switch (action) {
+      case 'play':
+        play(track);
+        return;
+      case 'rename':
+        setDialog({ kind: 'rename-track', index: track, fromMenu: true });
+        return;
+      case 'delete':
+        setDialog({ kind: 'delete', tracks: [track], fromMenu: true });
+        return;
+      case 'move-up':
+        move(track, track - 1);
+        return;
+      case 'move-down':
+        move(track, track + 1);
+        return;
+    }
   };
   const summary = (
     <>
@@ -324,13 +353,21 @@ function DiscEditor({
               edit(ungroupPlan(raw, track));
             }}
             playState={(track) => trackPlayState(deviceStatus, track)}
-            playBlocked={playBlocked}
-            onPlay={(track) => {
-              const state = trackPlayState(deviceStatus, track);
-              if (state === 'playing') onControl({ kind: 'pause' });
-              else if (state === 'paused') onControl({ kind: 'play' });
-              else onControl({ kind: 'playTrack', track });
+            playBlocked={playBlocker !== null}
+            onPlay={play}
+            trackMenu={(track) =>
+              trackActions(track, {
+                trackCount: raw.trackCount,
+                editBlocker: blocker,
+                playBlocker,
+                playState: trackPlayState(deviceStatus, track),
+              })
+            }
+            onMenuOpen={(track) => {
+              // The menu acts on the track it was opened on, so that track becomes the selection.
+              if (!selection.has(track)) setSelection(new Set([track]));
             }}
+            onTrackAction={runTrackAction}
           />
         </div>
       </>
@@ -361,6 +398,7 @@ function DiscEditor({
           target={{ kind: 'track', index: dialog.index }}
           heading={`Rename track ${String(dialog.index + 1)}`}
           saveLabel="Rename"
+          returnFocus={dialog.fromMenu === true ? () => trackRow(dialog.index) : undefined}
           onClose={() => {
             setDialog(null);
           }}
@@ -414,6 +452,7 @@ function DiscEditor({
       {dialog?.kind === 'delete' && (
         <DeleteDialog
           count={dialog.tracks.length}
+          returnFocus={dialog.fromMenu === true ? () => trackRow(dialog.tracks[0] ?? 0) : undefined}
           onClose={() => {
             setDialog(null);
           }}
@@ -752,7 +791,7 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
           upload={upload}
           player={player}
           deviceStatus={shownStatus}
-          playBlocked={blocker !== null}
+          playBlocker={blocker}
           onControl={runControl}
           disc={status.disc}
           raw={status.raw}

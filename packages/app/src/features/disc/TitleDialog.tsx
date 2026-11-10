@@ -18,6 +18,8 @@ export interface TitleDialogProps {
   readonly saveLabel: string;
   readonly onSave: (form: TitleForm) => void;
   readonly onClose: () => void;
+  /** Where focus goes when the dialog closes, for a dialog opened from a menu. */
+  readonly returnFocus?: (() => HTMLElement | null) | undefined;
 }
 
 /** One title input with what will be stored and the space left. */
@@ -69,6 +71,7 @@ export function TitleDialog({
   saveLabel,
   onSave,
   onClose,
+  returnFocus,
 }: TitleDialogProps) {
   const [input, setInput] = useState(() => currentTitles(disc, target));
   const form = useMemo(() => titleForm(disc, target, input), [disc, target, input]);
@@ -82,7 +85,7 @@ export function TitleDialog({
         if (!open) onClose();
       }}
     >
-      <GlassDialogContent closeLabel="Cancel">
+      <GlassDialogContent closeLabel="Cancel" returnFocus={returnFocus}>
         <GlassDialogTitle className="text-lg font-semibold">{heading}</GlassDialogTitle>
         <GlassDialogDescription className="mt-1 text-sm opacity-80">
           The disc stores plain letters, numbers and half-width katakana. A full-width title can
