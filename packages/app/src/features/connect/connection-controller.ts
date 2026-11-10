@@ -13,6 +13,8 @@ export class ConnectionController {
   private busy = false;
   private openHandle: UsbDeviceHandle | null = null;
   private switchingTo: UsbDeviceHandle | null = null;
+  /** The close Exit started; an open waits for it, since a device cannot open while closing. */
+  private closing: Promise<void> | null = null;
   /** Devices unplugged while they were being switched to. */
   private readonly unplugged = new WeakSet<UsbDeviceHandle>();
   /** The chooser filters for the platform's device kinds; reconnects honour the same set. */
@@ -91,9 +93,16 @@ export class ConnectionController {
     const handle = this.openHandle;
     this.openHandle = null;
     this.dispatch({ type: 'exited' });
-    handle?.close().catch(() => {
-      // Already closed by the session, or unplugged.
-    });
+    if (handle === null) return;
+    const closing: Promise<void> = handle
+      .close()
+      .catch(() => {
+        // Already closed by the session, or unplugged.
+      })
+      .then(() => {
+        if (this.closing === closing) this.closing = null;
+      });
+    this.closing = closing;
   }
 
   /** Whether the chooser would have offered this device (a kind this platform supports). */
@@ -122,6 +131,8 @@ export class ConnectionController {
     this.switchingTo = handle;
     this.unplugged.delete(handle);
     try {
+      // After the chooser, so the request keeps its user gesture.
+      if (this.closing !== null) await this.closing;
       await switchDevice(this.openHandle, handle);
     } catch (error) {
       if (this.unplugged.has(handle) && this.openHandle === null) {

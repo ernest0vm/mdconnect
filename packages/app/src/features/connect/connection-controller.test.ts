@@ -100,6 +100,26 @@ describe('ConnectionController', () => {
     expect(a.calls).toEqual(['open', 'close']);
   });
 
+  it('waits for the Exit close to finish before opening the device again', async () => {
+    const { usb, actions, controller } = setup();
+    const a = controllableDevice(MZ_N510);
+    usb.nextRequest = () => Promise.resolve(a.handle);
+    const first = controller.request(() => false);
+    await flush();
+    a.finishOpen();
+    await first;
+    controller.exit();
+    const again = controller.request(() => false);
+    await flush();
+    expect(a.calls).toEqual(['open', 'close']);
+    a.finishClose();
+    await flush();
+    expect(a.calls).toEqual(['open', 'close', 'open']);
+    a.finishOpen();
+    await again;
+    expect(actions.at(-1)).toBe('connected');
+  });
+
   it('classifies a cancelled in-app chooser', async () => {
     const { actions, controller } = setup();
     await controller.request(() => true);
