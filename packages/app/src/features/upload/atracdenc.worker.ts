@@ -5,7 +5,7 @@
  */
 
 import type { AtracdencModule } from '../../../vendor/atracdenc/atracdenc.mjs';
-import { atracdencArguments, type EncodeReply, type EncodeRequest } from './encoders';
+import { atracdencArguments, type EncodeReply, type EncodeRequest } from './atracdenc-protocol';
 
 interface WorkerScope {
   onmessage: ((event: MessageEvent<EncodeRequest>) => void) | null;
