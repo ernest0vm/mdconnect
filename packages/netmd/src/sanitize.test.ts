@@ -56,6 +56,18 @@ describe('sanitizeFullWidthTitle', () => {
     expect(sanitizeFullWidthTitle('夜明け')).toBe('夜明け');
   });
 
+  it('drops a whole full-width title to ASCII when one character cannot be stored (disc-editing: "Full-width title with an unsupported character")', () => {
+    expect(sanitizeFullWidthTitle('夜明け😀')).toBe('');
+  });
+
+  it('drops to ASCII when a character converts to one that is not two bytes (disc-editing: "Full-width title with a converted character")', () => {
+    expect(sanitizeFullWidthTitle('夜А')).toBe('');
+  });
+
+  it('keeps a conversion whose total length is still two bytes per character, as webminidisc does (disc-editing: "Full-width title whose conversion keeps its length")', () => {
+    expect(sanitizeFullWidthTitle('夜Ж')).toBe('夜Zh');
+  });
+
   it('falls back to plain ASCII when the title cannot be stored in full-width', () => {
     expect(sanitizeFullWidthTitle('Ríos 😀')).toBe('Rios ');
   });

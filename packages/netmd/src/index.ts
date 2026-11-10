@@ -32,6 +32,7 @@ export {
   groupsFit,
   remainingTitleSpace,
   titleSpaceBalance,
+  titleSpaceWithStoredTitle,
   type RawDiscTitles,
   type TitleSpace,
 } from './disc-titles';

@@ -170,4 +170,33 @@ describe('titleForm', () => {
     );
     expect(form.fits).toBe(false);
   });
+
+  it('fits a title that replaces one of the same length on a full disc (disc-editing: "Replacing a title on a full disc")', () => {
+    // The disc entry "Mix0;//" (1 cell), "Old" (1) and another title (253) fill all 255 cells.
+    const full = disc([track(0, 'Old'), track(1, 'x'.repeat(7 * 253))]);
+    expect(
+      titleForm(
+        full,
+        { kind: 'track', index: 1 },
+        { halfWidth: 'x'.repeat(7 * 253), fullWidth: '' },
+      ).remaining.halfWidth,
+    ).toBe(0);
+    const form = titleForm(full, { kind: 'track', index: 0 }, { halfWidth: 'New', fullWidth: '' });
+    expect(form.fits).toBe(true);
+  });
+
+  it('counts the stored group entries when a track rename needs more space', () => {
+    // "0;Mix//1-50;A//" is 15 characters, 3 cells; the estimate without the ";" says 2.
+    const tracks = Array.from({ length: 50 }, (_, i) =>
+      track(i, i === 0 ? 'x'.repeat(7 * 203) : 'a'),
+    );
+    const grouped = disc(tracks, [{ title: 'A', fullWidthTitle: null, tracks }]);
+    // Track titles use 252 cells; renaming track 2 to 8 characters adds one: 256 of 255.
+    const form = titleForm(
+      grouped,
+      { kind: 'track', index: 1 },
+      { halfWidth: 'a'.repeat(8), fullWidth: '' },
+    );
+    expect(form.fits).toBe(false);
+  });
 });
