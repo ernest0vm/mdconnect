@@ -39,12 +39,12 @@ function fakeContexts(decoded: FakeBuffer | Error) {
   return { factory, created };
 }
 
-const file = new Blob([new Uint8Array(4)]);
+const file = () => new ArrayBuffer(4);
 
 describe('decodeAudio', () => {
   it('decodes at 44.1 kHz and keeps a stereo file as it is', async () => {
     const { factory, created } = fakeContexts(buffer(2, 100));
-    const audio = await decodeAudio(file, factory);
+    const audio = await decodeAudio(file(), factory);
     expect(created).toEqual([{ channels: 2, length: 1, rate: 44_100 }]);
     expect(audio.left[0]).toBe(1);
     expect(audio.right[0]).toBe(2);
@@ -53,7 +53,7 @@ describe('decodeAudio', () => {
 
   it('mixes a mono or multichannel file to stereo (audio-conversion: "Decode an MP3")', async () => {
     const { factory, created } = fakeContexts(buffer(1, 100));
-    const audio = await decodeAudio(file, factory);
+    const audio = await decodeAudio(file(), factory);
     expect(created[1]).toEqual({ channels: 2, length: 100, rate: 44_100 });
     expect(audio.left).toHaveLength(100);
   });
@@ -62,6 +62,6 @@ describe('decodeAudio', () => {
     const { factory } = fakeContexts(
       new DOMException('Unable to decode audio data', 'EncodingError'),
     );
-    await expect(decodeAudio(file, factory)).rejects.toBeInstanceOf(NotDecodableError);
+    await expect(decodeAudio(file(), factory)).rejects.toBeInstanceOf(NotDecodableError);
   });
 });

@@ -31,18 +31,18 @@ const browserContexts: AudioContextFactory = (channels, length, sampleRate) =>
 const STEREO = 2;
 
 /**
- * Decodes a file with the platform's own decoder (Web Audio) to 44.1 kHz stereo. Mono and
+ * Decodes a file's bytes with the platform's own decoder (Web Audio) to 44.1 kHz stereo. Mono and
  * multichannel audio is mixed to stereo with the Web Audio rules.
  */
 export async function decodeAudio(
-  file: Blob,
+  file: ArrayBuffer,
   contexts: AudioContextFactory = browserContexts,
 ): Promise<DecodedAudio> {
-  // decodeAudioData resamples to the context's rate.
+  // decodeAudioData resamples to the context's rate. It takes over (detaches) the buffer.
   const decoder = contexts(STEREO, 1, SAMPLE_RATE);
   let decoded: AudioBuffer;
   try {
-    decoded = await decoder.decodeAudioData(await file.arrayBuffer());
+    decoded = await decoder.decodeAudioData(file);
   } catch (error) {
     throw new NotDecodableError({ cause: error });
   }

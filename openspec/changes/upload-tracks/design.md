@@ -111,7 +111,7 @@
 - **EKB:** the open-source EKB by default. The "corrupted deck" EKB is used for `054c:0081` when the 8-byte leaf ID is all `0xFF`.
 - **Host nonce:** comes from an injected random source, `globalThis.crypto.getRandomValues` in the app. Upstream uses `Math.random`.
 
-### 3. Packet encryption in a worker
+### 3. Packet encryption
 
 `packets.ts` in `packages/netmd` is a pure generator, a port of `encrypt-generator.ts`:
 
@@ -123,7 +123,9 @@
 
 Packets are 1024 bytes, as in webminidisc. That value is proven across many decks. The 1 MiB netmd-js default is not.
 
-`UploadSession` takes a `packets` option, `(data, frameSize) => AsyncIterable<packet>`, which defaults to running the generator on the calling thread. In `packages/app`, that option is backed by `encrypt.worker.ts`, which runs the generator. It posts packets back with transferable buffers and stays at most a few packets ahead, so memory stays flat. The main thread awaits `bulkWrite` for each packet and reports two numbers: bytes encrypted (the "buffer" value) and bytes written.
+`UploadSession` takes a `packets` option, `(data, frameSize) => AsyncIterable<packet>`, which defaults to running the generator on the calling thread, one packet between USB writes.
+
+The design first moved encryption to a worker. Measured DES speed (about 74 MB/s) makes that unnecessary: a 1 KB packet takes about 14 µs, far below a frame, and the generator yields after each packet, so the UI never waits on it. A worker would add a message per packet and copies of the track. The `packets` option keeps a worker possible if a slow machine needs it. The dialog reports bytes written.
 
 ### 4. Formats
 

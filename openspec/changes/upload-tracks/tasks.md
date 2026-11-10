@@ -84,8 +84,8 @@
 
 ## 7. Pipeline (`packages/app`)
 
-- [ ] 7.1 Add `fitCheck` for the time in SP units per mode and the remaining title cells, and title shortening in order. Verify with tests (track-upload: "Fits in LP2 but not in SP", "Title space runs out").
-- [ ] 7.2 Add `upload-pipeline.ts` with:
+- [x] 7.1 Add `fitCheck` for the time in SP units per mode and the remaining title cells, and title shortening in order. Verify with tests (track-upload: "Fits in LP2 but not in SP", "Title space runs out").
+- [x] 7.2 Add `upload-pipeline.ts` with:
   - conversion one track ahead;
   - a skip on a conversion error;
   - a stop on a device error;
@@ -95,9 +95,9 @@
 
   Verify with fake-converter and fake-session tests (track-upload: "Cancel during the second track", "A file cannot be decoded", "Device fails mid-upload"; audio-conversion: "Consent declined" at the pipeline level).
 
-- [ ] 7.3 Add `encrypt.worker.ts`, which runs the packet generator a few packets ahead, and wire it into the pipeline. Verify with a test of the backpressure logic, and in the browser that memory stays flat during a long SP upload with the demo device.
-- [ ] 7.4 Add `DiscReader.upload(job)`: one exclusive operation that stops playback, runs the pipeline and reads the disc again. Verify with tests that a status poll waits for it and that playback stops first (track-upload: "Playback stopped").
-- [ ] 7.5 Make the demo device accept uploads: append a track with the given title and length. Verify with a test, so the UI can be checked without hardware.
+- [x] 7.3 ~~Add `encrypt.worker.ts`, which runs the packet generator a few packets ahead.~~ Not needed. DES runs at about 74 MB/s, about 14 µs per 1 KB packet, so `UploadSession` encrypts each packet inline between USB writes (design, decision 3). A worker can still be plugged in through the `packets` option. Checked: `upload-session.test.ts` covers the packet source, and the demo upload test runs the whole path.
+- [x] 7.4 Add `DiscReader.upload(job)`: one exclusive operation that stops playback, runs the pipeline and reads the disc again. Verify with tests that a status poll waits for it and that playback stops first (track-upload: "Playback stopped").
+- [x] 7.5 Make the demo device accept uploads: append a track with the given title and length. Verify with a test, so the UI can be checked without hardware. Done differently: the demo answers the upload commands with synthetic replies, so the transfer and its progress can be tried, but it stores nothing. The disc reads the same afterwards, as with the other demo edits. Checked by `demo-upload.test.ts`.
 
 ## 8. UI (`packages/app`)
 
