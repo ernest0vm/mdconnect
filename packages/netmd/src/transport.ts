@@ -79,9 +79,10 @@ const MAX_RETRY_MS = 1_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_TRANSFER_TIMEOUT_MS = 5_000;
 /**
- * A bulk write waits while the deck still writes the previous track: it holds new data back
- * (USB flow control) for as long as that takes. Measured on the MZ-N510, a 10-second SP track made
- * the next track's first packet wait past 5 s.
+ * A deck may hold track data back over USB (flow control) while it is busy, for example writing the
+ * previous track. Packets usually take milliseconds (at most 25 ms over 3,450 packets on the
+ * MZ-N510), but 5 s is too tight a bound for a transfer the device is allowed to delay; upstream
+ * has no limit at all.
  */
 const DEFAULT_BULK_TIMEOUT_MS = 120_000;
 
