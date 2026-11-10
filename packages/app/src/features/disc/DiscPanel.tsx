@@ -457,6 +457,10 @@ export function DiscPanel({ device }: { readonly device: UsbDeviceHandle }) {
   const refreshButton = (
     <GlassButton
       ref={focusNewRefresh}
+      onBlur={(event) => {
+        // Moving to another control means the user has moved on; a removed button has no target.
+        if (event.relatedTarget !== null) keepRefreshFocus.current = false;
+      }}
       variant="soft"
       size="sm"
       aria-disabled={status.kind === 'reading' || saving}

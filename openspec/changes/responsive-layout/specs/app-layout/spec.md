@@ -77,5 +77,5 @@ The desktop app SHALL open its main window at 1200 × 800 pixels, or smaller whe
 
 #### Scenario: Resize
 
-- **WHEN** the user drags the window smaller than 480 × 560
+- **WHEN** the screen's work area is at least 480 × 560 and the user drags the window smaller than that
 - **THEN** the window stops at 480 × 560 and the layout is still usable
