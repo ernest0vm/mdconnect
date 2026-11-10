@@ -58,20 +58,20 @@
 
 ## 5. Audio files (`packages/app`)
 
-- [ ] 5.1 Add `music-metadata`, pinned to the newest version that passes the age gate, and `readTags(file)` for title, artist, album, duration and track gain. Verify with tests on small tagged MP3, FLAC and M4A fixtures.
-- [ ] 5.2 Add `titleFromSource(tags, fileName, source)` for the six sources. Verify with tests (track-upload: "Title from file name", "Title from tags", "Missing tag").
-- [ ] 5.3 Add `atrac-file.ts`, which recognises ATRAC3 WAV (`0x0270` and `0xFFFE`) and OMA files, their mode from the block align or the bitrate, and encrypted OMA. Verify with header fixtures (audio-conversion: "LP4 ATRAC3 WAV", "LP105 file", "Encrypted OMA").
+- [x] 5.1 Add `music-metadata`, pinned to the newest version that passes the age gate, and `readTags(file)` for title, artist, album, duration and track gain. Verify with tests on small tagged MP3, FLAC and M4A fixtures.
+- [x] 5.2 Add `titleFromSource(tags, fileName, source)` for the six sources. Verify with tests (track-upload: "Title from file name", "Title from tags", "Missing tag").
+- [x] 5.3 Add `atrac-file.ts`, which recognises ATRAC3 WAV (`0x0270` and `0xFFFE`) and OMA files, their mode from the block align or the bitrate, and encrypted OMA. Verify with header fixtures (audio-conversion: "LP4 ATRAC3 WAV", "LP105 file", "Encrypted OMA").
 - [ ] 5.4 Add `decode.ts`: Web Audio decoding to 44.1 kHz stereo, ReplayGain with a peak cap, and 16-bit big-endian interleaving. Keep the sample conversion and gain as pure functions with unit tests. Verify in the browser with an MP3, a FLAC, a 48 kHz mono WAV and a 5.1 file (audio-conversion: "Decode an MP3", "Unsupported format", "Apply track gain", "No tag").
 
 ## 6. LP encoders (`packages/app`)
 
-- [ ] 6.1 Add `packages/app/vendor/atracdenc/`:
+- [x] 6.1 Add `packages/app/vendor/atracdenc/`:
   - a `build.sh` pinning the Emscripten Docker image and the atracdenc and libsndfile commits, with `EXPORT_ES6`, `SINGLE_FILE`, `INVOKE_RUN=0` and `DYNAMIC_EXECUTION=0`;
   - the built `atracdenc.mjs`;
   - the LGPL-2.1 licence;
   - a README with the source links.
 
-  Verify by running `build.sh` and getting the committed file byte for byte. Check that `eval` and `new Function` do not appear in the output. Record atracdenc's ATRAC3 header length in the design's open question.
+  Verify by running `build.sh` and getting the committed file byte for byte. Check that `eval` and `new Function` do not appear in the output. Record atracdenc's ATRAC3 header length in the design's open question. Checked: two runs gave the same SHA-256, and neither `eval(` nor `new Function` appears in the output. Current atracdenc writes raw frames with `--container raw`, so there is no header and the open question is closed.
 
 - [ ] 6.2 Add the built-in encoder: a WAV built from PCM, and an `atracdenc.worker.ts` loaded lazily that returns raw ATRAC3 frames. Verify with a test for the WAV header. Check in the browser that a 10-second file encodes to the expected LP2 and LP4 frame counts (audio-conversion: "Encode LP2 offline").
 - [ ] 6.3 Add the online encoder: the multipart POST, 3 attempts, and the header stripped with `atrac-file.ts`. Inject `fetch`. Verify with tests for:

@@ -169,15 +169,15 @@ Both encoders implement `encode(source, mode) → ATRAC3 frames`.
 **Built-in (atracdenc):**
 
 - Input is a 44.1 kHz 16-bit little-endian stereo WAV built from the decoded PCM.
-- A worker runs `atracdenc -e atrac3 --bitrate 128|64`, as webminidisc does, and strips the output header to keep the raw frames.
-- We build atracdenc ourselves (dcherednik/atracdenc, LGPL-2.1, plus libsndfile, LGPL-2.1) with a pinned Emscripten Docker image, using:
+- A fresh worker per track runs `atracdenc -e atrac3 --bitrate 128` for LP2 or `-e atrac3_lp4` for LP4, with `--container raw`, so the output is raw ATRAC3 frames and no header is stripped. Webminidisc's older build had no raw container and cut a 96-byte header.
+- We build atracdenc ourselves (dcherednik/atracdenc, LGPL-2.1, plus libsndfile 1.2.2, LGPL-2.1) in the `emscripten/emsdk:6.0.10` Docker image, using:
   - `MODULARIZE`, `EXPORT_ES6` and `SINGLE_FILE`;
   - `INVOKE_RUN=0`;
   - `DYNAMIC_EXECUTION=0`, so the output never calls `eval` or `new Function`, which the CSP forbids.
-- The output `atracdenc.mjs` (about 1 MB) is committed under `packages/app/vendor/atracdenc/` together with:
+- The output `atracdenc.mjs` (1.1 MB) is committed under `packages/app/vendor/atracdenc/` together with:
   - the licence;
   - the upstream commits;
-  - `build.sh`, to satisfy the LGPL's source requirement.
+  - `build.sh`, to satisfy the LGPL's source requirement. Two runs give a byte-identical file.
 - It is loaded lazily, only when LP is chosen.
 
 Alternative: commit webminidisc's prebuilt `atracdenc.js`. Rejected: it was built with an old Emscripten and closure flags we cannot audit or reproduce.
@@ -290,7 +290,3 @@ This change lands as three stacked PRs, one per task group cluster, each passing
 3. the UI, CSP and preferences.
 
 Nothing is persisted that needs migrating. Rolling back removes the "Add tracks" action and the CSP entry.
-
-## Open Questions
-
-- The exact header length atracdenc writes for `atrac3` output. Webminidisc strips 96 bytes; this is confirmed when the build is made.

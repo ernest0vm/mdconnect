@@ -17,6 +17,8 @@ export default defineConfig(
     '**/.turbo/',
     '.yarn/',
     'openspec/',
+    // Built from pinned sources by packages/app/vendor/atracdenc/build.sh; not hand-written.
+    'packages/app/vendor/atracdenc/atracdenc.mjs',
   ]),
 
   js.configs.recommended,
