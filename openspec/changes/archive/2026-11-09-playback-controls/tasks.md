@@ -30,4 +30,4 @@
 
   Record a play, next and stop session as an anonymised fixture with a replay test.
 
-- [ ] 4.2 Add any steps that cannot run on the available hardware to issue #8.
+- [x] 4.2 Add any steps that cannot run on the available hardware to issue #8. Added under "Playback" in #8.
