@@ -152,6 +152,29 @@ describe('encodeOnline', () => {
     expect(calls).toHaveLength(3);
   });
 
+  it('gives up on an attempt that stalls, then tries again', async () => {
+    let calls = 0;
+    const fetchImpl = (_url: string, init: RequestInit) => {
+      calls += 1;
+      if (calls > 1) return Promise.resolve(new Response(encoded));
+      // The service accepts the connection and never answers.
+      return new Promise<Response>((_resolve, reject) => {
+        init.signal?.addEventListener('abort', () => {
+          reject(new DOMException('Timed out', 'TimeoutError'));
+        });
+      });
+    };
+    const encodedTrack = await encodeOnline(
+      file,
+      'song.mp3',
+      'lp2',
+      { replayGain: false, timeoutMs: 10 },
+      fetchImpl,
+    );
+    expect(encodedTrack.data).toHaveLength(384);
+    expect(calls).toBe(2);
+  });
+
   it('stops trying once aborted', async () => {
     const controller = new AbortController();
     const { fetchImpl, calls } = fakeFetch([

@@ -130,6 +130,21 @@ describe('runUpload', () => {
     expect(summary).toMatchObject({ uploaded: [0, 1], notUploaded: [2, 3], cancelled: true });
   });
 
+  it('does not send a track that was being converted when the user cancelled', async () => {
+    let cancelled = false;
+    const { session, log } = fakeSession();
+    const summary = await runUpload(items(2), {
+      convert: () => {
+        cancelled = true;
+        return Promise.resolve(converted);
+      },
+      session,
+      isCancelled: () => cancelled,
+    });
+    expect(log).toEqual(['open', 'close']);
+    expect(summary).toMatchObject({ uploaded: [], notUploaded: [0, 1], cancelled: true });
+  });
+
   it('aborts a conversion started ahead when the upload stops early', async () => {
     let cancelled = false;
     const signals: AbortSignal[] = [];
