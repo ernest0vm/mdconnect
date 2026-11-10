@@ -12,6 +12,7 @@
 
 const sjis = new TextDecoder('shift_jis');
 
+/** Decodes Shift-JIS bytes with the platform decoder. */
 export function decodeSjis(bytes: Uint8Array): string {
   return sjis.decode(bytes);
 }
@@ -32,7 +33,8 @@ const FULL_WIDTH: Readonly<Record<string, string>> = {
   ';': '；',
 };
 
-function toFullWidthRange(range: string): string {
+/** A group range in full-width digits, as the full-width title stores it. */
+export function toFullWidthRange(range: string): string {
   return range.replace(/./gu, (char) => FULL_WIDTH[char] ?? '');
 }
 

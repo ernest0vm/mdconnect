@@ -3,40 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { listContent, timeToFrames } from './content';
 import { NetMdNotImplementedError, NetMdRejectedError } from './errors';
 import { Encoding, NetMdInterface, type CommandChannel } from './interface';
-
-const bytes = (hex: string) =>
-  new Uint8Array(
-    (hex.replace(/\s+/g, '').match(/../g) ?? []).map((pair) => Number.parseInt(pair, 16)),
-  );
-const key = (data: Uint8Array) => [...data].map((b) => b.toString(16).padStart(2, '0')).join('');
-const ascii = (text: string) => key(new TextEncoder().encode(text));
-const word = (n: number) => n.toString(16).padStart(4, '0');
-
-/**
- * A NetMD channel that answers each exact command with a scripted reply (status byte included).
- * Descriptor open/close commands (1808…) are accepted unless scripted otherwise.
- */
-function channel(script: Record<string, string>) {
-  const replies = new Map(Object.entries(script).map(([cmd, reply]) => [key(bytes(cmd)), reply]));
-  const sent: string[] = [];
-  let last = '';
-  const ch: CommandChannel = {
-    sendCommand: (command) => {
-      last = key(command);
-      sent.push(last);
-      return Promise.resolve();
-    },
-    readReply: () => {
-      const scripted = replies.get(last);
-      if (scripted !== undefined) return Promise.resolve(bytes(scripted));
-      if (last.startsWith('001808')) return Promise.resolve(bytes(`09${last.slice(2)}`));
-      return Promise.reject(new Error(`unscripted command ${last}`));
-    },
-  };
-  return { ch, sent };
-}
-
-const noSleep = () => Promise.resolve();
+import { ascii, bytes, channel, key, noSleep, word } from './testing/scripted-channel';
 
 /** Replies for a disc titled `raw` (half-width only), with `tracks` [title, h, m, s, encoding, channel]. */
 function discScript(

@@ -1,9 +1,11 @@
+import type { Disc } from '@mdconnect/netmd';
+
 import type { DiscReadResult } from './disc-reader';
 import type { DiscView } from './disc-view';
 
 export type DiscStatus =
   | { readonly kind: 'reading'; readonly title: string }
-  | { readonly kind: 'disc'; readonly disc: DiscView }
+  | { readonly kind: 'disc'; readonly disc: DiscView; readonly raw: Disc }
   | {
       readonly kind: 'notice' | 'warning';
       readonly title: string;
@@ -16,7 +18,7 @@ export function discStatus(result: DiscReadResult | 'reading'): DiscStatus {
   if (result === 'reading') return { kind: 'reading', title: 'Reading disc…' };
   switch (result.kind) {
     case 'disc':
-      return { kind: 'disc', disc: result.disc };
+      return { kind: 'disc', disc: result.disc, raw: result.raw };
     case 'no-disc':
       return {
         kind: 'notice',

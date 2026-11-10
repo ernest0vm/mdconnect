@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { listContent } from './content';
+import { rewriteDiscGroups } from './commands';
+import { listContent, type Disc, type Track } from './content';
 import { Encoding, NetMdInterface } from './interface';
 import { NetMdTransport, type NetMdUsbDevice } from './transport';
+import edits from './fixtures/mz-ne410-edits.json';
 import grouped from './fixtures/mz-ne410-grouped-lp4.json';
 import noDisc from './fixtures/mz-ne410-no-disc.json';
 import refresh from './fixtures/mz-ne410-refresh-lp2.json';
@@ -114,5 +116,62 @@ describe('reading a recorded disc (MZ-NE410/NF520D, 60 LP4 tracks, titles anonym
     expect(secondsOf(disc.left)).toBe(2 * 60 + 25);
     // Track 14 is stored with a space where an accented letter was ("Te Llor  un Rio").
     expect(disc.groups[0]?.tracks[13]?.title).toBe('xx xxxx  xx xxx');
+  });
+});
+
+describe('replaying recorded edits (MZ-NE410/NF520D, 37 LP2 tracks, titles anonymized)', () => {
+  const noSleep = { sleep: () => Promise.resolve() };
+  const session = (index: number) => {
+    const edit = edits.edits[index];
+    if (edit === undefined) throw new Error(`no recorded edit ${String(index)}`);
+    const device = replay(edit.transfers as Transfer[]);
+    return { device, md: new NetMdInterface(new NetMdTransport(device, noSleep), noSleep) };
+  };
+  const discTitle = "xxxxxxxx/xxxxxx.xxxxxxxx./xxxxxxx.xxxxx.-xxxx'x.xxxxxxxxx";
+  const track = (index: number): Track => ({
+    index,
+    title: '',
+    fullWidthTitle: '',
+    duration: 0,
+    channel: 0,
+    encoding: Encoding.lp2,
+    flags: 3,
+  });
+  const disc = (groups: Disc['groups']): Disc => ({
+    title: discTitle,
+    fullWidthTitle: '',
+    writable: true,
+    writeProtected: false,
+    used: 0,
+    left: 0,
+    total: 0,
+    trackCount: 37,
+    groups,
+  });
+  const tracks = Array.from({ length: 37 }, (_, i) => track(i));
+
+  it('renames a track byte for byte (disc-editing: "Rename a track")', async () => {
+    const { device, md } = session(0);
+    await md.setTrackTitle(13, 'xx xxxxx xx xxx');
+    expect(device.remaining()).toBe(0);
+  });
+
+  it('moves a track and leaves unchanged disc titles alone (disc-editing: "Move with the keyboard")', async () => {
+    const { device, md } = session(1);
+    await md.moveTrack(15, 14);
+    await rewriteDiscGroups(md, disc([{ title: null, fullWidthTitle: null, tracks }]));
+    expect(device.remaining()).toBe(0);
+  });
+
+  it('writes a new group into the disc title (disc-editing: "Group tracks")', async () => {
+    const { device, md } = session(2);
+    await rewriteDiscGroups(
+      md,
+      disc([
+        { title: null, fullWidthTitle: null, tracks: tracks.slice(2) },
+        { title: 'xxxx xxxxx', fullWidthTitle: '', tracks: tracks.slice(0, 2) },
+      ]),
+    );
+    expect(device.remaining()).toBe(0);
   });
 });
