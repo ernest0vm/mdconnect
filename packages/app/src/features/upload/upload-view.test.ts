@@ -13,6 +13,7 @@ import {
   recordingModes,
   removeItem,
   retitle,
+  skippedLine,
   skipReasonText,
   summaryText,
   uploadModeOf,
@@ -165,6 +166,10 @@ describe('preparedTitles', () => {
 });
 
 describe('result messages', () => {
+  it('writes a line for a track skipped before the upload', () => {
+    expect(skippedLine('Demo', 'not-decodable')).toBe('Skipped “Demo”: it could not be decoded.');
+  });
+
   it('explains each skip reason', () => {
     expect(skipReasonText('not-decodable')).toBe('it could not be decoded');
     expect(skipReasonText('online-encoder-unavailable')).toBe(

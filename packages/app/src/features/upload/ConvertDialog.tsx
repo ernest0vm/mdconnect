@@ -132,6 +132,8 @@ export function ConvertDialog({
   const [askConsent, setAskConsent] = useState(false);
   const [rejected, setRejected] = useState<readonly string[]>([]);
   const loading = useRef(new Set<number>());
+  // A load that finishes after the source changed must title with the current source.
+  const sourceRef = useRef(titleSource);
   const moreInput = useRef<HTMLInputElement>(null);
   const id = useId();
 
@@ -150,15 +152,16 @@ export function ConvertDialog({
                   ...loaded,
                   title: entry.edited
                     ? entry.title
-                    : titleFromSource(titleSource, loaded.tags ?? {}, entry.file.name),
+                    : titleFromSource(sourceRef.current, loaded.tags ?? {}, entry.file.name),
                 },
           ),
         );
       });
     }
-  }, [items, load, titleSource]);
+  }, [items, load]);
 
   const lp = mode === 'lp2' || mode === 'lp4';
+  const uploadCount = items.filter((item) => item.problem === null).length;
   const fit = fitView(items, mode, disc, fullWidth);
   const chosen: UploadPreferences = {
     mode,
@@ -228,6 +231,7 @@ export function ConvertDialog({
               onChange={(event) => {
                 const source = event.target.value as TitleSource;
                 setTitleSource(source);
+                sourceRef.current = source;
                 setItems((current) => retitle(current, source));
               }}
             >
@@ -450,7 +454,7 @@ export function ConvertDialog({
                 else upload();
               }}
             >
-              Upload {items.length === 1 ? 'track' : `${String(items.length)} tracks`}
+              Upload {uploadCount === 1 ? 'track' : `${String(uploadCount)} tracks`}
             </GlassButton>
           </div>
         </div>

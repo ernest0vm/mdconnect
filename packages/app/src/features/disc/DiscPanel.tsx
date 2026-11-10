@@ -624,7 +624,8 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
   const blocker = playerBlocker({
     status: shownStatus,
     reading: status.kind === 'reading',
-    saving,
+    // Controls would wait behind the upload and then start playback unexpectedly.
+    saving: saving || upload.uploading,
     readable,
     noDisc: result !== 'reading' && result.kind === 'no-disc',
   });

@@ -212,6 +212,10 @@ const SKIP_REASONS: Readonly<Record<ConversionFailure, string>> = {
 
 export const skipReasonText = (reason: ConversionFailure): string => SKIP_REASONS[reason];
 
+/** One summary line for a track that was skipped. */
+export const skippedLine = (title: string, reason: ConversionFailure): string =>
+  `Skipped “${title}”: ${skipReasonText(reason)}.`;
+
 const quoted = (titles: readonly string[], indexes: readonly number[]) =>
   indexes.map((index) => `“${titles[index] ?? `Track ${String(index + 1)}`}”`).join(', ');
 
@@ -220,7 +224,7 @@ export function summaryText(summary: UploadSummary, titles: readonly string[]): 
   const count = summary.uploaded.length;
   const lines = [`${String(count)} ${count === 1 ? 'track' : 'tracks'} uploaded.`];
   for (const { index, reason } of summary.skipped) {
-    lines.push(`Skipped ${quoted(titles, [index])}: ${skipReasonText(reason)}.`);
+    lines.push(skippedLine(titles[index] ?? `Track ${String(index + 1)}`, reason));
   }
   if (summary.cancelled && summary.notUploaded.length > 0) {
     lines.push(`Cancelled before ${quoted(titles, [summary.notUploaded[0] ?? 0])}.`);

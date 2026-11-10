@@ -3,6 +3,7 @@ import { GlassAlert } from '@mdconnect/ui/components/glassyui/glass-alert';
 import {
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -24,6 +25,7 @@ import {
   preparedTitles,
   progressAfter,
   recordingModes,
+  skippedLine,
   startingProgress,
   summaryText,
 } from './upload-view';
@@ -96,6 +98,7 @@ export function useUploadFlow({
   const [refusal, setRefusal] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
+  const reasonId = useId();
   const cancelled = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -140,10 +143,17 @@ export function useUploadFlow({
     if (disc === null) return;
     remember(job.preferences);
     setFiles(null);
-    const titles = preparedTitles(job.items, disc, job.preferences.fullWidth);
+    setRefusal(null);
+    // Files found unusable while the dialog read them are skipped without trying again; they take
+    // no title space and do not count as tracks to upload.
+    const items = job.items.filter((item) => item.problem === null);
+    const knownSkips = job.items.flatMap((item) =>
+      item.problem === null ? [] : [skippedLine(item.title || item.file.name, item.problem)],
+    );
+    const titles = preparedTitles(items, disc, job.preferences.fullWidth);
     // An empty title is shown as the file it came from.
     const shownTitles = titles.map((t, i) =>
-      t.title === '' ? (job.items[i]?.file.name ?? '') : t.title,
+      t.title === '' ? (items[i]?.file.name ?? '') : t.title,
     );
     let latest = startingProgress(shownTitles);
     setProgress(latest);
@@ -156,36 +166,44 @@ export function useUploadFlow({
     }, PROGRESS_INTERVAL_MS);
     const { encoder, replayGain } = job.preferences;
 
-    void holdWakeLock().then(async (release) => {
-      const result = await reader.upload((session) =>
-        runUpload(titles, {
-          convert: (index, _onProgress, signal) => {
-            const item = job.items[index];
-            if (item === undefined) return Promise.reject(new Error('No such track'));
-            return convertTrack(item.file, job.mode, {
-              encoder,
-              replayGain,
-              trackGainDb: item.tags?.trackGainDb,
-              signal,
-            });
-          },
-          session,
-          isCancelled: () => cancelled.current,
-          onEvent: (event) => {
-            latest = progressAfter(latest, event, shownTitles);
-          },
-        }),
-      );
-      clearInterval(flush);
-      release();
-      if (!mounted.current) return;
-      const finished =
-        result.outcome.kind === 'done'
-          ? summaryText(result.outcome.summary, shownTitles)
-          : ['Nothing was uploaded: the device could not be reached.'];
-      setProgress({ ...latest, stopping: cancelled.current, finished });
-      onFinished(result);
-    });
+    const run = async (): Promise<string[]> => {
+      const release = await holdWakeLock();
+      try {
+        const result = await reader.upload((session) =>
+          runUpload(titles, {
+            convert: (index, _onProgress, signal) => {
+              const item = items[index];
+              if (item === undefined) return Promise.reject(new Error('No such track'));
+              return convertTrack(item.file, job.mode, {
+                encoder,
+                replayGain,
+                trackGainDb: item.tags?.trackGainDb,
+                signal,
+              });
+            },
+            session,
+            isCancelled: () => cancelled.current,
+            onEvent: (event) => {
+              latest = progressAfter(latest, event, shownTitles);
+            },
+          }),
+        );
+        if (mounted.current) onFinished(result);
+        if (result.outcome.kind === 'failed') {
+          return ['Nothing was uploaded: the device could not be reached.'];
+        }
+        const [first = '', ...rest] = summaryText(result.outcome.summary, shownTitles);
+        return [first, ...knownSkips, ...rest];
+      } finally {
+        release();
+      }
+    };
+    void run()
+      .catch(() => ['The upload stopped unexpectedly. Refresh to see what reached the disc.'])
+      .then((finished) => {
+        clearInterval(flush);
+        if (mounted.current) setProgress({ ...latest, stopping: cancelled.current, finished });
+      });
   };
 
   const addTracks = (
@@ -193,8 +211,14 @@ export function useUploadFlow({
       <Action
         label="Add tracks"
         blocked={blocker !== null || disc === null}
+        describedBy={reasonId}
         onRun={() => input.current?.click()}
       />
+      {blocker !== null && (
+        <span id={reasonId} className="sr-only">
+          {blocker}
+        </span>
+      )}
       <input
         ref={input}
         type="file"
@@ -250,6 +274,7 @@ export function useUploadFlow({
           onPreferences={remember}
           onClose={() => {
             setFiles(null);
+            setRefusal(null);
           }}
         />
       )}

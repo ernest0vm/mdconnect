@@ -104,8 +104,9 @@ export function UploadDialog({
             <GlassDialogDescription className="mt-1 text-sm">{finished[0]}</GlassDialogDescription>
             {finished.length > 1 && (
               <ul className="mt-3 flex list-disc flex-col gap-1 pl-5 text-sm">
-                {finished.slice(1).map((line) => (
-                  <li key={line}>{line}</li>
+                {finished.slice(1).map((line, index) => (
+                  // Lines can repeat (two files with the same title skipped alike).
+                  <li key={index}>{line}</li>
                 ))}
               </ul>
             )}
