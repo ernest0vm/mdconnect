@@ -415,14 +415,16 @@ export function ConvertDialog({
             <GlassAlert tone="info" title={`Send your files to ${ONLINE_HOST}?`}>
               <p>
                 Sony's encoder runs on {ONLINE_HOST}, a service run by MiniDisc enthusiasts. Your{' '}
-                {items.length === 1 ? 'file is' : `${String(items.length)} files are`} uploaded
-                there, encoded and sent back. Nothing else leaves your computer.
+                {uploadCount === 1 ? 'file is' : `${String(uploadCount)} files are`} uploaded there,
+                encoded and sent back. Nothing else leaves your computer.
               </p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <GlassButton
                   type="button"
                   variant="primary"
                   size="sm"
+                  // The list can change while the prompt is open; it starts only what could upload.
+                  disabled={!fit.canUpload}
                   onClick={() => {
                     const consented = { ...chosen, onlineConsent: true };
                     onPreferences(consented);
