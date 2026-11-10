@@ -74,7 +74,7 @@
 **Transport and device interface:**
 
 - `NetMdUsbDevice` gains `transferOut(endpointNumber, data)`. WebUSB's `USBDevice` in Chromium and in Electron both provide it.
-- `NetMdTransport.bulkWrite(data)` writes to endpoint 2. Each write keeps the 5 s per-transfer limit, so a hung device still fails.
+- `NetMdTransport.bulkWrite(data)` writes to endpoint 2. Each write may take up to 2 minutes, so a hung device still fails. Control transfers keep their 5 s limit. A deck may hold data back over USB while it is busy, so 5 s is too tight for a bulk write. Packets measured on the MZ-N510 took at most 25 ms. Once, the MZ-N510 reset at the start of a second 10-second SP track; the cause was not confirmed, and the same upload worked afterwards.
 - `readReply({ timeoutMs })` accepts a per-call limit, with the poll interval capped at 1 s. The reply after a track's bulk transfer may take up to five minutes, because the deck answers once it has written the audio. Upstream has no limit, but a deck stuck in its recording state (as the MZ-NE410 got stuck in #8) would then keep the upload waiting forever. Each poll still has its 5 s USB limit, and an unplug ends it.
 - `sendQuery(query, { acceptInterim: true })` returns the first interim reply. `sendTrack` needs this.
 

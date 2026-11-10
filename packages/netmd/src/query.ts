@@ -6,6 +6,8 @@
  * - Native `BigInt` instead of `jsbi`.
  * - `%W` encodes a full 2-byte BCD word; upstream limits it to one byte.
  * - Debug logging removed.
+ * - A length-prefixed block (`%x`, `%s`, `%z`) shorter than its declared length is an error;
+ *   upstream returns the bytes that are there.
  *
  * Format language, shared by `formatQuery` and `scanQuery`:
  *   hex digit pairs   literal bytes (spaces are ignored)
@@ -151,6 +153,7 @@ export function scanQuery(reply: Uint8Array, format: string): ScannedValue[] {
         result.push(value);
       } else if (char === 's' || char === 'x' || char === 'z') {
         const length = char === 'z' ? take() : (take() << 8) | take();
+        if (input.length < length) fail('Reply is shorter than its format');
         result.push(new Uint8Array(input.splice(0, length)));
       } else if (char === '*' || char === '#') {
         result.push(new Uint8Array(input.splice(0)));

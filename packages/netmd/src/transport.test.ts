@@ -152,6 +152,21 @@ describe('NetMdTransport', () => {
     expect(bulk).toEqual([{ endpoint: 2, data: new Uint8Array([1, 2, 3]) }]);
   });
 
+  it('gives a bulk write two minutes, since the deck holds data back while it writes the last track', async () => {
+    const limits: number[] = [];
+    const { device } = scriptedDevice([], []);
+    const transport = new NetMdTransport(device, {
+      sleep: noSleep,
+      timer: (ms) => {
+        limits.push(ms);
+        return () => undefined;
+      },
+    });
+    await transport.sendCommand(new Uint8Array([0]));
+    await transport.bulkWrite(new Uint8Array([1]));
+    expect(limits).toEqual([5_000, 120_000]);
+  });
+
   it('rejects a bulk write the device stalls', async () => {
     const device: NetMdUsbDevice = {
       ...scriptedDevice([], []).device,
