@@ -12,7 +12,7 @@ import { useRef, useState, type KeyboardEvent } from 'react';
 import { Action } from './Action';
 import type { DiscView, GroupView, TrackView } from './disc-view';
 import { moveDestination, type Selection } from './editing';
-import { trackAfterAction, type TrackAction } from './track-menu';
+import type { TrackAction } from './track-menu';
 
 type DropHint = { readonly index: number; readonly side: 'before' | 'after' } | null;
 
@@ -235,8 +235,6 @@ function TrackRow({
 }) {
   const index = track.number - 1;
   const row = useRef<HTMLTableRowElement>(null);
-  /** The track that gets focus when the menu closes: a moved track keeps it. */
-  const focusAfter = useRef(index);
   /** When the keyboard last opened the menu, to ignore a native `contextmenu` that follows. */
   const keyboardOpenedAt = useRef(Number.NEGATIVE_INFINITY);
   /** Up and Down move to the next row; keys pressed on the row's own controls are theirs. */
@@ -272,9 +270,7 @@ function TrackRow({
   return (
     <GlassContextMenu
       onOpenChange={(open) => {
-        if (!open) return;
-        focusAfter.current = index;
-        onMenuOpen(index);
+        if (open) onMenuOpen(index);
       }}
     >
       <GlassContextMenuTrigger asChild>
@@ -374,7 +370,7 @@ function TrackRow({
         onCloseAutoFocus={(event) => {
           // Back to the row, also after a right-click, so the keyboard can go on from there.
           event.preventDefault();
-          if (row.current !== null) focusRow(row.current, focusAfter.current);
+          row.current?.focus();
         }}
       >
         {actions.map((action) => (
@@ -383,7 +379,6 @@ function TrackRow({
             disabled={action.reason !== null}
             reason={action.reason}
             onSelect={() => {
-              focusAfter.current = trackAfterAction(index, action.id);
               onAction(index, action.id);
             }}
           >

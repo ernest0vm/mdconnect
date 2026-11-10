@@ -59,9 +59,12 @@ import {
 } from './player-view';
 import { browserClock, documentVisibility, StatusPoller } from './status-poller';
 import { TitleDialog } from './TitleDialog';
-import { trackActions, type TrackAction } from './track-menu';
+import { trackActions, trackAfterAction, type TrackAction } from './track-menu';
 import { TrackTable, trackRow } from './TrackTable';
 import { useUploadFlow, type UploadFlow } from '../upload/useUploadFlow';
+
+/** The tracks region, a focus target that outlives the rows in it. */
+const TRACKS_REGION_ID = 'disc-tracks';
 
 type Dialog =
   | { readonly kind: 'rename-disc' }
@@ -104,6 +107,9 @@ function DiscAreas({
       <GlassPanel
         role="region"
         aria-label="Tracks"
+        id={TRACKS_REGION_ID}
+        // Where focus goes after the tracks it was on are deleted.
+        tabIndex={-1}
         aria-busy={busy}
         className={`flex min-h-96 flex-1 flex-col gap-3 p-4 lg:min-h-0 ${dropTarget}`}
         {...upload?.dropZone}
@@ -118,7 +124,8 @@ interface EditorProps {
   readonly disc: DiscView;
   readonly raw: Disc;
   readonly busy: boolean;
-  readonly onEdit: (plan: EditPlan, selectAfter?: Selection) => void;
+  /** Runs a plan; resolves true once the device saved it. */
+  readonly onEdit: (plan: EditPlan) => Promise<boolean>;
   readonly notice: ReactNode;
   /** The Refresh button, which belongs in the summary. */
   readonly refresh: ReactNode;
@@ -148,6 +155,8 @@ function DiscEditor({
 }: EditorProps) {
   const [chosen, setSelection] = useState<Selection>(new Set());
   const [dialog, setDialog] = useState<Dialog | null>(null);
+  /** Whether the open delete dialog was confirmed, which decides where focus goes when it closes. */
+  const deleteConfirmed = useRef(false);
   const reasonId = useId();
   const blocker = editBlocker({ writeProtected: raw.writeProtected, busy });
   const locked = blocker !== null;
@@ -162,16 +171,22 @@ function DiscEditor({
   const grouping = groupTracksPlan(raw, selected, 'check');
   const allState = selectAllState(selection, raw.trackCount);
 
-  /** Runs a plan, closes any dialog and optionally moves the selection. */
-  const edit = (plan: EditPlan, selectAfter?: Selection) => {
+  /**
+   * Runs a plan, closes any dialog and, once the device saved the change, moves the selection. A
+   * refused change leaves the selection on the tracks the user chose.
+   */
+  const edit = (plan: EditPlan, selectAfter?: Selection, afterSave?: () => void) => {
     setDialog(null);
-    onEdit(plan, selectAfter);
-    if (selectAfter) setSelection(selectAfter);
+    void onEdit(plan).then((saved) => {
+      if (!saved) return;
+      if (selectAfter) setSelection(selectAfter);
+      afterSave?.();
+    });
   };
   /** Moves a track to a valid position and keeps it selected. */
-  const move = (from: number, to: number) => {
+  const move = (from: number, to: number, afterSave?: () => void) => {
     if (from === to || to < 0 || to >= raw.trackCount) return;
-    edit(moveTrackPlan(raw, from, to), new Set([to]));
+    edit(moveTrackPlan(raw, from, to), new Set([to]), afterSave);
   };
   /** Plays a track, or pauses or resumes it when it is the current one. */
   const play = (track: number) => {
@@ -190,14 +205,16 @@ function DiscEditor({
         setDialog({ kind: 'rename-track', index: track, fromMenu: true });
         return;
       case 'delete':
+        deleteConfirmed.current = false;
         setDialog({ kind: 'delete', tracks: [track], fromMenu: true });
         return;
       case 'move-up':
-        move(track, track - 1);
+      case 'move-down': {
+        // Focus follows the track once the device has saved the move; a refused move leaves it.
+        const to = trackAfterAction(track, action);
+        move(track, to, () => trackRow(to)?.focus());
         return;
-      case 'move-down':
-        move(track, track + 1);
-        return;
+      }
     }
   };
   const summary = (
@@ -452,11 +469,20 @@ function DiscEditor({
       {dialog?.kind === 'delete' && (
         <DeleteDialog
           count={dialog.tracks.length}
-          returnFocus={dialog.fromMenu === true ? () => trackRow(dialog.tracks[0] ?? 0) : undefined}
+          returnFocus={
+            dialog.fromMenu === true
+              ? () =>
+                  // A confirmed delete removes the row, so focus goes to the tracks region.
+                  deleteConfirmed.current
+                    ? document.getElementById(TRACKS_REGION_ID)
+                    : trackRow(dialog.tracks[0] ?? 0)
+              : undefined
+          }
           onClose={() => {
             setDialog(null);
           }}
           onConfirm={() => {
+            deleteConfirmed.current = true;
             edit(deleteTracksPlan(raw, dialog.tracks), new Set());
           }}
         />
@@ -576,17 +602,17 @@ export function DiscPanel({
   }, []);
 
   const runEdit = useCallback(
-    (plan: EditPlan) => {
-      if (plan.commands.length === 0) return;
+    async (plan: EditPlan): Promise<boolean> => {
+      if (plan.commands.length === 0) return false;
       const blocked = planBlocker(plan);
       if (blocked !== null) {
         setEditState({ kind: 'failed', message: blocked });
-        return;
+        return false;
       }
       setImportError(null);
       setEditState({ kind: 'saving' });
-      void reader.edit(plan).then(({ outcome, result: next }) => {
-        if (!mounted.current) return;
+      return reader.edit(plan).then(({ outcome, result: next }) => {
+        if (!mounted.current) return false;
         setResult(next);
         // A read cannot tell that the earlier status belongs to this disc: the next poll sets it.
         setDeviceStatus(null);
@@ -595,6 +621,7 @@ export function DiscPanel({
             ? { kind: 'saved' }
             : { kind: 'failed', message: editFailureMessage(outcome.reason) },
         );
+        return outcome.kind === 'saved';
       });
     },
     [reader],
@@ -766,7 +793,7 @@ export function DiscPanel({
           }}
           onConfirm={() => {
             setMenuDialog(null);
-            runEdit(wipeDiscPlan());
+            void runEdit(wipeDiscPlan());
           }}
         />
       )}
@@ -783,7 +810,7 @@ export function DiscPanel({
           }}
           onConfirm={(skipped) => {
             setMenuDialog(null);
-            runEdit(importPlan(menuDialog.parsed, raw, skipped));
+            void runEdit(importPlan(menuDialog.parsed, raw, skipped));
           }}
         />
       )}
