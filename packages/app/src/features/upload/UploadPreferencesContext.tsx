@@ -1,16 +1,8 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import {
+  createConsentGuard,
   createUploadPreferencesStore,
-  fromOtherTab,
   type UploadPreferences,
   type UploadPreferencesStore,
 } from './upload-preferences';
@@ -43,15 +35,14 @@ export function UploadPreferencesProvider({ children }: { readonly children: Rea
   const store = useMemo(() => browserStore(), []);
   const [preferences, setPreferencesState] = useState(() => store.load());
   const [saved, setSaved] = useState(true);
-  /** A consent withdrawal the browser refused to store, which must outlast other tabs' saves. */
-  const withdrawalUnsaved = useRef(false);
+  const guard = useMemo(() => createConsentGuard(), []);
 
   useEffect(
     () =>
       store.subscribe((incoming) => {
-        setPreferencesState(fromOtherTab(incoming, withdrawalUnsaved.current));
+        setPreferencesState(guard.fromOtherTab(incoming));
       }),
-    [store],
+    [store, guard],
   );
 
   const value = useMemo<UploadPreferencesValue>(
@@ -59,15 +50,13 @@ export function UploadPreferencesProvider({ children }: { readonly children: Rea
       preferences,
       setPreferences: (next) => {
         setPreferencesState(next);
-        const ok = store.save(next);
-        setSaved(ok);
-        // Consenting again, or a stored withdrawal, ends the need to override other tabs.
-        if (next.onlineConsent || ok) withdrawalUnsaved.current = false;
-        else if (preferences.onlineConsent) withdrawalUnsaved.current = true;
+        const stored = store.save(next);
+        setSaved(stored);
+        guard.afterSave(preferences, next, stored);
       },
       saved,
     }),
-    [preferences, saved, store],
+    [preferences, saved, store, guard],
   );
 
   return (

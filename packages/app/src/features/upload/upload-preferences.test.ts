@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createUploadPreferencesStore,
   DEFAULT_UPLOAD_PREFERENCES,
-  fromOtherTab,
+  createConsentGuard,
   UPLOAD_PREFERENCES_KEY,
   withdrawConsent,
 } from './upload-preferences';
@@ -114,8 +114,38 @@ describe('upload preferences', () => {
   });
 
   it('keep a withdrawal that could not be saved when another tab saves its consent', () => {
-    const otherTab = { ...DEFAULT_UPLOAD_PREFERENCES, mode: 'lp2' as const, onlineConsent: true };
-    expect(fromOtherTab(otherTab, true)).toEqual({ ...otherTab, onlineConsent: false });
-    expect(fromOtherTab(otherTab, false)).toEqual(otherTab);
+    // The provider's sequence: this tab withdraws, the browser refuses to store it, and then
+    // another tab saves preferences that still hold consent.
+    const { target, fire } = storageEvents();
+    const failing = {
+      getItem: () => null,
+      setItem: () => {
+        throw new Error('quota');
+      },
+    };
+    const store = createUploadPreferencesStore(failing, target);
+    const guard = createConsentGuard();
+    let shown = { ...DEFAULT_UPLOAD_PREFERENCES, onlineConsent: true };
+    store.subscribe((incoming) => {
+      shown = guard.fromOtherTab(incoming);
+    });
+
+    const withdrawn = withdrawConsent(shown);
+    guard.afterSave(shown, withdrawn, store.save(withdrawn));
+    shown = withdrawn;
+    fire(UPLOAD_PREFERENCES_KEY, JSON.stringify({ ...shown, mode: 'lp2', onlineConsent: true }));
+    expect(shown).toEqual({ ...DEFAULT_UPLOAD_PREFERENCES, mode: 'lp2', onlineConsent: false });
+
+    // Agreeing again in this tab ends the override.
+    guard.afterSave(shown, { ...shown, onlineConsent: true }, false);
+    fire(UPLOAD_PREFERENCES_KEY, JSON.stringify({ ...shown, onlineConsent: true }));
+    expect(shown.onlineConsent).toBe(true);
+  });
+
+  it('follow other tabs when the withdrawal was stored', () => {
+    const guard = createConsentGuard();
+    const agreed = { ...DEFAULT_UPLOAD_PREFERENCES, onlineConsent: true };
+    guard.afterSave(agreed, withdrawConsent(agreed), true);
+    expect(guard.fromOtherTab(agreed)).toEqual(agreed);
   });
 });

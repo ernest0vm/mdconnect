@@ -76,14 +76,28 @@ export const withdrawConsent = (preferences: UploadPreferences): UploadPreferenc
   onlineConsent: false,
 });
 
-/**
- * Preferences saved by another tab, as this tab applies them. A withdrawal this tab could not
- * store stays in effect, so another tab's stored consent cannot bring it back.
- */
-export const fromOtherTab = (
-  incoming: UploadPreferences,
-  withdrawalUnsaved: boolean,
-): UploadPreferences => (withdrawalUnsaved ? withdrawConsent(incoming) : incoming);
+export interface ConsentGuard {
+  /** Records a change this tab saved, and whether the browser stored it. */
+  afterSave(previous: UploadPreferences, next: UploadPreferences, stored: boolean): void;
+  /**
+   * Preferences saved by another tab, as this tab applies them. A withdrawal this tab could not
+   * store stays in effect, so another tab's stored consent cannot bring it back.
+   */
+  fromOtherTab(incoming: UploadPreferences): UploadPreferences;
+}
+
+/** Keeps a consent withdrawal the browser refused to store in effect for this tab. */
+export function createConsentGuard(): ConsentGuard {
+  let withdrawalUnsaved = false;
+  return {
+    afterSave(previous, next, stored) {
+      // Consenting again, or a stored withdrawal, ends the need to override other tabs.
+      if (next.onlineConsent || stored) withdrawalUnsaved = false;
+      else if (previous.onlineConsent) withdrawalUnsaved = true;
+    },
+    fromOtherTab: (incoming) => (withdrawalUnsaved ? withdrawConsent(incoming) : incoming),
+  };
+}
 
 /** Keeps upload preferences in `localStorage`, like the Appearance choice. */
 export function createUploadPreferencesStore(
