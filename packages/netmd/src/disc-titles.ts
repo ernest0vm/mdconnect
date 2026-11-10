@@ -139,13 +139,15 @@ export function groupsFit(disc: Disc): boolean {
     (g) => g.title !== null,
   );
   if (kept.length !== groups.length) return false;
-  // Full-width group titles are stored in their own field, which can run out on its own.
-  const fullWidthLost = groups.some((group) => {
-    if ((group.fullWidthTitle ?? '') === '') return false;
-    const first = Math.min(...group.tracks.map((t) => t.index));
-    return kept.find((g) => g.tracks[0] === first)?.fullWidthTitle !== group.fullWidthTitle;
+  // Each group must come back with the same tracks and titles. Full-width titles are stored in
+  // their own field, which can run out on its own.
+  const allKept = groups.every((group) => {
+    const tracks = group.tracks.map((t) => t.index).sort((a, b) => a - b);
+    const match = kept.find((g) => g.tracks.join() === tracks.join());
+    if (match?.title !== group.title) return false;
+    return (group.fullWidthTitle ?? '') === '' || match.fullWidthTitle === group.fullWidthTitle;
   });
-  if (fullWidthLost) return false;
+  if (!allKept) return false;
   if (discDisplayTitle(compiled.title, false) !== disc.title) return false;
   return (
     disc.fullWidthTitle === '' ||
