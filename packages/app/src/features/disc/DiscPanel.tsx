@@ -11,15 +11,7 @@ import { createPortal } from 'react-dom';
 
 import type { UsbDeviceHandle } from '../../platform';
 import { Action } from './Action';
-import {
-  csvFileName,
-  formatCsv,
-  importPlan,
-  parseCsv,
-  reviewImport,
-  type CsvRow,
-  type ImportReview,
-} from './csv';
+import { csvFileName, formatCsv, importPlan, parseCsv, reviewImport, type CsvRow } from './csv';
 import { DeleteDialog } from './DeleteDialog';
 import { DiscMenu, menuTrigger } from './DiscMenu';
 import { downloadText } from './download';
@@ -442,7 +434,6 @@ type MenuDialog =
       readonly kind: 'import';
       readonly fileName: string;
       readonly parsed: { readonly rows: readonly CsvRow[] };
-      readonly review: ImportReview;
     };
 
 /** Reads the disc in the open device, shows it, and edits it; puts the More menu in the header. */
@@ -641,7 +632,6 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
         kind: 'import',
         fileName: file.name,
         parsed,
-        review: reviewImport(parsed, raw),
       });
     });
   };
@@ -683,7 +673,8 @@ export function DiscPanel({ device, menuSlot = null, onAbout, onExit }: DiscPane
         <ImportDialog
           returnFocus={() => menuTrigger(menuSlot)}
           fileName={menuDialog.fileName}
-          review={menuDialog.review}
+          // Against the disc shown now, which the import is applied to, even if it was read again.
+          review={reviewImport(menuDialog.parsed, raw)}
           onClose={() => {
             setMenuDialog(null);
           }}

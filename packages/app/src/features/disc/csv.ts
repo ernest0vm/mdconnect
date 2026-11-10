@@ -134,8 +134,8 @@ export interface CsvRow {
   readonly groupFullWidthName: string;
   readonly name: string;
   readonly fullWidthName: string;
-  /** Seconds. */
-  readonly duration: number;
+  /** Seconds, or null when the cell is empty or not a number. */
+  readonly duration: number | null;
   readonly codec: string;
   readonly bitrate: string;
 }
@@ -166,6 +166,7 @@ export function parseCsv(text: string): ParsedCsv {
     const c = cells(line);
     const at = (i: number) => c[i] ?? '';
     const [duration, codec, bitrate] = old ? [at(6), at(7), ''] : [at(8), at(9), at(10)];
+    const durationSeconds = Number.parseInt(duration, 10);
     return {
       index: Number.parseInt(at(0), 10),
       groupRange: at(1).replace(/ /gu, ''),
@@ -173,7 +174,7 @@ export function parseCsv(text: string): ParsedCsv {
       groupFullWidthName: at(3),
       name: at(4),
       fullWidthName: at(5),
-      duration: Number.parseInt(duration, 10),
+      duration: Number.isNaN(durationSeconds) ? null : durationSeconds,
       codec,
       bitrate,
     };
@@ -184,7 +185,7 @@ export function parseCsv(text: string): ParsedCsv {
 export interface ImportReview {
   readonly fileTracks: number;
   readonly discTracks: number;
-  /** Tracks whose duration or mode differ, described as "m:ss MODE". */
+  /** Tracks whose duration or mode differ (or that have no duration), described as "m:ss MODE". */
   readonly mismatches: readonly { track: number; file: string; disc: string }[];
   /** 1-based tracks in the file that the disc does not have; they are ignored. */
   readonly outside: readonly number[];
@@ -212,10 +213,13 @@ export function reviewImport(parsed: { rows: readonly CsvRow[] }, disc: Disc): I
     const sameMode =
       row.codec.toLowerCase() === actual.codec.toLowerCase() &&
       (row.bitrate === '' || row.bitrate === actual.bitrate);
-    if (Math.abs(seconds(track.duration) - row.duration) >= 2 || !sameMode) {
+    const duration = row.duration;
+    if (duration === null || Math.abs(seconds(track.duration) - duration) >= 2 || !sameMode) {
+      const fileDuration =
+        duration === null ? 'no duration' : formatDuration(duration * FRAMES_PER_SECOND);
       mismatches.push({
         track: row.index,
-        file: `${formatDuration(row.duration * FRAMES_PER_SECOND)} ${modeName(row.codec, row.bitrate)}`,
+        file: `${fileDuration} ${modeName(row.codec, row.bitrate)}`,
         disc: `${formatDuration(track.duration)} ${modeName(actual.codec, actual.bitrate)}`,
       });
     }

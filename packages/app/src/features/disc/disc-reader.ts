@@ -183,6 +183,8 @@ export class DiscReader {
   private inFlight: Promise<DiscReadResult> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
   private statusInFlight: Promise<DeviceStatus | null> | null = null;
+  /** Set by close(): the device's session has ended for good. */
+  private closed = false;
   private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(
@@ -215,9 +217,13 @@ export class DiscReader {
     });
   }
 
-  /** Ends the session after anything already queued. The next use opens a new one. */
+  /**
+   * Ends the session after anything already queued. The reader is done afterwards: later reads,
+   * edits and status polls fail without opening the device again.
+   */
   close(): Promise<void> {
     return this.exclusive(async () => {
+      this.closed = true;
       const session = this.session;
       this.session = null;
       if (session === null) return;
@@ -237,6 +243,13 @@ export class DiscReader {
     return this.statusInFlight;
   }
 
+  /** Opens a session, unless close() has ended this reader's use of the device. */
+  private openNewSession(): Promise<DiscSession> {
+    return this.closed
+      ? Promise.reject(new Error('The session with the device has ended.'))
+      : this.openSession();
+  }
+
   /** Positive evidence of Hi-MD mode: never open a NetMD session on such a device. */
   private inHiMdMode(): boolean {
     return this.options.hiMdMode?.() ?? false;
@@ -246,7 +259,7 @@ export class DiscReader {
   private async readStatus(): Promise<DeviceStatus | null> {
     if (this.inHiMdMode()) return null;
     try {
-      this.session ??= this.openSession();
+      this.session ??= this.openNewSession();
       return await (await this.session).deviceStatus();
     } catch (error) {
       // A device that refuses status queries keeps its session; only a broken one is reopened.
@@ -261,7 +274,7 @@ export class DiscReader {
   ): Promise<ControlOutcome> {
     if (this.inHiMdMode()) return { kind: 'failed', reason: 'failed' };
     try {
-      this.session ??= this.openSession();
+      this.session ??= this.openNewSession();
       const session = await this.session;
       try {
         await session.playback(command);
@@ -318,7 +331,7 @@ export class DiscReader {
   private async runPlan(plan: EditPlan): Promise<EditOutcome> {
     let session: DiscSession;
     try {
-      this.session ??= this.openSession();
+      this.session ??= this.openNewSession();
       session = await this.session;
     } catch {
       this.session = null;
@@ -357,7 +370,7 @@ export class DiscReader {
     if (hiMdMode()) return { kind: 'failed', reason: 'not-netmd' };
     let session: DiscSession;
     try {
-      this.session ??= this.openSession();
+      this.session ??= this.openNewSession();
       session = await this.session;
     } catch {
       this.session = null;

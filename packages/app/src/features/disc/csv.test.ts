@@ -133,6 +133,13 @@ describe('reviewImport', () => {
     ]);
   });
 
+  it('lists a track whose duration is missing, as webminidisc does', () => {
+    const missing = formatCsv(grouped).replace('Outro,,,,90,', 'Outro,,,,,');
+    expect(reviewImport(parse(missing), grouped).mismatches).toEqual([
+      { track: 3, file: 'no duration LP2', disc: '1:30 LP2' },
+    ]);
+  });
+
   it('accepts a duration within 2 seconds', () => {
     const close = formatCsv(grouped).replace('Outro,,,,90,', 'Outro,,,,91,');
     expect(reviewImport(parse(close), grouped).mismatches).toEqual([]);

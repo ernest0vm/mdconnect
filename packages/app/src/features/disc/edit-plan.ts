@@ -41,13 +41,12 @@ export interface LayoutPlan extends EditPlan {
   readonly fits: boolean;
 }
 
-/** Renames the disc; the full-width title is left alone unless given. */
 /** Erases the whole disc, after stopping playback, as webminidisc's Wipe Disc does. */
 export function wipeDiscPlan(): EditPlan {
   return { commands: [{ kind: 'stop' }, { kind: 'eraseDisc' }] };
 }
 
-/** Renames the disc; a full-width title is written only when given. */
+/** Renames the disc; the full-width title is left alone unless given. */
 export function renameDiscPlan(title: string, fullWidthTitle?: string): EditPlan {
   return { commands: [{ kind: 'renameDisc', title, fullWidthTitle }] };
 }
