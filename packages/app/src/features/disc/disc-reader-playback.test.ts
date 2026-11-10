@@ -179,3 +179,42 @@ describe('DiscReader.status', () => {
     expect(opened).toBe(0);
   });
 });
+
+describe('DiscReader.close (app-menu: "Exit during an edit")', () => {
+  it('ends the session after the edit in progress', async () => {
+    const log: string[] = [];
+    const reader = new DiscReader(() =>
+      Promise.resolve({
+        isDiscPresent: () => Promise.resolve(true),
+        listContent: () => {
+          log.push('list');
+          return Promise.resolve(blank);
+        },
+        run: (command) => {
+          log.push(command.kind);
+          return Promise.resolve();
+        },
+        playback: () => Promise.resolve(),
+        deviceStatus: () => Promise.reject(new NetMdRejectedError('no')),
+        end: () => {
+          log.push('end');
+          return Promise.resolve();
+        },
+      }),
+    );
+    const editing = reader.edit(renameTrackPlan(0, 'x'));
+    const closing = reader.close();
+    await Promise.all([editing, closing]);
+    expect(log).toEqual(['setTrackTitle', 'list', 'end']);
+  });
+
+  it('does nothing when no session was opened', async () => {
+    let opened = 0;
+    const reader = new DiscReader(() => {
+      opened += 1;
+      return Promise.reject(new Error('not used'));
+    });
+    await reader.close();
+    expect(opened).toBe(0);
+  });
+});

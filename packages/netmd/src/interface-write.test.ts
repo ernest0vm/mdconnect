@@ -136,3 +136,18 @@ describe('titles stored with bytes the decoder cannot read', () => {
     expect(sent).toContain(k(write));
   });
 });
+
+describe('eraseDisc (disc-editing: "Wipe after confirming")', () => {
+  it('erases the whole disc', async () => {
+    const { ch, sent } = channel({ '00 1840 ff 0000': '09 1840 00 0000' });
+    await new NetMdInterface(ch, { sleep: noSleep }).eraseDisc();
+    expect(sent).toEqual([k('00 1840 ff 0000')]);
+  });
+
+  it('fails when the device rejects it', async () => {
+    const { ch } = channel({ '00 1840 ff 0000': '0a 1840 ff 0000' });
+    await expect(new NetMdInterface(ch, { sleep: noSleep }).eraseDisc()).rejects.toThrow(
+      NetMdRejectedError,
+    );
+  });
+});

@@ -357,6 +357,12 @@ export class NetMdInterface {
     await this.descriptor(descriptor, CLOSE);
   }
 
+  /** Erases every track and title on the disc. */
+  async eraseDisc(): Promise<void> {
+    const reply = await this.sendQuery(formatQuery('1840 ff 0000'));
+    scanQuery(reply, '1840 00 0000');
+  }
+
   /** Erases a track. Later tracks move up by one. */
   async eraseTrack(track: number): Promise<void> {
     await this.sendQuery(formatQuery('1840 ff01 00 201001 %w', track));

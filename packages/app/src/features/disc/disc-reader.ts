@@ -25,6 +25,8 @@ export interface DiscSession {
   playback(command: PlaybackCommand): Promise<void>;
   /** Reads what the device is doing. */
   deviceStatus(): Promise<DeviceStatus>;
+  /** Ends the session with the device, as netmd-js `finalize` does: reset, release, close. */
+  end?(): Promise<void>;
 }
 
 /** A playback control. Unlike an edit, it does not change the disc, so the disc is not read again. */
@@ -87,6 +89,20 @@ export async function openNetMdSession(handle: UsbDeviceHandle): Promise<DiscSes
     isDiscPresent: () => md.isDiscPresent(),
     listContent: () => listContent(md),
     run: (command) => runCommand(md, command),
+    end: async () => {
+      // As netmd-js finalize: errors are ignored, the device may already be gone.
+      for (const step of [
+        () => handle.reset?.(),
+        () => handle.releaseInterface?.(0),
+        () => handle.close(),
+      ]) {
+        try {
+          await step();
+        } catch {
+          // Nothing to do.
+        }
+      }
+    },
     playback: (command) => runPlayback(md, command),
     deviceStatus: () => getDeviceStatus(md),
   };
@@ -142,6 +158,10 @@ async function runCommand(md: NetMdInterface, command: EditCommand): Promise<voi
       return md.moveTrack(command.from, command.to);
     case 'rewriteGroups':
       return rewriteDiscGroups(md, command.disc);
+    case 'stop':
+      return md.stop();
+    case 'eraseDisc':
+      return md.eraseDisc();
   }
 }
 
@@ -192,6 +212,20 @@ export class DiscReader {
       const outcome = await this.runControl(command, at);
       await this.sleep(SETTLE_MS);
       return { outcome, status: await this.readStatus() };
+    });
+  }
+
+  /** Ends the session after anything already queued. The next use opens a new one. */
+  close(): Promise<void> {
+    return this.exclusive(async () => {
+      const session = this.session;
+      this.session = null;
+      if (session === null) return;
+      try {
+        await (await session).end?.();
+      } catch {
+        // A session that never opened has nothing to end.
+      }
     });
   }
 

@@ -22,6 +22,9 @@ export interface UsbDeviceHandle extends NetMdUsbDevice {
   readonly serialNumber?: string | null | undefined;
   open(): Promise<void>;
   close(): Promise<void>;
+  /** WebUSB's reset and release, used to end a NetMD session; absent in some test doubles. */
+  reset?(): Promise<void>;
+  releaseInterface?(interfaceNumber: number): Promise<void>;
 }
 
 export interface UsbConnectionEventLike {
