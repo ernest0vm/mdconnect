@@ -81,6 +81,8 @@ export class OnlineEncoderUnavailableError extends Error {
 }
 
 const ONLINE_ATTEMPTS = 3;
+/** How long one attempt may take: the service may accept the upload and then never answer. */
+const ONLINE_TIMEOUT_MS = 120_000;
 const ONLINE_TYPES: Readonly<Record<LpMode, string>> = { lp2: 'LP2', lp4: 'LP4' };
 
 type FetchFunction = (url: string, init: RequestInit) => Promise<Response>;
@@ -94,7 +96,12 @@ export async function encodeOnline(
   file: Blob,
   fileName: string,
   mode: LpMode,
-  options: { readonly replayGain: boolean; readonly signal?: AbortSignal | undefined },
+  options: {
+    readonly replayGain: boolean;
+    readonly signal?: AbortSignal | undefined;
+    /** Limit for one attempt; a stalled attempt is retried like a failed one. */
+    readonly timeoutMs?: number;
+  },
   fetchImpl: FetchFunction = (url, init) => fetch(url, init),
 ): Promise<{ readonly mode: UploadMode; readonly data: Uint8Array }> {
   const url = new URL('/transcode', ONLINE_ENCODER_ORIGIN);
@@ -107,7 +114,10 @@ export async function encodeOnline(
   for (let attempt = 0; attempt < ONLINE_ATTEMPTS; attempt++) {
     options.signal?.throwIfAborted();
     try {
-      const response = await fetchImpl(url.href, { method: 'POST', body, signal: options.signal });
+      // AbortSignal.any and AbortSignal.timeout: Chromium 116+, which Electron and the web app need.
+      const timeout = AbortSignal.timeout(options.timeoutMs ?? ONLINE_TIMEOUT_MS);
+      const signal = options.signal ? AbortSignal.any([options.signal, timeout]) : timeout;
+      const response = await fetchImpl(url.href, { method: 'POST', body, signal });
       if (!response.ok) throw new Error(`The online encoder answered ${String(response.status)}`);
       const encoded = readAtracFile(new Uint8Array(await response.arrayBuffer()));
       if (encoded?.kind !== 'atrac') throw new Error('The online encoder sent no ATRAC3 audio');

@@ -112,6 +112,10 @@ export async function runUpload(
         return { uploaded, skipped, notUploaded: remaining(index), cancelled: true, failure: null };
       }
       const conversion = await convert(index);
+      // The user may have cancelled while this track was converting: send nothing more.
+      if (dependencies.isCancelled()) {
+        return { uploaded, skipped, notUploaded: remaining(index), cancelled: true, failure: null };
+      }
       if (index + 1 < items.length) void convert(index + 1);
       if ('reason' in conversion) {
         skipped.push({ index, reason: conversion.reason });
