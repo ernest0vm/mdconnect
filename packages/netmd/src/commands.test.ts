@@ -36,6 +36,11 @@ describe('replaceDiscTitle', () => {
     expect(replaceDiscTitle('1-2;Side A//', '', false)).toBe('1-2;Side A//');
   });
 
+  it('replaces a plain title that contains // but has no groups', () => {
+    expect(replaceDiscTitle('AC//DC', 'New', false)).toBe('New');
+    expect(replaceDiscTitle('Ａ／／Ｂ', '朝', true)).toBe('朝');
+  });
+
   it('uses the full-width markers for full-width titles', () => {
     expect(replaceDiscTitle('０；夜／／１－２；エー／／', '朝', true)).toBe(
       '０；朝／／１－２；エー／／',

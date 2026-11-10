@@ -9,6 +9,8 @@
  * - Clearing the title of a disc that only has groups leaves its groups as they are; upstream
  *   added an empty `0;//` entry.
  * - The title replacement is a pure function, `replaceDiscTitle`.
+ * - A title field holds groups only when it ends with the delimiter (as `getDiscTitle` decides);
+ *   upstream treated any `//` as groups, so renaming "AC//DC" left "0;New//AC//DC".
  */
 
 import type { Disc } from './content';
@@ -23,7 +25,9 @@ export type DiscTitleWriter = Pick<NetMdInterface, 'getRawDiscTitle' | 'setDiscT
 export function replaceDiscTitle(raw: string, title: string, fullWidth: boolean): string {
   const delimiter = fullWidth ? '／／' : '//';
   const marker = fullWidth ? '０；' : '0;';
-  if (!raw.includes(delimiter)) return title;
+  // Like `discDisplayTitle`: a title field holds groups only when it ends with the delimiter, so a
+  // plain title such as "AC//DC" is replaced whole.
+  if (!raw.endsWith(delimiter)) return title;
   const entry = title === '' ? '' : `${marker}${title}${delimiter}`;
   if (raw.startsWith(marker)) {
     return entry + raw.slice(raw.indexOf(delimiter) + delimiter.length);
