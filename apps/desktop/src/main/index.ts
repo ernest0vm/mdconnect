@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 
-import { app, BrowserWindow, ipcMain, nativeTheme, session } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, screen, session } from 'electron';
 
 import { IPC, type AppearancePayload } from '../shared/ipc';
 import { registerAppScheme, serveAppProtocol } from './app-protocol';
@@ -13,6 +13,7 @@ import {
 } from './security';
 import { APP_ORIGIN, type OriginContext } from './url-policy';
 import { installUsbHandlers } from './usb';
+import { mainWindowSize } from './window-size';
 
 // electron-vite sets ELECTRON_RENDERER_URL in development; an empty value means "not set".
 const rendererUrl = process.env.ELECTRON_RENDERER_URL;
@@ -42,6 +43,7 @@ if (app.requestSingleInstanceLock()) {
   app.quit();
 }
 
+/** Sets up the session handlers, the app protocol and the main window once Electron is ready. */
 function start(): void {
   nativeTheme.themeSource = 'system';
   const defaultSession = session.defaultSession;
@@ -71,8 +73,7 @@ function showMainWindow(): void {
  */
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
-    width: 960,
-    height: 720,
+    ...mainWindowSize(screen.getPrimaryDisplay().workAreaSize),
     show: false,
     title: 'mdconnect',
     webPreferences: {
@@ -95,10 +96,12 @@ function createMainWindow(): BrowserWindow {
   return window;
 }
 
+/** The OS appearance signals the renderer needs: reduced transparency. */
 function appearancePayload(): AppearancePayload {
   return { prefersReducedTransparency: nativeTheme.prefersReducedTransparency };
 }
 
+/** Answers appearance requests from the renderer and pushes changes to it. */
 function forwardAppearance(): void {
   ipcMain.on(IPC.appearanceGet, (event) => {
     event.returnValue = appearancePayload();

@@ -24,6 +24,8 @@ export interface DiscView {
   readonly subtitle: string | null;
   readonly writeProtected: boolean;
   readonly capacity: { readonly used: string; readonly free: string; readonly total: string };
+  /** The capacity bar: used and total time in seconds, and the same as text. */
+  readonly capacityMeter: { readonly value: number; readonly max: number; readonly text: string };
   readonly groups: readonly GroupView[];
 }
 
@@ -43,6 +45,7 @@ const MODE_LABELS: Readonly<Record<number, string>> = {
 
 const MONO: number = Channels.mono;
 
+/** The recording mode as shown: SP, LP2 or LP4, with "mono" for mono tracks. */
 function modeLabel(track: Track): string {
   const base = MODE_LABELS[track.encoding] ?? 'Unknown mode';
   return track.channel === MONO ? `${base} mono` : base;
@@ -59,6 +62,7 @@ function titles(halfWidth: string, fullWidth: string | null): { main: string; su
   return { main: full, sub: halfWidth !== '' && halfWidth !== full ? halfWidth : null };
 }
 
+/** What a track row shows: number, titles, duration and mode. */
 function trackView(track: Track): TrackView {
   const { main, sub } = titles(track.title, track.fullWidthTitle);
   return {
@@ -100,15 +104,21 @@ export function toDiscView(disc: Disc): DiscView {
   }
 
   const { main, sub } = titles(disc.title, disc.fullWidthTitle);
+  // Devices report used time as playback time, which exceeds the SP total on long-play discs.
+  const usedFrames = Math.max(0, disc.total - disc.left);
   return {
     title: main === '' ? null : main,
     subtitle: sub,
     writeProtected: disc.writeProtected,
     capacity: {
-      // Devices report used time as playback time, which exceeds the SP total on long-play discs.
-      used: formatDuration(Math.max(0, disc.total - disc.left)),
+      used: formatDuration(usedFrames),
       free: formatDuration(disc.left),
       total: formatDuration(disc.total),
+    },
+    capacityMeter: {
+      value: Math.floor(usedFrames / FRAMES_PER_SECOND),
+      max: Math.floor(disc.total / FRAMES_PER_SECOND),
+      text: `${formatDuration(usedFrames)} used of ${formatDuration(disc.total)}`,
     },
     groups,
   };

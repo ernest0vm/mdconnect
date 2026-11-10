@@ -39,7 +39,7 @@ yarn install
 yarn dev
 ```
 
-`yarn dev` starts the desktop app with hot reload; `yarn dev:web` starts the web app at <http://localhost:5173>. Before connecting a device on Windows or Linux, follow [docs/platform-setup.md](docs/platform-setup.md).
+`yarn dev` starts the desktop app with hot reload; `yarn dev:web` starts the web app at <http://localhost:5173>. Without a device, open <http://localhost:5173/?demo> and click Connect device: a demo MZ-NE410 replays a recorded 60-track disc (read-only, development builds only). Before connecting a device on Windows or Linux, follow [docs/platform-setup.md](docs/platform-setup.md).
 
 ## Commands
 

@@ -43,6 +43,14 @@ describe('formatDuration', () => {
 });
 
 describe('toDiscView', () => {
+  it('gives the capacity bar its values in seconds (app-layout: "Capacity bar")', () => {
+    expect(toDiscView(disc()).capacityMeter).toEqual({
+      value: 30 * 60,
+      max: 80 * 60,
+      text: '30:00 used of 80:00',
+    });
+  });
+
   it('shows capacity in minutes and seconds (disc-contents: "Capacity")', () => {
     expect(toDiscView(disc()).capacity).toEqual({ used: '30:00', free: '50:00', total: '80:00' });
   });

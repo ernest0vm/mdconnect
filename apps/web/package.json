@@ -19,6 +19,7 @@
   "dependencies": {
     "@mdconnect/app": "workspace:^",
     "@mdconnect/core": "workspace:^",
+    "@mdconnect/netmd": "workspace:^",
     "@mdconnect/ui": "workspace:^",
     "react": "^19",
     "react-dom": "^19"
