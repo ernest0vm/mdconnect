@@ -13,7 +13,7 @@ When a device is connected, the header SHALL offer a "More" menu with Export tit
 #### Scenario: Open with the keyboard
 
 - **WHEN** the user focuses More, presses Enter and moves with the arrow keys
-- **THEN** each item can be reached and chosen, and Escape closes the menu and returns focus to More
+- **THEN** each available item can be reached and chosen; an unavailable item is skipped and shows why under its name, and Escape closes the menu and returns focus to More
 
 #### Scenario: Focus after a dialog
 

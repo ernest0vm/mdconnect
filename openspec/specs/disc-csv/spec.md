@@ -31,7 +31,7 @@ Import titles from CSV SHALL read webminidisc's format, current or older, and ap
 #### Scenario: Import onto a matching disc
 
 - **WHEN** the user imports a CSV exported from the same disc, after renaming tracks on the disc
-- **THEN** the review shows no differences, and after confirming, the disc has the titles and groups from the file
+- **THEN** the review reports no mismatch in track count, durations or modes, and after confirming, the disc has the titles and groups from the file
 
 #### Scenario: Older format
 
