@@ -170,4 +170,18 @@ describe('titleForm', () => {
     );
     expect(form.fits).toBe(false);
   });
+
+  it('fits a title that replaces one of the same length on a full disc (disc-editing: "Replacing a title on a full disc")', () => {
+    // The disc entry "Mix0;//" (1 cell), "Old" (1) and another title (253) fill all 255 cells.
+    const full = disc([track(0, 'Old'), track(1, 'x'.repeat(7 * 253))]);
+    expect(
+      titleForm(
+        full,
+        { kind: 'track', index: 1 },
+        { halfWidth: 'x'.repeat(7 * 253), fullWidth: '' },
+      ).remaining.halfWidth,
+    ).toBe(0);
+    const form = titleForm(full, { kind: 'track', index: 0 }, { halfWidth: 'New', fullWidth: '' });
+    expect(form.fits).toBe(true);
+  });
 });

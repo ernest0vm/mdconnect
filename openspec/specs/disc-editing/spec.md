@@ -55,12 +55,17 @@ Before saving, the app SHALL convert each title to characters the disc can store
 
 ### Requirement: Title space
 
-The app SHALL show how many characters remain on the disc for half-width and for full-width titles, and SHALL NOT save titles that do not fit.
+The app SHALL show how many characters remain on the disc for half-width and for full-width titles once the edited titles replace the current ones, and SHALL NOT save titles that do not fit in that space.
 
 #### Scenario: Title too long for the disc
 
-- **WHEN** the user enters a title longer than the remaining title space
+- **WHEN** the user enters a title that, replacing the current one, needs more title space than the disc has
 - **THEN** the dialog says the title does not fit and Save is disabled
+
+#### Scenario: Replacing a title on a full disc
+
+- **WHEN** the disc has no title space left and the user renames a track from "Old" to "New"
+- **THEN** the new title fits, because it takes no more space than the title it replaces
 
 ### Requirement: Select tracks
 
@@ -97,7 +102,7 @@ The app SHALL delete the selected tracks only after the user confirms a dialog t
 
 ### Requirement: Move tracks
 
-The app SHALL let the user move a track to another position by dragging it and, as a keyboard alternative, by moving it up or down one position. Groups SHALL follow their tracks.
+The app SHALL let the user move a track to another position by dragging it and, as a keyboard alternative, by moving it up or down one position. A moved track SHALL stay in its group when it lands next to another track of that group; otherwise it SHALL join the group it lands inside, or no group.
 
 #### Scenario: Drag a track
 
@@ -113,6 +118,16 @@ The app SHALL let the user move a track to another position by dragging it and, 
 
 - **WHEN** the user drags a track that is in no group between two tracks of the group "Side A"
 - **THEN** the moved track is shown under "Side A"
+
+#### Scenario: Move out of a group
+
+- **WHEN** tracks 1 and 2 are in "Side A" and the user drags track 1 to the end of a 4-track disc, away from "Side A"
+- **THEN** the moved track is in no group and the former track 2 is the only track of "Side A"
+
+#### Scenario: Move to the edge of its group
+
+- **WHEN** tracks 1 to 3 are in "Side A" and the user moves track 1 to position 3
+- **THEN** it is still under "Side A", as its last track
 
 ### Requirement: Groups
 

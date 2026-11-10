@@ -117,8 +117,12 @@ export function titleForm(disc: Disc, target: TitleTarget, input: TitleInput): T
       halfWidth: Math.max(balance.halfWidth, 0),
       fullWidth: Math.max(balance.fullWidth, 0),
     },
-    // The balance is an estimate; the compiled disc title field is what decides.
-    fits: balance.halfWidth >= 0 && balance.fullWidth >= 0 && groupsFit(changedDisc),
+    // The balance is an estimate. For edits that rewrite the disc title field (disc and group
+    // titles) the compiled field decides; a track rename does not rewrite it.
+    fits:
+      balance.halfWidth >= 0 &&
+      balance.fullWidth >= 0 &&
+      (!STORED_IN_DISC_TITLE.has(target.kind) || groupsFit(changedDisc)),
     missingTitle: NEEDS_TITLE.has(target.kind) && halfWidth.trim() === '',
   };
 }

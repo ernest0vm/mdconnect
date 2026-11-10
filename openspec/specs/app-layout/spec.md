@@ -22,7 +22,7 @@ When a device is connected, the app SHALL use the whole window. It SHALL show a 
 
 ### Requirement: Track area fills the window
 
-The track area SHALL take the height left below the header and disc summary, and SHALL scroll on its own. Its column headings (#, Title, Duration, Mode) and the track actions toolbar SHALL stay visible while the tracks scroll.
+The track area SHALL take the height left below the header (and, in one column, below the disc summary), and SHALL scroll on its own. Its column headings (#, Title, Duration, Mode) and the track actions toolbar SHALL stay visible while the tracks scroll.
 
 #### Scenario: Long disc
 
