@@ -4,11 +4,14 @@
  *
  * Changes from upstream:
  * - Works on a minimal device interface instead of `USBDevice`, so it stays platform-agnostic.
- * - `readReply` gives up after `timeoutMs` (upstream polls forever).
- * - Every control transfer fails after `transferTimeoutMs` (5 s) if it does not complete, so a
+ * - `readReply` gives up after `timeoutMs` (upstream polls forever), unless a call asks for no
+ *   limit, and polls at most once a second (upstream keeps doubling the interval).
+ * - Every USB transfer fails after `transferTimeoutMs` (5 s) if it does not complete, so a
  *   device that stops answering at the USB level cannot leave a read waiting forever.
- * - No DES/3DES loading, factory commands, bulk transfers or logging: reading needs none of them.
- * - An input transfer whose status is not "ok" (stall, babble) is an error; upstream uses its bytes.
+ * - No DES/3DES loading, factory commands, bulk reads or logging. `bulkWrite` (upstream
+ *   `writeBulk`) is used by uploads; DES lives in des.ts.
+ * - A transfer whose status is not "ok" (stall, babble) is an error; upstream uses its bytes. A
+ *   bulk write the device only partly accepts is an error too.
  */
 
 import { NetMdError, NetMdTimeoutError } from './errors';
@@ -35,6 +38,18 @@ export interface NetMdUsbDevice {
     data?: DataView | undefined;
   }>;
   controlTransferOut(setup: ControlSetup, data: BufferSource): Promise<unknown>;
+  transferOut(
+    endpointNumber: number,
+    data: BufferSource,
+  ): Promise<{
+    readonly status?: 'ok' | 'stall' | 'babble' | undefined;
+    readonly bytesWritten?: number | undefined;
+  }>;
+}
+
+export interface ReadReplyOptions {
+  /** Total time to wait for this reply; `Infinity` waits until the device answers or is gone. */
+  readonly timeoutMs?: number;
 }
 
 /** Starts a timer that calls `onTimeout` after `ms`; returns a function that cancels it. */
@@ -55,7 +70,9 @@ export interface TransportOptions {
 const REQUEST_REPLY_LENGTH = 0x01;
 const REQUEST_SEND = 0x80;
 const REQUEST_READ = 0x81;
+const BULK_OUT_ENDPOINT = 2;
 const FIRST_RETRY_MS = 10;
+const MAX_RETRY_MS = 1_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_TRANSFER_TIMEOUT_MS = 5_000;
 
@@ -111,16 +128,36 @@ export class NetMdTransport {
     );
   }
 
-  /** Waits for the device's reply, doubling the poll interval each time, up to `timeoutMs`. */
-  async readReply(): Promise<Uint8Array> {
+  /** Writes one packet of track data to the bulk OUT endpoint. */
+  async bulkWrite(data: Uint8Array<ArrayBuffer>): Promise<void> {
+    const result = await this.limited(
+      this.device.transferOut(BULK_OUT_ENDPOINT, data),
+      'bulk transfer',
+    );
+    if (result.status !== undefined && result.status !== 'ok') {
+      throw new NetMdError(`USB bulk transfer ended with ${result.status}`);
+    }
+    if (result.bytesWritten !== undefined && result.bytesWritten !== data.length) {
+      throw new NetMdError(
+        `USB bulk transfer wrote ${String(result.bytesWritten)} of ${String(data.length)} bytes`,
+      );
+    }
+  }
+
+  /**
+   * Waits for the device's reply, doubling the poll interval each time up to a second, for at
+   * most `timeoutMs` (the transport's limit unless the call gives its own).
+   */
+  async readReply(options: ReadReplyOptions = {}): Promise<Uint8Array> {
+    const timeoutMs = options.timeoutMs ?? this.timeoutMs;
     let length = await this.replyLength();
     let waited = 0;
     for (let attempt = 0; length === 0; attempt++) {
-      if (waited >= this.timeoutMs) {
+      if (waited >= timeoutMs) {
         throw new NetMdTimeoutError(`No reply after ${String(waited)} ms`);
       }
-      // Double the wait each time, but never past the time limit.
-      const delay = Math.min(FIRST_RETRY_MS * 2 ** attempt, this.timeoutMs - waited);
+      // Double the wait each time, but never past a second or the time limit.
+      const delay = Math.min(FIRST_RETRY_MS * 2 ** attempt, MAX_RETRY_MS, timeoutMs - waited);
       await this.sleep(delay);
       waited += delay;
       length = await this.replyLength();

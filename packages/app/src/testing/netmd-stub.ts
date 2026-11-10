@@ -10,5 +10,6 @@ export function netMdStub(): Omit<NetMdUsbDevice, 'opened' | 'open'> & {
     claimInterface: () => Promise.resolve(),
     controlTransferIn: () => Promise.resolve({}),
     controlTransferOut: () => Promise.resolve({}),
+    transferOut: () => Promise.resolve({}),
   };
 }

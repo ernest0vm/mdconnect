@@ -63,6 +63,8 @@ export function recordedDevice(transfers: readonly RecordedTransfer[]): NetMdUsb
       }
       return Promise.resolve({ status: 'ok' });
     },
+    // The recordings hold no track data, so a bulk write is refused like an unknown command.
+    transferOut: () => Promise.resolve({ status: 'stall' }),
     controlTransferIn: (setup) => {
       let bytes: Uint8Array<ArrayBuffer> = new Uint8Array(4);
       if (setup.request === REQUEST_REPLY_LENGTH && pending !== null) {

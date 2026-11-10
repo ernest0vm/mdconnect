@@ -4,7 +4,7 @@
   "private": true,
   "license": "GPL-2.0-only",
   "type": "module",
-  "description": "Read-only NetMD protocol: a TypeScript port of part of netmd-js 4.4.1 over WebUSB.",
+  "description": "NetMD protocol (reading, editing, playback and uploads): a TypeScript port of part of netmd-js 4.4.1 over WebUSB.",
   "exports": {
     ".": "./src/index.ts",
     "./demo": "./src/demo.ts"

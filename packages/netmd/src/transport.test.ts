@@ -8,6 +8,7 @@ type ControlSetup = Parameters<NetMdUsbDevice['controlTransferIn']>[0];
 /** A device whose control-transfer replies the test scripts, recording what it was sent. */
 function scriptedDevice(lengths: number[], replies: Uint8Array[]) {
   const sent: { request: number; data: Uint8Array }[] = [];
+  const bulk: { endpoint: number; data: Uint8Array }[] = [];
   const calls: string[] = [];
   let opened = false;
   const device: NetMdUsbDevice = {
@@ -40,8 +41,13 @@ function scriptedDevice(lengths: number[], replies: Uint8Array[]) {
       sent.push({ request: setup.request, data: new Uint8Array(data as ArrayBuffer) });
       return Promise.resolve({});
     },
+    transferOut: (endpoint, data) => {
+      const bytes = new Uint8Array(data as ArrayBuffer);
+      bulk.push({ endpoint, data: bytes });
+      return Promise.resolve({ status: 'ok' as const, bytesWritten: bytes.length });
+    },
   };
-  return { device, sent, calls };
+  return { device, sent, calls, bulk };
 }
 
 const noSleep = () => Promise.resolve();
@@ -110,6 +116,61 @@ describe('NetMdTransport', () => {
     // The whole budget is used, not just the doublings that fit under it.
     expect(waited).toBe(1000);
   });
+
+  it('polls at most once a second however long it waits', async () => {
+    const reply = new Uint8Array([0x09]);
+    const { device } = scriptedDevice([...new Array<number>(12).fill(0), 1, 0], [reply]);
+    const waits: number[] = [];
+    const transport = new NetMdTransport(device, {
+      sleep: (ms) => {
+        waits.push(ms);
+        return Promise.resolve();
+      },
+    });
+    await transport.readReply();
+    expect(waits).toEqual([10, 20, 40, 80, 160, 320, 640, 1000, 1000, 1000, 1000, 1000]);
+  });
+
+  it('waits past the usual limit when the call asks for no limit (the reply after a track transfer)', async () => {
+    const reply = new Uint8Array([0x09]);
+    const { device } = scriptedDevice([...new Array<number>(40).fill(0), 1, 0], [reply]);
+    let waited = 0;
+    const transport = new NetMdTransport(device, {
+      sleep: (ms) => {
+        waited += ms;
+        return Promise.resolve();
+      },
+      timeoutMs: 10_000,
+    });
+    expect(await transport.readReply({ timeoutMs: Number.POSITIVE_INFINITY })).toEqual(reply);
+    expect(waited).toBeGreaterThan(30_000);
+  });
+
+  it('writes bulk data to endpoint 2', async () => {
+    const { device, bulk } = scriptedDevice([], []);
+    await new NetMdTransport(device, { sleep: noSleep }).bulkWrite(new Uint8Array([1, 2, 3]));
+    expect(bulk).toEqual([{ endpoint: 2, data: new Uint8Array([1, 2, 3]) }]);
+  });
+
+  it('rejects a bulk write the device stalls', async () => {
+    const device: NetMdUsbDevice = {
+      ...scriptedDevice([], []).device,
+      transferOut: () => Promise.resolve({ status: 'stall' as const, bytesWritten: 0 }),
+    };
+    await expect(
+      new NetMdTransport(device, { sleep: noSleep }).bulkWrite(new Uint8Array([1])),
+    ).rejects.toThrow(/stall/);
+  });
+
+  it('rejects a bulk write the device only partly accepts', async () => {
+    const device: NetMdUsbDevice = {
+      ...scriptedDevice([], []).device,
+      transferOut: () => Promise.resolve({ status: 'ok' as const, bytesWritten: 1 }),
+    };
+    await expect(
+      new NetMdTransport(device, { sleep: noSleep }).bulkWrite(new Uint8Array([1, 2])),
+    ).rejects.toThrow(/1 of 2 bytes/);
+  });
 });
 
 describe('a transfer that never completes (a hung device)', () => {
@@ -121,6 +182,7 @@ describe('a transfer that never completes (a hung device)', () => {
     claimInterface: () => Promise.resolve(),
     controlTransferIn: () => new Promise(() => undefined),
     controlTransferOut: () => new Promise(() => undefined),
+    transferOut: () => new Promise(() => undefined),
   };
   /** A timer that fires at once, so the test does not wait. */
   const firesNow = (_ms: number, onTimeout: () => void) => {
@@ -136,6 +198,11 @@ describe('a transfer that never completes (a hung device)', () => {
   it('fails a command send with a timeout instead of waiting forever', async () => {
     const transport = new NetMdTransport(hung, { sleep: () => Promise.resolve(), timer: firesNow });
     await expect(transport.sendCommand(new Uint8Array([0]))).rejects.toThrow(NetMdTimeoutError);
+  });
+
+  it('fails a bulk write with a timeout instead of waiting forever', async () => {
+    const transport = new NetMdTransport(hung, { sleep: () => Promise.resolve(), timer: firesNow });
+    await expect(transport.bulkWrite(new Uint8Array([0]))).rejects.toThrow(NetMdTimeoutError);
   });
 
   it('cancels the timer when the transfer completes', async () => {
