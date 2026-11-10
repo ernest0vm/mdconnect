@@ -10,6 +10,7 @@ All notable changes to mdconnect are listed here, newest first. The format follo
 - Read the disc: its title, groups and tracks, with their full-width titles, recording mode and length, and the time used and left.
 - Rename the disc, tracks and groups; create, rename and remove groups; move and delete tracks.
 - Play, pause, stop and skip tracks on the device, with the track and position shown as it plays.
+- Right-click a track, or press Shift+F10 on it, for Play, Rename, Delete, Move up and Move down.
 - Export the titles to a CSV file and import them back, compatible with Web MiniDisc Pro.
 - Wipe the disc.
 - Add tracks from audio files in SP, LP2 or LP4, encoded by the built-in encoder or, with your consent, by Sony's encoder online.

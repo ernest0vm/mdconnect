@@ -85,16 +85,7 @@ export function GlassMenuLinkItem({
 }) {
   return (
     <MenuPrimitive.Item asChild {...rest}>
-      <a
-        href={href}
-        target="_blank"
-        rel="noreferrer"
-        className={clsx(
-          'flex cursor-pointer rounded-lg px-3 py-2 text-sm outline-none select-none',
-          'data-[highlighted]:bg-indigo-500/20',
-          className,
-        )}
-      >
+      <a href={href} target="_blank" rel="noreferrer" className={clsx(MENU_ITEM_CLASS, className)}>
         {children}
       </a>
     </MenuPrimitive.Item>
