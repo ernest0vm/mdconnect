@@ -38,6 +38,11 @@ describe('formatQuery', () => {
 });
 
 describe('scanQuery', () => {
+  it('rejects a length-prefixed block shorter than its declared length', () => {
+    // %x declares 6 bytes but only 5 follow.
+    expect(() => scanQuery(new Uint8Array([0x00, 0x06, 1, 2, 3, 4, 5]), '%x')).toThrow(/shorter/);
+  });
+
   it('matches literal bytes and reads numbers as bigint', () => {
     expect(scanQuery(new Uint8Array([0x18, 0x06, 0x12, 0x34, 0x56]), '1806 %b %w')).toEqual([
       0x12n,
