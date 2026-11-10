@@ -150,4 +150,17 @@ describe('a transfer that never completes (a hung device)', () => {
     await transport.sendCommand(new Uint8Array([0]));
     expect(cancelled).toBe(1);
   });
+
+  it('fails init when claiming the interface never completes', async () => {
+    const stuck: NetMdUsbDevice = {
+      ...hung,
+      opened: false,
+      claimInterface: () => new Promise(() => undefined),
+    };
+    const transport = new NetMdTransport(stuck, {
+      sleep: () => Promise.resolve(),
+      timer: firesNow,
+    });
+    await expect(transport.init()).rejects.toThrow(NetMdTimeoutError);
+  });
 });

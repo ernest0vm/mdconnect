@@ -98,14 +98,17 @@ export class NetMdTransport {
 
   /** Claims the NetMD interface and discards any reply left over from an earlier session. */
   async init(): Promise<void> {
-    if (!this.device.opened) await this.device.open();
-    await this.device.selectConfiguration(1);
-    await this.device.claimInterface(0);
+    if (!this.device.opened) await this.limited(this.device.open(), 'open');
+    await this.limited(this.device.selectConfiguration(1), 'configuration');
+    await this.limited(this.device.claimInterface(0), 'claim');
     if ((await this.replyLength()) > 0) await this.readReply();
   }
 
   async sendCommand(command: Uint8Array<ArrayBuffer>): Promise<void> {
-    await this.limited(this.device.controlTransferOut(setup(REQUEST_SEND), command), 'output');
+    await this.limited(
+      this.device.controlTransferOut(setup(REQUEST_SEND), command),
+      'output transfer',
+    );
   }
 
   /** Waits for the device's reply, doubling the poll interval each time, up to `timeoutMs`. */
@@ -137,7 +140,7 @@ export class NetMdTransport {
   private async transferIn(request: number, length: number) {
     const result = await this.limited(
       this.device.controlTransferIn(setup(request), length),
-      `input ${String(request)}`,
+      `input transfer ${String(request)}`,
     );
     if (result.status !== undefined && result.status !== 'ok') {
       throw new NetMdError(`USB input transfer ${String(request)} ended with ${result.status}`);
@@ -154,7 +157,7 @@ export class NetMdTransport {
       const cancel = this.timer(this.transferTimeoutMs, () => {
         reject(
           new NetMdTimeoutError(
-            `USB ${what} transfer did not complete in ${String(this.transferTimeoutMs)} ms`,
+            `USB ${what} did not complete in ${String(this.transferTimeoutMs)} ms`,
           ),
         );
       });
