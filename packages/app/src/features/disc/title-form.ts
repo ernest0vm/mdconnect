@@ -110,8 +110,7 @@ export function titleForm(disc: Disc, target: TitleTarget, input: TitleInput): T
   const changedDisc = withTitles(disc, target, { halfWidth, fullWidth });
   // A track rename leaves the stored disc title field as it is, so measure it as stored; edits
   // that rewrite the field are checked against the compiled field below.
-  const inField = STORED_IN_DISC_TITLE.has(target.kind);
-  const balance = inField
+  const balance = inDiscTitle
     ? titleSpaceBalance(changedDisc)
     : titleSpaceWithStoredTitle(disc, changedDisc);
   return {
@@ -125,7 +124,8 @@ export function titleForm(disc: Disc, target: TitleTarget, input: TitleInput): T
     },
     // The balance is an estimate. For edits that rewrite the disc title field (disc and group
     // titles) the compiled field decides; a track rename does not rewrite it.
-    fits: balance.halfWidth >= 0 && balance.fullWidth >= 0 && (!inField || groupsFit(changedDisc)),
+    fits:
+      balance.halfWidth >= 0 && balance.fullWidth >= 0 && (!inDiscTitle || groupsFit(changedDisc)),
     missingTitle: NEEDS_TITLE.has(target.kind) && halfWidth.trim() === '',
   };
 }

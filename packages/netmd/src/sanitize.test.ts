@@ -60,6 +60,10 @@ describe('sanitizeFullWidthTitle', () => {
     expect(sanitizeFullWidthTitle('夜明け😀')).toBe('');
   });
 
+  it('drops to ASCII when a character converts to one that is not two bytes (disc-editing: "Full-width title with a converted character")', () => {
+    expect(sanitizeFullWidthTitle('夜А')).toBe('');
+  });
+
   it('falls back to plain ASCII when the title cannot be stored in full-width', () => {
     expect(sanitizeFullWidthTitle('Ríos 😀')).toBe('Rios ');
   });

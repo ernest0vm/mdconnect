@@ -41,7 +41,12 @@ The app SHALL let the user change a track's title, with a half-width title and a
 
 ### Requirement: Title conversion
 
-Before saving, the app SHALL convert each title to characters the disc can store, as webminidisc does, and SHALL show the converted title in the dialog. Half-width titles keep ASCII and half-width katakana; other characters lose diacritics or become spaces. Full-width titles keep Shift-JIS characters; if any character of a full-width title cannot be stored, the whole title falls back to plain ASCII, as webminidisc does.
+Before saving, the app SHALL convert each title to characters the disc can store, as webminidisc does, and SHALL show the converted title in the dialog. Half-width titles keep ASCII and half-width katakana; other characters lose diacritics or become spaces. Full-width titles keep two-byte Shift-JIS characters. The whole title falls back to plain ASCII, as webminidisc does, when any character cannot be stored or when the conversion turns a character into one that does not take two bytes.
+
+#### Scenario: Full-width title with a converted character
+
+- **WHEN** the user types the full-width track title "夜А", where the Cyrillic "А" becomes the ASCII "A"
+- **THEN** the title falls back to plain ASCII, which leaves it empty, and the dialog shows the empty title that will be saved
 
 #### Scenario: Accented title
 
