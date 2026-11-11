@@ -5,6 +5,7 @@
 
 const ascii = (text: string) => new TextEncoder().encode(text);
 
+/** The parts joined into one buffer. */
 function concat(...parts: readonly Uint8Array[]): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
   let offset = 0;

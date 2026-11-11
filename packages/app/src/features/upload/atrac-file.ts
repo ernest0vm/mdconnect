@@ -54,6 +54,7 @@ function atracWavMode(data: Uint8Array): UploadMode | null {
   return WAV_FRAME_MODES[view.getUint16(32, true) / 2] ?? null;
 }
 
+/** An ATRAC3 WAV's mode and the audio in its `data` chunk, or null when either is missing. */
 function readAtracWav(data: Uint8Array): AtracFile | null {
   const mode = atracWavMode(data);
   if (mode === null) return null;
@@ -85,6 +86,7 @@ function omaHeaderOffset(data: Uint8Array): number {
   return tagLength + 10 + (((data[5] ?? 0) & 0x10) === 0 ? 0 : 10);
 }
 
+/** An OMA's ATRAC3 audio and mode, or why it cannot be uploaded; null for other files. */
 function readOma(data: Uint8Array): AtracFile | null {
   const offset = omaHeaderOffset(data);
   const header = data.subarray(offset, offset + EA3_HEADER_LENGTH);
@@ -108,6 +110,7 @@ function readOma(data: Uint8Array): AtracFile | null {
   return { kind: 'atrac', mode, data: data.subarray(offset + EA3_HEADER_LENGTH) };
 }
 
+/** The NetMD mode for an OMA's frame size and stereo coding, or null when NetMD has none. */
 function omaMode(frameSize: number, jointStereo: boolean): UploadMode | null {
   if (frameSize === 384 && !jointStereo) return 'lp2';
   if (frameSize === 304 && !jointStereo) return 'lp105';
