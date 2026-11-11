@@ -113,7 +113,7 @@ The convert dialog SHALL show the time the tracks need against the disc's free t
 
 ### Requirement: Title space
 
-The convert dialog SHALL show the title characters the tracks need against the disc's remaining title space. Titles that do not fit SHALL be shortened, in order, with a warning; they do not block the upload.
+The convert dialog SHALL check the title characters the tracks need against the disc's remaining title space, and warn when some titles will be shortened. Titles that do not fit SHALL be shortened, in order; they do not block the upload.
 
 #### Scenario: Title space runs out
 

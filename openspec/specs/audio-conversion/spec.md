@@ -69,7 +69,7 @@ For LP2 and LP4, the app SHALL offer Sony's encoder through the online ATRAC ser
 
 ### Requirement: No audio leaves the computer otherwise
 
-The app SHALL NOT send audio, file names or tags anywhere except to the online ATRAC service when the user has chosen it. SP uploads and the built-in encoder SHALL work with no network connection.
+The app SHALL NOT send audio, file names or tags anywhere except to the online ATRAC service when the user has chosen it. In the desktop app, SP uploads and the built-in encoder SHALL work with no network connection. In the web app, SP uploads SHALL work offline once the page has loaded; the built-in encoder's files are fetched the first time it is used, so it needs a connection then.
 
 #### Scenario: SP upload makes no network request
 
