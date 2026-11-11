@@ -82,12 +82,14 @@ export function mp3WithId3(frames: Readonly<Record<string, string>>): Uint8Array
 
 /**
  * An ATRAC3 WAV: format 0x0270 (or 0xFFFE), 44.1 kHz stereo, block align of two frames, then a
- * `data` chunk of `dataLength` bytes.
+ * `data` chunk of `dataLength` bytes. `metadataLength` adds a `LIST` chunk of that size before the
+ * audio, as taggers do.
  */
 export function atracWav(
   frameSize: number,
   dataLength: number,
   formatTag = 0x0270,
+  metadataLength = 0,
 ): Uint8Array<ArrayBuffer> {
   const fmt = concat(
     u16le(formatTag),
@@ -107,6 +109,9 @@ export function atracWav(
     ascii('fact'),
     u32le(8),
     new Uint8Array(8),
+    ...(metadataLength > 0
+      ? [ascii('LIST'), u32le(metadataLength), new Uint8Array(metadataLength)]
+      : []),
     ascii('data'),
     u32le(data.length),
     data,

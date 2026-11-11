@@ -59,6 +59,14 @@ describe('loadItem', () => {
     expect(calls).toEqual(['tags']);
   });
 
+  it('recognises an ATRAC3 WAV whose audio starts after 64 KiB of metadata', async () => {
+    const { deps: d, calls } = deps();
+    const loaded = await loadItem(file(atracWav(96, 431 * 192, 0x0270, 70 * 1024), 'a.wav'), d);
+    expect(loaded.atrac).toBe('lp4');
+    expect(loaded.durationSeconds).toBeCloseTo(10, 1);
+    expect(calls).toEqual(['tags']);
+  });
+
   it('marks an encrypted OMA as not supported', async () => {
     const { deps: d } = deps();
     const loaded = await loadItem(

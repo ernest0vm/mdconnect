@@ -39,7 +39,8 @@ export function readAtracFile(data: Uint8Array): AtracFile | null {
   return readAtracWav(data) ?? readOma(data);
 }
 
-function readAtracWav(data: Uint8Array): AtracFile | null {
+/** The mode of an ATRAC3 WAV, read from its `fmt ` chunk, or null for any other file. */
+function atracWavMode(data: Uint8Array): UploadMode | null {
   if (data.length < 44 || text(data, 0, 4) !== 'RIFF' || text(data, 8, 8) !== 'WAVEfmt ') {
     return null;
   }
@@ -50,8 +51,13 @@ function readAtracWav(data: Uint8Array): AtracFile | null {
     return null;
   }
   if (view.getUint32(24, true) !== SAMPLE_RATE) return null;
-  const mode = WAV_FRAME_MODES[view.getUint16(32, true) / 2];
-  if (mode === undefined) return null;
+  return WAV_FRAME_MODES[view.getUint16(32, true) / 2] ?? null;
+}
+
+function readAtracWav(data: Uint8Array): AtracFile | null {
+  const mode = atracWavMode(data);
+  if (mode === null) return null;
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
   for (let offset = 12; offset + 8 <= data.length;) {
     const size = view.getUint32(offset + 4, true);
@@ -104,4 +110,20 @@ function omaMode(frameSize: number, jointStereo: boolean): UploadMode | null {
   if (frameSize === 304 && !jointStereo) return 'lp105';
   if (frameSize === 192 && jointStereo) return 'lp4';
   return null;
+}
+
+/** Enough of a file to tell whether it is ATRAC3, and in which mode. */
+const HEADER_PROBE_BYTES = 64 * 1024;
+
+/**
+ * `readAtracFile` for a file on disk. It reads the start of the file first and the whole file
+ * only when that start shows ATRAC3, including an ATRAC3 WAV whose metadata pushes its audio past
+ * the first 64 KiB.
+ */
+export async function readAtracBlob(file: Blob): Promise<AtracFile | null> {
+  const header = new Uint8Array(await file.slice(0, HEADER_PROBE_BYTES).arrayBuffer());
+  const probe = readAtracFile(header);
+  if (probe !== null && probe.kind !== 'atrac') return probe;
+  if (probe === null && atracWavMode(header) === null) return null;
+  return readAtracFile(new Uint8Array(await file.arrayBuffer()));
 }

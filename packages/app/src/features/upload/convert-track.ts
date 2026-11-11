@@ -1,6 +1,6 @@
 import type { UploadMode } from '@mdconnect/netmd';
 
-import { readAtracFile } from './atrac-file';
+import { readAtracBlob } from './atrac-file';
 import { decodeAudio, NotDecodableError, type DecodedAudio } from './decode';
 import {
   BuiltInEncoder,
@@ -74,7 +74,6 @@ const browserDependencies: ConvertDependencies = {
 };
 
 /** Enough of a file to recognise an ATRAC3 WAV or OMA header without reading all of it. */
-const HEADER_PROBE_BYTES = 64 * 1024;
 
 /**
  * Turns a file into data for the deck. ATRAC3 files are uploaded as they are, in their own mode.
@@ -100,14 +99,9 @@ async function convert(
   options: ConvertOptions,
   dependencies: ConvertDependencies,
 ): Promise<ConvertedTrack> {
-  const probe = readAtracFile(
-    new Uint8Array(await file.slice(0, HEADER_PROBE_BYTES).arrayBuffer()),
-  );
-  if (probe?.kind === 'atrac') {
-    const atrac = readAtracFile(new Uint8Array(await file.arrayBuffer()));
-    if (atrac?.kind === 'atrac') return { mode: atrac.mode, data: atrac.data };
-  }
-  if (probe !== null) throw new ConversionError('not-supported');
+  const atrac = await readAtracBlob(file);
+  if (atrac?.kind === 'atrac') return { mode: atrac.mode, data: atrac.data };
+  if (atrac !== null) throw new ConversionError('not-supported');
 
   const lp = mode === 'lp2' || mode === 'lp4';
   if (lp && options.encoder === 'online') {
