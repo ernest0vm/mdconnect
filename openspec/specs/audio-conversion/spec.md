@@ -36,11 +36,11 @@ For SP and SP mono, the app SHALL send 44.1 kHz, 16-bit, big-endian stereo PCM a
 
 ### Requirement: Built-in LP encoder
 
-For LP2 and LP4, the app SHALL encode ATRAC3 itself with its bundled encoder, offline, in the LP2 (132 kbps) and LP4 (66 kbps) formats. The convert dialog SHALL say that this encoder's quality is lower than Sony's.
+For LP2 and LP4, the app SHALL encode ATRAC3 itself with its bundled encoder, on the user's computer, in the LP2 (132 kbps) and LP4 (66 kbps) formats. The convert dialog SHALL say that this encoder's quality is lower than Sony's.
 
 #### Scenario: Encode LP2 offline
 
-- **WHEN** the computer has no network connection and the user uploads an MP3 in LP2 with the built-in encoder
+- **WHEN** the desktop app has no network connection and the user uploads an MP3 in LP2 with the built-in encoder
 - **THEN** the track is uploaded and marked LP2
 
 #### Scenario: Quality note
