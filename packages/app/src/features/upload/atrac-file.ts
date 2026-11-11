@@ -39,7 +39,8 @@ export function readAtracFile(data: Uint8Array): AtracFile | null {
   return readAtracWav(data) ?? readOma(data);
 }
 
-function readAtracWav(data: Uint8Array): AtracFile | null {
+/** The mode of an ATRAC3 WAV, read from its `fmt ` chunk, or null for any other file. */
+function atracWavMode(data: Uint8Array): UploadMode | null {
   if (data.length < 44 || text(data, 0, 4) !== 'RIFF' || text(data, 8, 8) !== 'WAVEfmt ') {
     return null;
   }
@@ -50,8 +51,14 @@ function readAtracWav(data: Uint8Array): AtracFile | null {
     return null;
   }
   if (view.getUint32(24, true) !== SAMPLE_RATE) return null;
-  const mode = WAV_FRAME_MODES[view.getUint16(32, true) / 2];
-  if (mode === undefined) return null;
+  return WAV_FRAME_MODES[view.getUint16(32, true) / 2] ?? null;
+}
+
+/** An ATRAC3 WAV's mode and the audio in its `data` chunk, or null when either is missing. */
+function readAtracWav(data: Uint8Array): AtracFile | null {
+  const mode = atracWavMode(data);
+  if (mode === null) return null;
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
   for (let offset = 12; offset + 8 <= data.length;) {
     const size = view.getUint32(offset + 4, true);
@@ -68,16 +75,20 @@ function readAtracWav(data: Uint8Array): AtracFile | null {
   return null;
 }
 
+/** Where an OMA's EA3 header starts: after its leading `ea3` tag block, if it has one. */
+function omaHeaderOffset(data: Uint8Array): number {
+  if (text(data, 0, 3) !== 'ea3') return 0;
+  const tagLength =
+    (((data[6] ?? 0) & 0x7f) << 21) |
+    (((data[7] ?? 0) & 0x7f) << 14) |
+    (((data[8] ?? 0) & 0x7f) << 7) |
+    ((data[9] ?? 0) & 0x7f);
+  return tagLength + 10 + (((data[5] ?? 0) & 0x10) === 0 ? 0 : 10);
+}
+
+/** An OMA's ATRAC3 audio and mode, or why it cannot be uploaded; null for other files. */
 function readOma(data: Uint8Array): AtracFile | null {
-  let offset = 0;
-  if (text(data, 0, 3) === 'ea3') {
-    const tagLength =
-      (((data[6] ?? 0) & 0x7f) << 21) |
-      (((data[7] ?? 0) & 0x7f) << 14) |
-      (((data[8] ?? 0) & 0x7f) << 7) |
-      ((data[9] ?? 0) & 0x7f);
-    offset = tagLength + 10 + (((data[5] ?? 0) & 0x10) === 0 ? 0 : 10);
-  }
+  const offset = omaHeaderOffset(data);
   const header = data.subarray(offset, offset + EA3_HEADER_LENGTH);
   if (header.length < EA3_HEADER_LENGTH || text(header, 0, 4) !== 'EA3\x01') return null;
   if (header[5] !== EA3_HEADER_LENGTH) return null;
@@ -99,9 +110,37 @@ function readOma(data: Uint8Array): AtracFile | null {
   return { kind: 'atrac', mode, data: data.subarray(offset + EA3_HEADER_LENGTH) };
 }
 
+/** The NetMD mode for an OMA's frame size and stereo coding, or null when NetMD has none. */
 function omaMode(frameSize: number, jointStereo: boolean): UploadMode | null {
   if (frameSize === 384 && !jointStereo) return 'lp2';
   if (frameSize === 304 && !jointStereo) return 'lp105';
   if (frameSize === 192 && jointStereo) return 'lp4';
   return null;
+}
+
+/** Enough of a file to tell whether it is ATRAC3, and in which mode. */
+const HEADER_PROBE_BYTES = 64 * 1024;
+
+/**
+ * Whether the start of a file could still be ATRAC3 whose decisive part lies further on: an
+ * ATRAC3 WAV whose metadata chunks push its `data` chunk out, or an OMA whose `ea3` tag block
+ * (cover art, often) pushes its EA3 header out.
+ */
+function continuesPastHeader(header: Uint8Array): boolean {
+  if (atracWavMode(header) !== null) return true;
+  return (
+    text(header, 0, 3) === 'ea3' && omaHeaderOffset(header) + EA3_HEADER_LENGTH > header.length
+  );
+}
+
+/**
+ * `readAtracFile` for a file on disk. It reads the first 64 KiB, and the whole file only when that
+ * start shows ATRAC3 or could still lead to it.
+ */
+export async function readAtracBlob(file: Blob): Promise<AtracFile | null> {
+  const header = new Uint8Array(await file.slice(0, HEADER_PROBE_BYTES).arrayBuffer());
+  const probe = readAtracFile(header);
+  if (probe !== null && probe.kind !== 'atrac') return probe;
+  if (probe === null && !continuesPastHeader(header)) return null;
+  return readAtracFile(new Uint8Array(await file.arrayBuffer()));
 }

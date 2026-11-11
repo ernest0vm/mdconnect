@@ -5,6 +5,7 @@
 
 const ascii = (text: string) => new TextEncoder().encode(text);
 
+/** The parts joined into one buffer. */
 function concat(...parts: readonly Uint8Array[]): Uint8Array<ArrayBuffer> {
   const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
   let offset = 0;
@@ -82,12 +83,14 @@ export function mp3WithId3(frames: Readonly<Record<string, string>>): Uint8Array
 
 /**
  * An ATRAC3 WAV: format 0x0270 (or 0xFFFE), 44.1 kHz stereo, block align of two frames, then a
- * `data` chunk of `dataLength` bytes.
+ * `data` chunk of `dataLength` bytes. `metadataLength` adds a `LIST` chunk of that size before the
+ * audio, as taggers do.
  */
 export function atracWav(
   frameSize: number,
   dataLength: number,
   formatTag = 0x0270,
+  metadataLength = 0,
 ): Uint8Array<ArrayBuffer> {
   const fmt = concat(
     u16le(formatTag),
@@ -107,6 +110,9 @@ export function atracWav(
     ascii('fact'),
     u32le(8),
     new Uint8Array(8),
+    ...(metadataLength > 0
+      ? [ascii('LIST'), u32le(metadataLength), new Uint8Array(metadataLength)]
+      : []),
     ascii('data'),
     u32le(data.length),
     data,
@@ -123,9 +129,17 @@ export function omaFile(options: {
   readonly jointStereo: boolean;
   readonly encrypted?: boolean;
   readonly dataLength?: number;
+  /** Bytes in the leading `ea3` tag block, as cover art makes it large. */
+  readonly tagLength?: number;
 }): Uint8Array<ArrayBuffer> {
-  // 'ea3', version (2 bytes), flags, then a sync-safe size of 16.
-  const tag = concat(ascii('ea3'), new Uint8Array([3, 0, 0, 0, 0, 0, 0x10]), new Uint8Array(16));
+  // 'ea3', version (2 bytes), flags, then the tag size as a sync-safe integer.
+  const tagLength = options.tagLength ?? 16;
+  const syncSafeSize = [21, 14, 7, 0].map((shift) => (tagLength >> shift) & 0x7f);
+  const tag = concat(
+    ascii('ea3'),
+    new Uint8Array([3, 0, 0, ...syncSafeSize]),
+    new Uint8Array(tagLength),
+  );
   const header = new Uint8Array(96);
   header.set(ascii('EA3\x01'), 0);
   header[5] = 96;

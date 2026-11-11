@@ -131,6 +131,29 @@ describe('convertTrack', () => {
     expect(calls).toEqual([]);
   });
 
+  it('uploads as is an ATRAC3 WAV whose audio starts after 64 KiB of metadata', async () => {
+    const { deps: d, calls } = deps();
+    const wav = atracWav(96, 192, 0x0270, 70 * 1024);
+    const track = await convertTrack(file(wav, 'a.wav'), 'sp', options, d);
+    expect(track.mode).toBe('lp4');
+    expect(track.data).toHaveLength(192);
+    expect(calls).toEqual([]);
+  });
+
+  it('uploads as is an OMA whose tag block (cover art) is over 64 KiB', async () => {
+    const { deps: d, calls } = deps();
+    const oma = omaFile({
+      frameSize: 384,
+      jointStereo: false,
+      dataLength: 768,
+      tagLength: 100_000,
+    });
+    const track = await convertTrack(file(oma, 'a.oma'), 'sp', options, d);
+    expect(track.mode).toBe('lp2');
+    expect(track.data).toHaveLength(768);
+    expect(calls).toEqual([]);
+  });
+
   it('refuses an encrypted OMA (audio-conversion: "Encrypted OMA")', async () => {
     const { deps: d } = deps();
     const attempt = convertTrack(
