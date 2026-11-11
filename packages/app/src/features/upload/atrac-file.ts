@@ -74,16 +74,19 @@ function readAtracWav(data: Uint8Array): AtracFile | null {
   return null;
 }
 
+/** Where an OMA's EA3 header starts: after its leading `ea3` tag block, if it has one. */
+function omaHeaderOffset(data: Uint8Array): number {
+  if (text(data, 0, 3) !== 'ea3') return 0;
+  const tagLength =
+    (((data[6] ?? 0) & 0x7f) << 21) |
+    (((data[7] ?? 0) & 0x7f) << 14) |
+    (((data[8] ?? 0) & 0x7f) << 7) |
+    ((data[9] ?? 0) & 0x7f);
+  return tagLength + 10 + (((data[5] ?? 0) & 0x10) === 0 ? 0 : 10);
+}
+
 function readOma(data: Uint8Array): AtracFile | null {
-  let offset = 0;
-  if (text(data, 0, 3) === 'ea3') {
-    const tagLength =
-      (((data[6] ?? 0) & 0x7f) << 21) |
-      (((data[7] ?? 0) & 0x7f) << 14) |
-      (((data[8] ?? 0) & 0x7f) << 7) |
-      ((data[9] ?? 0) & 0x7f);
-    offset = tagLength + 10 + (((data[5] ?? 0) & 0x10) === 0 ? 0 : 10);
-  }
+  const offset = omaHeaderOffset(data);
   const header = data.subarray(offset, offset + EA3_HEADER_LENGTH);
   if (header.length < EA3_HEADER_LENGTH || text(header, 0, 4) !== 'EA3\x01') return null;
   if (header[5] !== EA3_HEADER_LENGTH) return null;
@@ -116,14 +119,25 @@ function omaMode(frameSize: number, jointStereo: boolean): UploadMode | null {
 const HEADER_PROBE_BYTES = 64 * 1024;
 
 /**
- * `readAtracFile` for a file on disk. It reads the start of the file first and the whole file
- * only when that start shows ATRAC3, including an ATRAC3 WAV whose metadata pushes its audio past
- * the first 64 KiB.
+ * Whether the start of a file could still be ATRAC3 whose decisive part lies further on: an
+ * ATRAC3 WAV whose metadata chunks push its `data` chunk out, or an OMA whose `ea3` tag block
+ * (cover art, often) pushes its EA3 header out.
+ */
+function continuesPastHeader(header: Uint8Array): boolean {
+  if (atracWavMode(header) !== null) return true;
+  return (
+    text(header, 0, 3) === 'ea3' && omaHeaderOffset(header) + EA3_HEADER_LENGTH > header.length
+  );
+}
+
+/**
+ * `readAtracFile` for a file on disk. It reads the first 64 KiB, and the whole file only when that
+ * start shows ATRAC3 or could still lead to it.
  */
 export async function readAtracBlob(file: Blob): Promise<AtracFile | null> {
   const header = new Uint8Array(await file.slice(0, HEADER_PROBE_BYTES).arrayBuffer());
   const probe = readAtracFile(header);
   if (probe !== null && probe.kind !== 'atrac') return probe;
-  if (probe === null && atracWavMode(header) === null) return null;
+  if (probe === null && !continuesPastHeader(header)) return null;
   return readAtracFile(new Uint8Array(await file.arrayBuffer()));
 }

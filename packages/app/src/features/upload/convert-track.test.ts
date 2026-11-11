@@ -140,6 +140,20 @@ describe('convertTrack', () => {
     expect(calls).toEqual([]);
   });
 
+  it('uploads as is an OMA whose tag block (cover art) is over 64 KiB', async () => {
+    const { deps: d, calls } = deps();
+    const oma = omaFile({
+      frameSize: 384,
+      jointStereo: false,
+      dataLength: 768,
+      tagLength: 100_000,
+    });
+    const track = await convertTrack(file(oma, 'a.oma'), 'sp', options, d);
+    expect(track.mode).toBe('lp2');
+    expect(track.data).toHaveLength(768);
+    expect(calls).toEqual([]);
+  });
+
   it('refuses an encrypted OMA (audio-conversion: "Encrypted OMA")', async () => {
     const { deps: d } = deps();
     const attempt = convertTrack(

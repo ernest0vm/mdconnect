@@ -128,9 +128,17 @@ export function omaFile(options: {
   readonly jointStereo: boolean;
   readonly encrypted?: boolean;
   readonly dataLength?: number;
+  /** Bytes in the leading `ea3` tag block, as cover art makes it large. */
+  readonly tagLength?: number;
 }): Uint8Array<ArrayBuffer> {
-  // 'ea3', version (2 bytes), flags, then a sync-safe size of 16.
-  const tag = concat(ascii('ea3'), new Uint8Array([3, 0, 0, 0, 0, 0, 0x10]), new Uint8Array(16));
+  // 'ea3', version (2 bytes), flags, then the tag size as a sync-safe integer.
+  const tagLength = options.tagLength ?? 16;
+  const syncSafeSize = [21, 14, 7, 0].map((shift) => (tagLength >> shift) & 0x7f);
+  const tag = concat(
+    ascii('ea3'),
+    new Uint8Array([3, 0, 0, ...syncSafeSize]),
+    new Uint8Array(tagLength),
+  );
   const header = new Uint8Array(96);
   header.set(ascii('EA3\x01'), 0);
   header[5] = 96;
