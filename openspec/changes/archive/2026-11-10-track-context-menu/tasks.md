@@ -11,4 +11,4 @@
 
 ## 3. Manual verification
 
-- [ ] 3.1 In the desktop app, right-click a row and check that only mdconnect's menu appears, not Electron's. Check that Delete from the menu asks for confirmation.
+- [x] 3.1 In the desktop app, right-click a row and check that only mdconnect's menu appears, not Electron's. Check that Delete from the menu asks for confirmation. Desktop app (macOS, Sony MZ-N510, a 72-track LP4 disc): a mouse right-click on track 4 showed only mdconnect's menu (the app registers no native context menu) and selected that track alone. Move up was saved on the deck, with selection and focus following the track. Shift+F10 then Move down put it back. Delete asked "Delete 1 track?" with focus on Cancel, and cancelling returned focus to the row. A saved move that empties a group was not tried, to leave the disc's groups as they were.

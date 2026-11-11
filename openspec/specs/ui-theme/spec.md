@@ -69,12 +69,12 @@ Every interactive control SHALL be reachable and operable with the keyboard and 
 
 ### Requirement: Appearance control
 
-Every screen, in the desktop app and in the web app, SHALL offer an Appearance control that lets the user choose the theme (System, Light, Dark) and the transparency (System, Reduced, Glass). A change SHALL apply immediately, without a reload. The control SHALL be operable with the keyboard alone and SHALL announce the current choice of each group to assistive technology.
+The Appearance section of Settings, which every screen offers in the desktop app and in the web app, SHALL let the user choose the theme (System, Light, Dark) and the transparency (System, Reduced, Glass). A change SHALL apply immediately, without a reload. The section SHALL be operable with the keyboard alone and SHALL announce the current choice of each group to assistive technology.
 
 #### Scenario: Change theme from the control
 
-- **WHEN** the user opens the Appearance control and picks Dark
-- **THEN** the app switches to its dark appearance immediately, and the control shows Dark as the current theme
+- **WHEN** the user opens Settings and picks Dark in the Appearance section
+- **THEN** the app switches to its dark appearance immediately, and the section shows Dark as the current theme
 
 #### Scenario: Back to System
 
@@ -83,8 +83,8 @@ Every screen, in the desktop app and in the web app, SHALL offer an Appearance c
 
 #### Scenario: Keyboard only
 
-- **WHEN** the user focuses the Appearance control with Tab and presses Enter, then uses the arrow keys and Space within each group
-- **THEN** the dialog opens, each choice can be selected, and Escape closes the dialog and returns focus to the control
+- **WHEN** the user focuses Settings with Tab and presses Enter, then uses the arrow keys and Space within each Appearance group
+- **THEN** the dialog opens, each choice can be selected, and Escape closes the dialog and returns focus to Settings
 
 ### Requirement: Remember the appearance choice
 

@@ -13,4 +13,4 @@
 
 ## 3. Manual verification
 
-- [ ] 3.1 In the desktop app and in Chrome, change each setting, reload, and check that it is remembered. Check that an Appearance choice made before this change is kept.
+- [x] 3.1 In the desktop app and in Chrome, change each setting, reload, and check that it is remembered. Check that an Appearance choice made before this change is kept. Desktop app (macOS, Sony MZ-N510 connected): theme Light, mode LP2, Full-width titles on and consent withdrawn applied at once and were remembered after a reload. Chromium (`yarn dev:web`): theme Dark, LP4, Artist – Title and ReplayGain were remembered after a reload, and the Transparency choice made before this change (Glass) was kept.

@@ -14,4 +14,4 @@
 
 ## 3. Menu links
 
-- [ ] 3.1 Add Support and FAQ, Source code on GitHub and Donate to the More menu as links. Verify with a menu test of the hrefs. In the desktop app, check that each opens in the default browser and that the window keeps the app (app-menu: "Open a link").
+- [x] 3.1 Add Support and FAQ, Source code on GitHub and Donate to the More menu as links. Verify with a menu test of the hrefs. In the desktop app, check that each opens in the default browser and that the window keeps the app (app-menu: "Open a link"). Desktop app (macOS): each link opened its page in the default browser (minidisc.wiki, github.com/ernest0vm/mdconnect and paypal.me/ernest0vm, confirmed by the maintainer), and after each click the window kept the app with no new Electron window. Also checked there: What's new opens once with the 0.1.0 entry when the stored version is older, nothing opens on a first install, and About shows the version.
