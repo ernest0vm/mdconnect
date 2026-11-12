@@ -17,6 +17,8 @@ function fakeDirectory(
   existing: readonly string[] = [],
   fail: 'write' | 'open' | null = null,
   folders: readonly string[] = [],
+  /** Names another program writes `other` into just as the folder creates them. */
+  racers: readonly string[] = [],
 ) {
   const files = new Map<string, number[]>(existing.map((file) => [file, [...text('old')]]));
   const handle: DirectoryHandleLike = {
@@ -28,10 +30,13 @@ function fakeDirectory(
       if (!files.has(fileName) && options?.create !== true) {
         return Promise.reject(new DOMException('missing', 'NotFoundError'));
       }
-      if (!files.has(fileName)) files.set(fileName, []);
+      if (!files.has(fileName)) {
+        files.set(fileName, racers.includes(fileName) ? [...text('other')] : []);
+      }
       // Like Chromium, the writes go to a swap file that replaces the file on close.
       const pending: number[] = [];
       return Promise.resolve({
+        getFile: () => Promise.resolve({ size: files.get(fileName)?.length ?? 0 }),
         createWritable: () =>
           fail === 'open'
             ? Promise.reject(new DOMException('no permission', 'NotAllowedError'))
@@ -107,6 +112,13 @@ describe('directoryRecordingFolders', () => {
       name: 'NotAllowedError',
     });
     expect(files.size).toBe(0);
+  });
+
+  it('never removes a file another program wrote under the name meanwhile', async () => {
+    const { handle, files } = fakeDirectory('MiniDisc', [], 'write', [], ['01 One.wav']);
+    const folder = await directoryRecordingFolders(() => Promise.resolve(handle)).choose();
+    await expect(folder?.write('01 One.wav', [bytes(1)])).rejects.toThrow('disk full');
+    expect(files.get('01 One.wav')).toEqual([...text('other')]);
   });
 
   it('leaves no file behind when the recording is cancelled while it is written', async () => {

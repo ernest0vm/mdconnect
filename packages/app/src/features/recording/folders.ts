@@ -18,7 +18,10 @@ export interface DirectoryHandleLike {
   getFileHandle(
     name: string,
     options?: { readonly create?: boolean },
-  ): Promise<{ createWritable(): Promise<WritableLike> }>;
+  ): Promise<{
+    createWritable(): Promise<WritableLike>;
+    getFile(): Promise<{ readonly size: number }>;
+  }>;
   removeEntry(name: string): Promise<void>;
 }
 
@@ -124,9 +127,14 @@ function directoryFolder(directory: DirectoryHandleLike, batchBytes: number): Re
         name = uniqueFileName(fileName, (candidate) => taken.has(candidate));
       }
       const handle = await directory.getFileHandle(name, { create: true });
+      // The API has no exclusive create, so another program may have written the name since the
+      // check. Writes go to a swap file until close, so the entry stays empty unless it is theirs,
+      // and only an empty entry is removed.
+      const removeIfEmpty = async () => {
+        if ((await handle.getFile()).size === 0) await directory.removeEntry(name);
+      };
       const writable = await handle.createWritable().catch(async (error: unknown) => {
-        // The file was created empty above; it is removed rather than left behind.
-        await directory.removeEntry(name).catch(() => undefined);
+        await removeIfEmpty().catch(() => undefined);
         throw error;
       });
       await writeParts(
@@ -135,7 +143,7 @@ function directoryFolder(directory: DirectoryHandleLike, batchBytes: number): Re
           finish: () => writable.close(),
           discard: async () => {
             await writable.abort().catch(() => undefined);
-            await directory.removeEntry(name);
+            await removeIfEmpty();
           },
         },
         parts,
