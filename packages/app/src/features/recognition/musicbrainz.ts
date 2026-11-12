@@ -55,12 +55,13 @@ export class MusicBrainzClient {
     return list(isRecord(answer) ? answer.recordings : undefined).flatMap(readRecording);
   }
 
+  /** Reserves the next free slot before waiting for it, so searches started together queue up. */
   private async waitForTurn(): Promise<void> {
-    if (this.lastRequest !== null) {
-      const wait = this.lastRequest + REQUEST_SPACING_MS - this.options.now();
-      if (wait > 0) await this.options.sleep(wait);
-    }
-    this.lastRequest = this.options.now();
+    const now = this.options.now();
+    const slot =
+      this.lastRequest === null ? now : Math.max(now, this.lastRequest + REQUEST_SPACING_MS);
+    this.lastRequest = slot;
+    if (slot > now) await this.options.sleep(slot - now);
   }
 }
 

@@ -79,6 +79,8 @@ export function shazamIdentifier(
     plan: shazamPlan,
     async identify(pcm, sampleRate, _trackSeconds, signal) {
       const signature = shazamSignature(await resample(pcm, sampleRate));
+      // A cancel while resampling sends nothing.
+      signal.throwIfAborted();
       return withRetry(() => ask(signature), { sleep, signal });
     },
   };

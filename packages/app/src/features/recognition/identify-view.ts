@@ -14,6 +14,7 @@ import {
   type TrackResult,
 } from './identify-session';
 import {
+  SERVICE_NAMES,
   SERVICE_OF,
   type IdentifyMethod,
   type RecognitionPreferences,
@@ -59,7 +60,8 @@ export interface IdentifyRow {
 /** The selected tracks as rows: ticked, not yet identified, searched by their current title. */
 export function initialRows(tracks: readonly RecordingTrack[]): IdentifyRow[] {
   return tracks.map((track) => {
-    const title = track.title || track.fullWidthTitle;
+    // The full-width title first, as the disc view shows it.
+    const title = track.fullWidthTitle || track.title;
     return {
       index: track.index,
       number: track.index + 1,
@@ -167,12 +169,6 @@ export function consentNeeded(
   const service = SERVICE_OF[method];
   return preferences.consent[service] ? null : service;
 }
-
-const SERVICE_NAMES: Readonly<Record<RecognitionService, string>> = {
-  shazam: 'Shazam',
-  acoustid: 'AcoustID',
-  musicbrainz: 'MusicBrainz',
-};
 
 /** What the consent notice says for a service. */
 export function consentNotice(service: RecognitionService): { title: string; body: string } {

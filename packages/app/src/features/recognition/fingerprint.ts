@@ -37,14 +37,17 @@ export async function loadChromaprint(): Promise<ChromaprintApi> {
     import('@unimusic/chromaprint/dist/chromaprint.js'),
     import('@unimusic/chromaprint/dist/chromaprint.wasm?init'),
   ]);
-  return createModule({
-    instantiateWasm(
-      imports: WebAssembly.Imports,
-      receive: (instance: WebAssembly.Instance) => void,
-    ): Record<string, never> {
-      void instantiate(imports).then(receive);
-      return {};
-    },
+  // Emscripten's factory never settles when the instantiation fails, so that failure rejects here.
+  return new Promise((resolve, reject) => {
+    createModule({
+      instantiateWasm(
+        imports: WebAssembly.Imports,
+        receive: (instance: WebAssembly.Instance) => void,
+      ): Record<string, never> {
+        instantiate(imports).then(receive, reject);
+        return {};
+      },
+    }).then(resolve, reject);
   });
 }
 
@@ -55,7 +58,11 @@ export async function loadChromaprint(): Promise<ChromaprintApi> {
 export function chromaprintFingerprinter(load: () => Promise<ChromaprintApi>): Fingerprinter {
   let module: Promise<ChromaprintApi> | null = null;
   return async (chunks, sampleRate, channels) => {
-    module ??= load();
+    // A failed load is forgotten, so the next call tries again.
+    module ??= load().catch((error: unknown) => {
+      module = null;
+      throw error;
+    });
     return fingerprint(await module, chunks, sampleRate, channels);
   };
 }

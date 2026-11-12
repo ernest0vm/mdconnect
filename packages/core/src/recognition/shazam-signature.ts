@@ -3,7 +3,7 @@
  * src/signature-format.ts (`DecodedMessage.encodeToBinary`, `encodeToUri`), by asivery,
  * GPL-2.0, https://www.npmjs.org/package/shazam-api, the library webminidisc uses.
  *
- * Changes from upstream:
+ * Changes from upstream, made for mdconnect on 2026-11-12:
  * - The FFT is `powerSpectrum` (./fft) instead of `fft.js`, and the Hanning window is computed
  *   instead of read from a table of rounded values.
  * - Samples come in as an `Int16Array`; the output is the data URI and its length in

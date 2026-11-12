@@ -75,6 +75,17 @@ describe('lookupAcoustId', () => {
     expect(await lookupAcoustId('FP', 221, options(fakeFetch(weak).fetch))).toBeNull();
   });
 
+  it('passes over a higher score whose recording has no title', async () => {
+    const answer = {
+      status: 'ok',
+      results: [
+        { id: 'a', score: 0.95, recordings: [{ id: 'r0' }] },
+        { id: 'b', score: 0.9, recordings: [{ id: 'r1', title: 'Dawn', artists: [] }] },
+      ],
+    };
+    expect((await lookupAcoustId('FP', 221, options(fakeFetch(answer).fetch)))?.title).toBe('Dawn');
+  });
+
   it('skips a result without recordings', async () => {
     const bare = { status: 'ok', results: [{ id: 'a', score: 0.95 }] };
     expect(await lookupAcoustId('FP', 221, options(fakeFetch(bare).fetch))).toBeNull();

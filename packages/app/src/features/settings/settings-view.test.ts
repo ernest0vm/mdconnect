@@ -10,8 +10,10 @@ import { initialMode, RECORDING_MODES, recordingModes } from '../upload/upload-v
 import {
   consentStatus,
   recognitionConsentStatus,
+  saveFailedText,
   SAVE_FAILED_TEXT,
   SETTINGS_SECTIONS,
+  withdrawLabel,
 } from './settings-view';
 
 /** Sony MZ-N510/N610, which has no native mono upload. */
@@ -72,5 +74,17 @@ describe('Song recognition in Settings', () => {
       text: 'MusicBrainz: no consent given. Identify asks before the first search.',
       canWithdraw: false,
     });
+  });
+});
+
+describe('Settings for each recognition service', () => {
+  it('names the service on its withdraw action', () => {
+    expect(withdrawLabel('acoustid')).toBe('Withdraw consent to AcoustID');
+  });
+
+  it('says which consent could not be saved', () => {
+    expect(saveFailedText({ uploads: true, recognition: false })).toMatch(/song recognition/u);
+    expect(saveFailedText({ uploads: false, recognition: true })).toBe(SAVE_FAILED_TEXT);
+    expect(saveFailedText({ uploads: true, recognition: true })).toBeNull();
   });
 });

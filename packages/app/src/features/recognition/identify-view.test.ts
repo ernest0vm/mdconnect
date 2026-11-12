@@ -85,6 +85,13 @@ describe('the Identify dialog rows', () => {
     expect(searchBlocker('Dawn')).toBeNull();
   });
 
+  it('show and search the full-width title first, as the disc view does', () => {
+    const [row] = initialRows([
+      { index: 0, title: 'Yoake', fullWidthTitle: '夜明け', seconds: 60 },
+    ]);
+    expect([row?.current, row?.searchText]).toEqual(['夜明け', '夜明け']);
+  });
+
   it('format the song found, and let an edit replace it (song-recognition: "Edit a new title")', () => {
     const [row] = withResult(initialRows(tracks), 0, { kind: 'found', song: dawn });
     if (row === undefined) throw new Error('no row');

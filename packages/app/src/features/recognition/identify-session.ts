@@ -1,7 +1,7 @@
 import type { Song } from '@mdconnect/core';
 
 import type { PlaybackCommand } from '../disc/disc-reader';
-import { recordFrames } from '../recording/capture';
+import { InputLostError, recordFrames } from '../recording/capture';
 import type { LiveCapture } from '../recording/capture-source';
 import {
   deckEnding,
@@ -132,31 +132,43 @@ async function identifyTrack(
   };
   const frames = Math.ceil(plan.excerptSeconds * capture.sampleRate);
   const listening = new AbortController();
-  const listen = () => recordFrames(capture, frames, AbortSignal.any([signal, listening.signal]));
+  const listen = () => {
+    const excerpt = recordFrames(capture, frames, AbortSignal.any([signal, listening.signal]));
+    // An excerpt no longer wanted ends with an abort or a lost input, which nobody awaits.
+    excerpt.catch(() => undefined);
+    return excerpt;
+  };
+  // The input can stop while a service is asked; that ends the track without waiting for it.
+  let stopWatchingInput: () => void = () => undefined;
+  const inputLost = new Promise<never>((_resolve, reject) => {
+    stopWatchingInput = capture.onEnded(() => {
+      reject(new InputLostError());
+    });
+  });
+  inputLost.catch(() => undefined);
 
-  report('listening');
-  await prime(track.index, options, send);
-  let next: Promise<PcmBuffer> | null = listen();
-  await send({ kind: 'play' });
   try {
+    report('listening');
+    await prime(track.index, options, send);
+    let next: Promise<PcmBuffer> | null = listen();
+    await send({ kind: 'play' });
     for (let attempt = 0; attempt < plan.attempts; attempt++) {
       report('listening');
       const excerpt: PcmBuffer = await (next ?? listen());
       // The next excerpt starts at once, so the deck plays on while this one is asked about.
       next = attempt + 1 < plan.attempts ? listen() : null;
       report('asking');
-      const song = await answer(
-        identifier.identify(excerpt, capture.sampleRate, track.seconds, signal),
-        signal,
-      );
+      const song = await Promise.race([
+        answer(identifier.identify(excerpt, capture.sampleRate, track.seconds, signal), signal),
+        inputLost,
+      ]);
       if (song === 'unreachable') return { kind: 'unreachable' };
       if (song !== null) return { kind: 'found', song };
     }
     return { kind: 'not-found' };
   } finally {
+    stopWatchingInput();
     listening.abort();
-    // An excerpt no longer wanted ends with an abort, which nobody needs to hear about.
-    next?.catch(() => undefined);
   }
 }
 

@@ -221,14 +221,22 @@ export function IdentifyDialog({
     }
   };
 
+  /** The latest search of each row; an older search that answers later is ignored. */
+  const latestSearch = useRef(new Map<number, number>());
   const search = (position: number, text: string) => {
-    setSearches((current) => new Map(current).set(position, { state: 'searching', results: [] }));
+    const request = (latestSearch.current.get(position) ?? 0) + 1;
+    latestSearch.current.set(position, request);
+    const show = (found: Search) => {
+      if (latestSearch.current.get(position) !== request) return;
+      setSearches((current) => new Map(current).set(position, found));
+    };
+    show({ state: 'searching', results: [] });
     musicBrainz.search(text).then(
       (results) => {
-        setSearches((current) => new Map(current).set(position, { state: 'done', results }));
+        show({ state: 'done', results });
       },
       () => {
-        setSearches((current) => new Map(current).set(position, { state: 'failed', results: [] }));
+        show({ state: 'failed', results: [] });
       },
     );
   };
@@ -537,7 +545,9 @@ function SearchRow({
             onText(event.target.value);
           }}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' && blocker === null) onSearch();
+            if (event.key === 'Enter' && blocker === null && search?.state !== 'searching') {
+              onSearch();
+            }
           }}
         />
         <GlassButton

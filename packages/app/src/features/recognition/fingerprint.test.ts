@@ -67,6 +67,20 @@ function fakeApi(failFeedOn: number | null = null) {
   return { api, live, contexts };
 }
 
+describe('chromaprintFingerprinter when loading fails', () => {
+  it('loads again on the next call', async () => {
+    const { api } = fakeApi();
+    let loads = 0;
+    const fingerprint = chromaprintFingerprinter(() => {
+      loads += 1;
+      return loads === 1 ? Promise.reject(new Error('no wasm')) : Promise.resolve(api);
+    });
+    await expect(fingerprint([new Int16Array(10)], 44_100, 1)).rejects.toThrow('no wasm');
+    expect(await fingerprint([new Int16Array(10)], 44_100, 1)).toBe('AQ');
+    expect(loads).toBe(2);
+  });
+});
+
 describe('chromaprintFingerprinter', () => {
   it('frees every allocation and context, even when one fingerprint fails, and opens no AudioContext', async () => {
     const created = vi.fn();

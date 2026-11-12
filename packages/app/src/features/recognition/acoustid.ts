@@ -48,11 +48,14 @@ export async function lookupAcoustId(
 }
 
 function bestSong(results: readonly unknown[]): Song | null {
+  // Only a recording with a title can name a track, so results are ranked among those.
   const ranked = results
     .filter(isRecord)
     .map((result) => ({
       score: typeof result.score === 'number' ? result.score : 0,
-      recording: list(result.recordings).find(isRecord),
+      recording: list(result.recordings)
+        .filter(isRecord)
+        .find((recording) => text(recording.title) !== null),
     }))
     .filter((result) => result.score >= MIN_ACOUSTID_SCORE && result.recording !== undefined)
     .sort((a, b) => b.score - a.score);

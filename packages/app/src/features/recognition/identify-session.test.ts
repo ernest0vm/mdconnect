@@ -237,6 +237,59 @@ describe('identifyTracks', () => {
     expect(new InputLostError()).toBeInstanceOf(Error);
   });
 
+  it('stops when the input stops while it waits for an answer', async () => {
+    const { capture } = fakeCapture();
+    const listeners = new Set<() => void>();
+    const ended = () => {
+      for (const listener of listeners) listener();
+    };
+    const lost: LiveCapture = {
+      ...capture,
+      onEnded: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    };
+    const identifier: Identifier = {
+      plan: shazamPlan,
+      // The service never answers; the input stops meanwhile.
+      identify: () => {
+        setTimeout(() => {
+          ended();
+        }, 0);
+        return new Promise(() => undefined);
+      },
+    };
+    const { deck, commands } = fakeDeck();
+    const outcome = await identifyTracks(
+      [track(0, 'One', 60)],
+      options(identifier, { capture: lost, deck }),
+    );
+    expect(outcome.ending).toBe('input-lost');
+    expect(commands.at(-1)).toBe('stop');
+  });
+
+  it('leaves no listen pending when the deck refuses to play', async () => {
+    const { capture } = fakeCapture();
+    const silent: LiveCapture = {
+      ...capture,
+      onBlock: () => () => undefined,
+      onEnded: (listener) => {
+        setTimeout(listener, 0);
+        return () => undefined;
+      },
+    };
+    const { deck } = fakeDeck({ refuse: 'play' });
+    const { identifier } = scripted([dawn]);
+    const outcome = await identifyTracks(
+      [track(0, 'One', 60)],
+      options(identifier, { capture: silent, deck }),
+    );
+    expect(outcome.ending).toBe('refused');
+    // An input that ends afterwards must not leave an unhandled rejection behind.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  });
+
   it('ends as refused when the deck refuses a command', async () => {
     const { deck } = fakeDeck({ refuse: 'play' });
     const { identifier } = scripted([dawn]);

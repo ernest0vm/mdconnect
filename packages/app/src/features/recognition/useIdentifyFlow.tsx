@@ -41,6 +41,8 @@ export function useIdentifyFlow({
   onInterrupted,
 }: IdentifyFlowOptions): IdentifyFlow {
   const [tracks, setTracks] = useState<readonly RecordingTrack[] | null>(null);
+  // A disc that is gone takes the selection with it, so a later disc never gets these tracks' titles.
+  if (disc === null && tracks !== null) setTracks(null);
   const opener = useRef<HTMLElement | null>(null);
   const dialogs =
     tracks === null || disc === null ? null : (

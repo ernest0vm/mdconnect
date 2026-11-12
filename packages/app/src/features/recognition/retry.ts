@@ -22,6 +22,7 @@ export interface RetryOptions {
  */
 export async function withRetry<T>(attempt: () => Promise<T>, options: RetryOptions): Promise<T> {
   const cancelled = () => options.signal?.aborted === true;
+  options.signal?.throwIfAborted();
   try {
     return await attempt();
   } catch (error) {

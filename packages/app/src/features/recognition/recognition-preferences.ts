@@ -12,6 +12,13 @@ export const RECOGNITION_SERVICES: readonly RecognitionService[] = [
   'musicbrainz',
 ];
 
+/** Each service's name, as the app shows it. */
+export const SERVICE_NAMES: Readonly<Record<RecognitionService, string>> = {
+  shazam: 'Shazam',
+  acoustid: 'AcoustID',
+  musicbrainz: 'MusicBrainz',
+};
+
 /** The service each method sends data to. */
 export const SERVICE_OF: Readonly<Record<IdentifyMethod, RecognitionService>> = {
   shazam: 'shazam',

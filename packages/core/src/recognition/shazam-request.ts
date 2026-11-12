@@ -1,7 +1,8 @@
 /*
  * The request and the reading of its answer follow shazam-api 0.3.0, src/api.ts
- * (`Endpoint`, `Shazam.recognizeSong`), by asivery, GPL-2.0. Only the desktop main process uses
- * them: Shazam refuses requests from web pages.
+ * (`Endpoint`, `Shazam.recognizeSong`), by asivery, GPL-2.0. Rewritten for mdconnect on 2026-11-12
+ * as a request builder and an answer reader with no fetching of their own. Only the desktop main
+ * process uses them: Shazam refuses requests from web pages.
  */
 
 import { isJsonObject as isRecord, jsonList as list, jsonText as text } from './json';

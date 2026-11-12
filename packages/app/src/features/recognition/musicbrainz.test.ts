@@ -80,6 +80,14 @@ describe('MusicBrainzClient', () => {
   });
 });
 
+describe('MusicBrainzClient with searches at once', () => {
+  it('spaces searches started together a second apart each', async () => {
+    const { search, pauses } = client(answer, () => 0);
+    await Promise.all([search.search('a'), search.search('b'), search.search('c')]);
+    expect(pauses).toEqual([1000, 2000]);
+  });
+});
+
 describe('escapeLucene', () => {
   it('escapes the query syntax characters', () => {
     expect(escapeLucene('AC/DC: Back (in) Black!')).toBe('AC\\/DC\\: Back \\(in\\) Black\\!');

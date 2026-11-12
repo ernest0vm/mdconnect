@@ -95,6 +95,17 @@ describe('reviewNewTitles', () => {
     expect(review.blocker).toBe('The new titles do not fit in the disc’s title space.');
   });
 
+  it('refuses a title with nothing the disc can store', () => {
+    const review = reviewNewTitles(disc([track(0, 'Old')]), [{ index: 0, raw: '😀' }], on);
+    expect(review.blocker).toBe('Track 1’s new title has no character the disc can store.');
+  });
+
+  it('has nothing to apply when the titles are already on the disc', () => {
+    const review = reviewNewTitles(disc([track(0, 'Dawn')]), [{ index: 0, raw: 'Dawn' }], on);
+    expect(review.plan.commands).toEqual([]);
+    expect(review.blocker).toBe('The disc already has these titles.');
+  });
+
   it('asks for a ticked title when there is none', () => {
     expect(reviewNewTitles(disc([track(0)]), [], on).blocker).toBe(
       'Tick a track that has a new title.',

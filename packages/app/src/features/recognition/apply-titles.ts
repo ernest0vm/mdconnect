@@ -106,12 +106,23 @@ export function reviewNewTitles(
   }
   const balance = titleSpaceWithStoredTitle(disc, changed);
   const fits = balance.halfWidth >= 0 && balance.fullWidth >= 0;
-  return { titles, plan: { commands }, fits, blocker: blockerFor(disc, titles, fits) };
+  return { titles, plan: { commands }, fits, blocker: blockerFor(disc, titles, commands, fits) };
 }
 
-function blockerFor(disc: Disc, titles: readonly StoredTitle[], fits: boolean): string | null {
+function blockerFor(
+  disc: Disc,
+  titles: readonly StoredTitle[],
+  commands: readonly EditCommand[],
+  fits: boolean,
+): string | null {
   if (disc.writeProtected) return 'The disc is write-protected. Slide its tab to edit it.';
   if (titles.length === 0) return 'Tick a track that has a new title.';
+  // A title of characters the disc cannot store would blank the track's title.
+  const blank = titles.find((title) => title.halfWidth.trim() === '' && title.fullWidth === '');
+  if (blank !== undefined) {
+    return `Track ${String(blank.index + 1)}’s new title has no character the disc can store.`;
+  }
+  if (commands.length === 0) return 'The disc already has these titles.';
   if (!fits) return 'The new titles do not fit in the disc’s title space.';
   return null;
 }

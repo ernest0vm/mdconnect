@@ -48,20 +48,18 @@ export function AudioInputField({
       {problem !== null && (
         <GlassAlert tone="warning" title="The input cannot be used">
           <p>{problem}</p>
-          {inputId !== null && (
-            <GlassButton
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="mt-2"
-              disabled={locked}
-              onClick={() => {
-                live.retry();
-              }}
-            >
-              Try again
-            </GlassButton>
-          )}
+          <GlassButton
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="mt-2"
+            disabled={locked}
+            onClick={() => {
+              live.retry();
+            }}
+          >
+            Try again
+          </GlassButton>
         </GlassAlert>
       )}
     </>

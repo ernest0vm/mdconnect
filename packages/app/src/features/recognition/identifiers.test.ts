@@ -70,6 +70,23 @@ describe('shazamIdentifier', () => {
   });
 });
 
+describe('shazamIdentifier after a cancel', () => {
+  it('sends nothing when the identification was cancelled while it resampled', async () => {
+    const cancel = new AbortController();
+    let asked = 0;
+    const identifier = shazamIdentifier(
+      () => ((asked += 1), Promise.resolve(dawn)),
+      () => {
+        cancel.abort();
+        return Promise.resolve(new Int16Array(12 * 16_000));
+      },
+      () => Promise.resolve(),
+    );
+    await expect(identifier.identify(stereo(10), 48_000, 200, cancel.signal)).rejects.toThrow();
+    expect(asked).toBe(0);
+  });
+});
+
 describe('acoustIdIdentifier', () => {
   it('looks up the fingerprint of the excerpt with the track length', async () => {
     const fingerprinted: { length: number; rate: number; channels: number }[] = [];

@@ -40,7 +40,7 @@ export interface LiveInput {
   readonly problem: string | null;
   readonly level: number;
   choose(deviceId: string): void;
-  /** Opens the same input once more after it failed or stopped. */
+  /** Opens the same input once more, or lists the inputs again when none could be chosen. */
   retry(): void;
   /** Shows a problem found elsewhere, such as a folder that could not be chosen. */
   report(problem: string): void;
@@ -63,6 +63,8 @@ export function useLiveInput(): LiveInput {
   const [capture, setCapture] = useState<LiveCapture | null>(null);
   /** Bumped by `retry`, to open the same input once more. */
   const [attempt, setAttempt] = useState(0);
+  /** Bumped by `retry` when no input could be listed, to look for inputs again. */
+  const [discovery, setDiscovery] = useState(0);
   const handedOver = useRef(false);
   const level = useInputLevel(capture);
 
@@ -84,7 +86,7 @@ export function useLiveInput(): LiveInput {
     return () => {
       current = false;
     };
-  }, []);
+  }, [discovery]);
 
   // Opens the chosen input for the level meter; it stays open for the recording or listening.
   useEffect(() => {
@@ -133,7 +135,13 @@ export function useLiveInput(): LiveInput {
     },
     retry() {
       setProblem(null);
-      setAttempt((count) => count + 1);
+      // Without a chosen input (permission refused, none found) the inputs are listed again.
+      if (inputId === null) {
+        setInputs(null);
+        setDiscovery((count) => count + 1);
+      } else {
+        setAttempt((count) => count + 1);
+      }
     },
     report: setProblem,
     handOver() {

@@ -29,8 +29,9 @@ import { useRecognitionPreferences } from '../recognition/RecognitionPreferences
 import {
   consentStatus,
   recognitionConsentStatus,
-  SAVE_FAILED_TEXT,
+  saveFailedText,
   SETTINGS_SECTIONS,
+  withdrawLabel,
 } from './settings-view';
 
 const [APPEARANCE, TITLES, UPLOADS, RECOGNITION] = SETTINGS_SECTIONS;
@@ -209,6 +210,7 @@ function RecognitionSection() {
                   type="button"
                   variant="soft"
                   size="sm"
+                  aria-label={withdrawLabel(service)}
                   onClick={() => {
                     setPreferences(withdrawRecognitionConsent(preferences, service));
                     // The button goes away with the consent; keep focus in the section.
@@ -230,7 +232,7 @@ function RecognitionSection() {
 export function SettingsDialog() {
   const { saved: uploadsSaved } = useUploadPreferences();
   const { saved: recognitionSaved } = useRecognitionPreferences();
-  const saved = uploadsSaved && recognitionSaved;
+  const saveProblem = saveFailedText({ uploads: uploadsSaved, recognition: recognitionSaved });
   return (
     <GlassDialog>
       {/* The trigger is where Radix returns focus when the dialog closes. */}
@@ -256,9 +258,9 @@ export function SettingsDialog() {
         <GlassDialogDescription className="mt-1 text-sm opacity-80">
           Changes apply right away and are remembered on this device.
         </GlassDialogDescription>
-        {!saved && (
+        {saveProblem !== null && (
           <p role="alert" className="mt-3 text-sm font-semibold text-red-800 dark:text-red-200">
-            {SAVE_FAILED_TEXT}
+            {saveProblem}
           </p>
         )}
         {/* Only the sections scroll, so the title and the close button stay in view. */}
