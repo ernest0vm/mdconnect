@@ -3,7 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { addTracksBlocker } from '../upload/upload-view';
 import { editBlocker } from '../disc/editing';
 import { playerBlocker } from '../disc/player-view';
-import { RECORDING_IN_PROGRESS, recordBlocker } from './record-view';
+import {
+  chooseInput,
+  inputProblem,
+  longTrackWarning,
+  progressLabel,
+  RECORDING_IN_PROGRESS,
+  recordBlocker,
+  summaryLines,
+} from './record-view';
 
 const free = { selected: 2, busy: false, playBlocker: null, recording: false } as const;
 
@@ -52,5 +60,91 @@ describe('controls during a recording (deck-recording: "Controls blocked")', () 
         recording: true,
       }),
     ).toBe(RECORDING_IN_PROGRESS);
+  });
+});
+
+describe('chooseInput (deck-recording: "Remembered input")', () => {
+  const inputs = [
+    { deviceId: 'default', label: 'Default - Built-in Microphone' },
+    { deviceId: 'line', label: 'Line In' },
+  ];
+
+  it('chooses the remembered input when it is still there', () => {
+    expect(chooseInput(inputs, 'line')).toBe('line');
+  });
+
+  it('falls back to the first input, or none', () => {
+    expect(chooseInput(inputs, 'gone')).toBe('default');
+    expect(chooseInput(inputs, null)).toBe('default');
+    expect(chooseInput([], 'line')).toBeNull();
+  });
+});
+
+describe('inputProblem', () => {
+  it('explains a refused permission and how to allow it (deck-recording: "Permission refused")', () => {
+    const message = inputProblem(Object.assign(new Error('x'), { name: 'NotAllowedError' }));
+    expect(message).toMatch(/cannot hear/u);
+    expect(message).toMatch(/Privacy/u);
+  });
+
+  it('says when there is no input (deck-recording: "No input")', () => {
+    expect(inputProblem(Object.assign(new Error('x'), { name: 'NotFoundError' }))).toMatch(
+      /no audio input/u,
+    );
+  });
+
+  it('describes other failures plainly', () => {
+    expect(inputProblem(new Error('busy'))).toMatch(/could not be opened/u);
+  });
+});
+
+describe('progressLabel (deck-recording: "Progress")', () => {
+  it('names the track out of how many, with its title', () => {
+    expect(progressLabel({ position: 1, total: 3, title: 'Dawn' })).toBe('Track 2 of 3: “Dawn”');
+  });
+});
+
+describe('summaryLines (deck-recording: "Summary")', () => {
+  it('says how many files were saved and where', () => {
+    expect(
+      summaryLines({
+        saved: ['01 A.wav', '02 B.wav', '03 C.wav'],
+        folder: 'MiniDisc',
+        clipped: [],
+        ending: 'done',
+      }),
+    ).toEqual(['3 files saved to “MiniDisc”.']);
+  });
+
+  it('says files were downloaded when there was no folder', () => {
+    expect(
+      summaryLines({ saved: ['01 A.wav'], folder: null, clipped: [], ending: 'done' }),
+    ).toEqual(['1 file downloaded.']);
+  });
+
+  it('explains how the recording ended early, and warns about clipping', () => {
+    expect(
+      summaryLines({
+        saved: ['01 A.wav'],
+        folder: 'MD',
+        clipped: ['01 A.wav'],
+        ending: 'cancelled',
+      }),
+    ).toEqual([
+      'Recording cancelled. 1 file saved to “MD”; the track in progress was not kept.',
+      'The input was too loud in 01 A.wav. Lower the deck’s volume or the input gain and record it again.',
+    ]);
+    expect(summaryLines({ saved: [], folder: 'MD', clipped: [], ending: 'refused' })[0]).toMatch(
+      /device refused/u,
+    );
+  });
+});
+
+describe('longTrackWarning', () => {
+  it('warns about tracks longer than an hour', () => {
+    expect(longTrackWarning([{ seconds: 3000 }, { seconds: 3700 }])).toMatch(
+      /longer than an hour/u,
+    );
+    expect(longTrackWarning([{ seconds: 3000 }])).toBeNull();
   });
 });

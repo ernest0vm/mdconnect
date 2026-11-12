@@ -17,3 +17,79 @@ export function recordBlocker(state: {
   if (state.selected === 0) return 'Select tracks to record them.';
   return null;
 }
+
+/** An audio input as the setup dialog lists it. */
+export interface AudioInput {
+  readonly deviceId: string;
+  readonly label: string;
+}
+
+/** The input to start with: the remembered one if it is still there, else the first. */
+export function chooseInput(
+  inputs: readonly AudioInput[],
+  remembered: string | null,
+): string | null {
+  return (
+    inputs.find((input) => input.deviceId === remembered)?.deviceId ?? inputs[0]?.deviceId ?? null
+  );
+}
+
+/** Why the chosen input cannot be used, from the error opening it. */
+export function inputProblem(error: unknown): string {
+  const name = error instanceof Error ? error.name : '';
+  if (name === 'NotAllowedError' || name === 'SecurityError') {
+    return 'mdconnect cannot hear the input because audio capture was refused. Allow microphone access for mdconnect: on macOS in System Settings → Privacy & Security → Microphone, on Windows in Settings → Privacy → Microphone (with “Let desktop apps access your microphone” on), or in the browser through the site settings.';
+  }
+  if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+    return 'This computer has no audio input. Connect the deck to a line-in or microphone input, or through a USB audio interface.';
+  }
+  return 'The input could not be opened. Close other apps that may be using it, then try again.';
+}
+
+/** The progress dialog's line for the track being recorded. */
+export function progressLabel(progress: {
+  readonly position: number;
+  readonly total: number;
+  readonly title: string;
+}): string {
+  return `Track ${String(progress.position + 1)} of ${String(progress.total)}: “${progress.title}”`;
+}
+
+const files = (count: number) => `${String(count)} ${count === 1 ? 'file' : 'files'}`;
+
+/** What the summary says: how many files were saved and where, how it ended, and any clipping. */
+export function summaryLines(summary: {
+  readonly saved: readonly string[];
+  readonly folder: string | null;
+  readonly clipped: readonly string[];
+  readonly ending: 'done' | 'cancelled' | 'disconnected' | 'refused';
+}): string[] {
+  const where =
+    summary.folder === null
+      ? `${files(summary.saved.length)} downloaded`
+      : `${files(summary.saved.length)} saved to “${summary.folder}”`;
+  const lines = [
+    summary.ending === 'done'
+      ? `${where}.`
+      : summary.ending === 'cancelled'
+        ? `Recording cancelled. ${where}; the track in progress was not kept.`
+        : summary.ending === 'disconnected'
+          ? `The device was disconnected. ${where}; the track in progress was not kept.`
+          : `The device refused a playback command, so recording stopped. ${where}.`,
+  ];
+  if (summary.clipped.length > 0) {
+    lines.push(
+      `The input was too loud in ${summary.clipped.join(', ')}. Lower the deck’s volume or the input gain and record it again.`,
+    );
+  }
+  return lines;
+}
+
+const AN_HOUR = 3600;
+
+/** A warning when a track is longer than an hour, which needs a lot of memory to record. */
+export function longTrackWarning(tracks: readonly { readonly seconds: number }[]): string | null {
+  return tracks.some((track) => track.seconds > AN_HOUR)
+    ? 'A selected track is longer than an hour. Recording it needs several hundred megabytes of memory.'
+    : null;
+}

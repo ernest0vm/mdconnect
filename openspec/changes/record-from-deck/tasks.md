@@ -21,8 +21,8 @@
 
 ## 4. Dialogs and wiring
 
-- [ ] 4.1 Add the setup dialog: cabling steps, input list, live level meter, the remembered input, and messages for refused permission and no input. Verify the view logic (messages and remembered input) with unit tests (deck-recording: "Remembered input", "Permission refused", "No input"). Check it in the browser with `?demo`, by keyboard.
-- [ ] 4.2 Add the progress and summary dialog. Verify the view logic with tests (deck-recording: "Progress", "Summary").
+- [x] 4.1 Add the setup dialog: cabling steps, input list, live level meter, the remembered input, and messages for refused permission and no input. Verify the view logic (messages and remembered input) with unit tests (deck-recording: "Remembered input", "Permission refused", "No input"). Check it in the browser with `?demo`, by keyboard.
+- [x] 4.2 Add the progress and summary dialog. Verify the view logic with tests (deck-recording: "Progress", "Summary").
 - [ ] 4.3 Wire Record into the track toolbar, block editing, uploads and the player while recording, pause status polling, and hold the wake lock. Check in the browser with `?demo` that the controls are blocked with the recording reason (deck-recording: "Record selected tracks", "Controls blocked"). The demo device has no audio, so the recording itself is checked in 5.
 
 ## 5. Manual verification

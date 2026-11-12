@@ -147,6 +147,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
               key={deviceKey(openDevice)}
               device={openDevice}
               menuSlot={menuSlot}
+              recordingFolders={platform.recordingFolders}
               onAbout={() => {
                 setAboutOpen(true);
               }}

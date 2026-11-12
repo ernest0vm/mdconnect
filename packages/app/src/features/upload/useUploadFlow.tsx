@@ -3,6 +3,7 @@ import { GlassAlert } from '@mdconnect/ui/components/glassyui/glass-alert';
 import { useEffect, useId, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 
 import type { UsbDeviceHandle } from '../../platform';
+import { holdWakeLock } from '../../wake-lock';
 import { Action } from '../disc/Action';
 import type { DiscReader, UploadResult } from '../disc/disc-reader';
 import { ConvertDialog, type UploadJob } from './ConvertDialog';
@@ -24,18 +25,6 @@ import {
 /** How often progress reaches the screen: one event arrives per 1 KB packet. */
 const PROGRESS_INTERVAL_MS = 150;
 
-/** Keeps the screen on while an upload runs, where the platform allows it. */
-async function holdWakeLock(): Promise<() => void> {
-  try {
-    const lock = await navigator.wakeLock.request('screen');
-    return () => {
-      void lock.release();
-    };
-  } catch {
-    return () => undefined;
-  }
-}
-
 export interface UploadFlowOptions {
   readonly reader: DiscReader;
   readonly device: UsbDeviceHandle;
@@ -43,6 +32,8 @@ export interface UploadFlowOptions {
   readonly disc: Disc | null;
   /** Another change is being saved or the disc is being read. */
   readonly busy: boolean;
+  /** A recording is running; adding tracks waits for it. */
+  readonly recording?: boolean;
   /** Called with the disc read after the upload. */
   readonly onFinished: (result: UploadResult) => void;
 }
@@ -72,6 +63,7 @@ export function useUploadFlow({
   device,
   disc,
   busy,
+  recording = false,
   onFinished,
 }: UploadFlowOptions): UploadFlow {
   const { preferences, setPreferences: remember } = useUploadPreferences();
@@ -110,6 +102,7 @@ export function useUploadFlow({
   const blocker = addTracksBlocker({
     writeProtected: disc?.writeProtected ?? false,
     busy: busy || uploading,
+    recording,
   });
   const modes = useMemo(() => recordingModes(device.vendorId, device.productId), [device]);
 
