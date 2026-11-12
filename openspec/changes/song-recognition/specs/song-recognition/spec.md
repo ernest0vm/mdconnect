@@ -247,6 +247,11 @@ Apply new titles SHALL change only the titles of the ticked tracks, leaving grou
 - **WHEN** full-width titles are on and the new title is "夜明け"
 - **THEN** the track's full-width title is set to "夜明け"
 
+#### Scenario: Old full-width title cleared
+
+- **WHEN** track 4 has the full-width title "夜明け" and the new title applied is "Dawn"
+- **THEN** track 4's full-width title is cleared, so the disc shows "Dawn"
+
 #### Scenario: Groups unchanged
 
 - **WHEN** tracks 1 to 3 form the group "Side A" and the user applies a new title to track 5 only
