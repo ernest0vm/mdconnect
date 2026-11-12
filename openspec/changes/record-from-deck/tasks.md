@@ -23,7 +23,7 @@
 
 - [x] 4.1 Add the setup dialog: cabling steps, input list, live level meter, the remembered input, and messages for refused permission and no input. Verify the view logic (messages and remembered input) with unit tests (deck-recording: "Remembered input", "Permission refused", "No input"). Check it in the browser with `?demo`, by keyboard.
 - [x] 4.2 Add the progress and summary dialog. Verify the view logic with tests (deck-recording: "Progress", "Summary").
-- [ ] 4.3 Wire Record into the track toolbar, block editing, uploads and the player while recording, pause status polling, and hold the wake lock. Check in the browser with `?demo` that the controls are blocked with the recording reason (deck-recording: "Record selected tracks", "Controls blocked"). The demo device has no audio, so the recording itself is checked in 5.
+- [x] 4.3 Wire Record into the track toolbar, block editing, uploads and the player while recording, pause status polling, and hold the wake lock. Check in the browser with `?demo` that the controls are blocked with the recording reason (deck-recording: "Record selected tracks", "Controls blocked"). The demo device has no audio, so the recording itself is checked in 5. Checked with `?demo` (Record says "Select tracks to record them." with nothing selected; two selected tracks open "Record 2 tracks"; Escape returns focus to Record), then during real recordings in the desktop app and in Chrome: Rename, Delete, Add tracks, Play, Refresh and Record were all unavailable with "Wait for the recording to finish.".
 
 ## 5. Manual verification
 
@@ -33,5 +33,14 @@
   3. Record again while the window is hidden for the whole of one track. Check that the file is complete.
   4. Cancel during the second of three tracks. Check that one file is saved and the deck stops.
   5. Unplug the deck during a recording. Check that the app reports it and keeps the earlier file.
-- [ ] 5.2 **Web app in Chrome**, on `yarn dev:web` and on production: repeat steps 2 and 4 of 5.1. Check the browser's microphone prompt and the folder picker.
-- [ ] 5.3 **Windows and Linux:** if they cannot be run here, add steps 5.1.2 and 5.1.4 to #8, with the Windows microphone privacy setting and a PipeWire or PulseAudio input.
+
+  **Partly checked on 2026-11-12** with a Sony MZ-NE410 and the MacBook's built-in microphone as the input (no cable to the deck's output was at hand), recording tracks 15 (2:00) and 59 (2:38):
+  - Step 2: the two files were saved as `15 paul van dick - love stimulation (club mix) (1).wav` and `59 Mirala Bien.wav`, 121.6 s and 159.6 s long (each track plus 1.5 s), 48 kHz mono 16-bit, which is what the built-in microphone offers. The native folder dialog opened in front. The packaged app (`yarn package`) made macOS ask for microphone access for mdconnect with the stated reason. The meter moved with the room sound.
+  - Step 3: the page reported itself hidden for track 1, covered by other windows, and its file was complete. Minimizing the window over CDP did not work in Electron, so the window was covered, not minimized.
+  - Step 4: cancelled at 10% of track 2 of 3. Only track 1's file was kept, the deck stopped, and the second file for track 15 was saved as `… (1) (2).wav` instead of overwriting the first.
+  - Step 5: after unplugging during track 2 of 2, the Connect screen showed "Recording stopped — The device was disconnected. 1 file saved to “music-test”; the track in progress was not kept.", and track 1's file was complete.
+  - Fixed on the way: Space on the focused Cancel button ended a recording (the dialog now focuses its status), Refresh was not blocked, and an unplugged recording was not reported.
+  - **Still open:** step 1 and the audio itself, recording the deck's own output through a cable and checking the files sound right. This moves to the Windows laptop (5.3).
+
+- [ ] 5.2 **Web app in Chrome**, on `yarn dev:web` and on production: repeat steps 2 and 4 of 5.1. Check the browser's microphone prompt and the folder picker. **Partly checked on `yarn dev:web`** (2026-11-12, MZ-NE410, built-in microphone): Chrome asked for microphone access, listed the inputs by name, and its folder picker wrote `22 allison-frajil.wav` (175.5 s) and `15 … (5).wav` (121.6 s) without overwriting. The first input chosen was the iPhone's microphone, so the setup now prefers the system's default input. **Still open:** production, which gets this change once it is merged, and step 4 in Chrome.
+- [ ] 5.3 **Windows and Linux:** if they cannot be run here, add steps 5.1.2 and 5.1.4 to #8, with the Windows microphone privacy setting and a PipeWire or PulseAudio input. **Planned on the maintainer's HP Omen with Windows**, with the deck's output cabled to its audio input: steps 1–5 of 5.1 with real deck audio, the Windows microphone privacy setting, and 5.2 in Chrome there. Linux goes to #8.
