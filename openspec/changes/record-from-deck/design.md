@@ -52,20 +52,19 @@ The capture runs for the track's length plus 1.5 s, measured on the audio clock 
 
 Alternative: stop when the status shows the next track. That works only while status polling runs, and it stops while the app is hidden.
 
-### 3. Saving through the File System Access API, with downloads as the fallback
+### 3. Saving: a recording folder from the platform, downloads as the fallback
 
-- **Folder access available** (Chrome, Edge and other Chromium browsers, and Electron): `showDirectoryPicker({ mode: 'readwrite' })` once at start. Each finished track is written with `getFileHandle(name, { create: true })`, after checking for an existing name and adding ` (2)`, ` (3)` and so on.
-- **Folder access unavailable**, or the API missing: each finished track is downloaded with the existing download-link helper, generalised to take a `Blob`.
-- **Testing:** the save target sits behind a small interface (`RecordingSink`: `write(name, blob)`), so the session is tested with a fake sink.
+The app asks the platform for a recording folder once at start (`Platform.recordingFolder`): `choose()` returns a folder with a `name` and `write(fileName, bytes)`, or null when the user cancels. A platform with no folder access leaves it undefined, and each finished track is downloaded instead, with the download helper generalised to a `Blob`. Unique names (` (2)`, ` (3)`…) come from one pure function, `uniqueFileName(name, exists)`, in `packages/core`, used by both implementations.
 
-Alternative: a new preload API for the desktop app (native folder dialog and `fs.writeFile`). It would need a second code path and widen the privileged bridge. The File System Access API covers both apps through Chromium.
+- **Web app:** `showDirectoryPicker({ mode: 'readwrite' })` (Chrome, Edge and other Chromium browsers), then `getFileHandle(name, { create: true })` per file.
+- **Desktop app:** a narrow bridge in the preload, `recordings.chooseFolder()` and `recordings.write(folderId, fileName, bytes)`. The main process shows the native folder dialog, keeps the chosen path behind an opaque id for the session, refuses a file name with a path separator, `..` or a control character, picks a free name, and writes the file with `fs.writeFile`. The renderer never sees or sends a path.
+
+Why not `showDirectoryPicker` in Electron as well: the spike on Electron 44 (task 1.1) found that it rejects at once with `AbortError`, shows no dialog and sends no permission request, even with the window in front and a user gesture.
 
 ### 4. Desktop permissions
 
-- **Request handler:** it grants, only for the app origin (`isAppOrigin`):
-  - `media`, when every requested media type is `audio`;
-  - `fileSystem`, for the folder the user picks.
-- **Check handler:** it answers `media` and `fileSystem` the same way for the app origin, and keeps answering `usb` as today.
+- **Request handler:** it grants, only for the app origin (`isAppOrigin`), `media` when every requested media type is `audio`.
+- **Check handler:** it answers `media` for audio from the app origin the same way, and keeps answering `usb` as today. The spike saw checks for `media` (audio, video and unspecified) and `speaker-selection`, and one request with `mediaTypes: ["audio"]`.
 - **Everything else** stays denied: other permissions, video, and other origins.
 - **macOS:** `electron-builder.yml` adds `mac.extendInfo.NSMicrophoneUsageDescription`. Without it, macOS kills the app the first time it captures audio. macOS then asks the user once; the answer can be changed later in System Settings → Privacy & Security → Microphone.
 - **Windows:** desktop apps need "Let desktop apps access your microphone" on (Settings → Privacy → Microphone). The setup dialog's refused-permission message names it.
@@ -93,7 +92,7 @@ Alternative: a new preload API for the desktop app (native folder dialog and `fs
 
 ## Risks / Trade-offs
 
-- **Electron's File System Access support:** Electron implements `showDirectoryPicker`, but the permission flow (`fileSystem` requests and the "restricted" event) has changed across versions. → The first task checks it on Electron 44 on all three OSes. If it fails, that task switches to a narrow preload API (choose folder, write file, both limited to the chosen folder).
+- **The desktop folder bridge widens the privileged API:** it is limited to a folder the user picked in a native dialog during the session. The main process validates every file name and never overwrites a file, and the renderer cannot name a path.
 - **Start offset:** the deck may take a moment to start after `play`, so a recording can begin with up to about a second of silence, and the 1.5 s margin can catch the start of the next track. → This is documented in the dialog. Trimming is out of scope.
 - **Memory:** a very long LP4 track (over 60 minutes) needs about 600 MB of samples. → The setup dialog warns when a selected track is longer than 60 minutes. Streaming to disk is left for later.
 - **Input level:** clipping or a very low level ruins a recording, and the app cannot fix either. → The live meter in setup and during recording, and a peak warning in the summary when a track clipped.

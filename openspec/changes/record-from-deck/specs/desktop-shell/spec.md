@@ -4,7 +4,7 @@
 
 ### Requirement: Renderer permissions
 
-The desktop app SHALL grant its own pages only the permissions they use: USB access to supported devices, audio capture without video, and access to a folder the user picks. It SHALL deny every other permission request, and every request from any other origin. The macOS build SHALL declare why it uses the audio input, so that macOS can ask the user.
+The desktop app SHALL grant its own pages only the permissions they use: USB access to supported devices and audio capture without video. It SHALL deny every other permission request, and every request from any other origin. The macOS build SHALL declare why it uses the audio input, so that macOS can ask the user.
 
 #### Scenario: Audio capture allowed
 
@@ -25,3 +25,22 @@ The desktop app SHALL grant its own pages only the permissions they use: USB acc
 
 - **WHEN** the desktop app first captures audio on macOS
 - **THEN** macOS asks the user to allow microphone access for mdconnect, with the app's stated reason
+
+### Requirement: Recording folder
+
+The privileged API SHALL let UI code ask the user for a folder through the native folder dialog, and write files into that folder only. UI code SHALL NOT see or pass file-system paths. A file name with a path separator, `..` or a control character SHALL be refused, and an existing file SHALL NOT be overwritten: the new file gets a free name instead.
+
+#### Scenario: Write into the chosen folder
+
+- **WHEN** the user picks a folder and the app writes `03 Dawn.wav`
+- **THEN** the file is created in that folder, and the app learns its final name, not its path
+
+#### Scenario: Path in a file name
+
+- **WHEN** UI code asks to write `../evil.wav`
+- **THEN** the write is refused and nothing is created
+
+#### Scenario: No folder picked
+
+- **WHEN** UI code asks to write before any folder was picked, or with a folder id from an earlier session
+- **THEN** the write is refused

@@ -51,7 +51,7 @@ Before recording, a setup dialog SHALL explain that the deck's line-out or headp
 
 ### Requirement: Recording a track
 
-For each track, the app SHALL start the track on the deck from its beginning, capture the chosen input while the track plays, and stop capturing after the track's length plus a short margin. The audio SHALL be captured without echo cancellation, noise suppression or automatic gain, in stereo, at 44.1 kHz where the input offers it and otherwise at the input's own rate. When every track is done, or the recording is cancelled, the deck SHALL be stopped.
+For each track, the app SHALL start the track on the deck from its beginning, capture the chosen input while the track plays, and stop capturing after the track's length plus a short margin. The audio SHALL be captured without echo cancellation, noise suppression or automatic gain, in stereo at 44.1 kHz where the input offers it, and otherwise with the input's own channels and rate. When every track is done, or the recording is cancelled, the deck SHALL be stopped.
 
 #### Scenario: One track
 
