@@ -186,10 +186,9 @@ Alternatives considered:
 **Applying** uses a title-only plan:
 
 - Each ticked track with a title is converted with `sanitizeHalfWidthTitle` and `sanitizeFullWidthTitle` and becomes `setTrackTitle` commands only for the titles that change. No group command is emitted, so groups and the other titles stay as they are.
-- Unlike `renameTrackPlan`, which leaves the full-width title alone when none is given, the full-width title is always decided: the converted full-width title when full-width titles are on and it differs from the half-width one, and otherwise empty. A track's old full-width title is therefore cleared, since the disc view shows a full-width title before the half-width one.
+- Unlike `renameTrackPlan`, which leaves the full-width title alone when none is given, the full-width title is always decided, as in webminidisc: with full-width titles on, it is `sanitizeFullWidthTitle(raw)` unless `sanitizeHalfWidthTitle` of that result equals the half-width title, in which case it is empty; with them off, it is empty. So "Dawn" gets no full-width title (its full-width form "Ｄａｗｎ" converts back to "Dawn"), "夜明け" keeps one, and a track's old full-width title is cleared, since the disc view shows a full-width title before the half-width one.
 - The fit is checked with the disc-title space helpers on the disc with the new titles.
 - The dialog shows the converted titles and whether they fit, and Apply runs the plan through the reader's edit queue.
-- When full-width titles are on, a title whose half-width conversion differs from it is also written as the full-width title, as in webminidisc.
 
 ### 7. Blocking other work
 
