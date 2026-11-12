@@ -138,7 +138,7 @@ describe('summaryLines (deck-recording: "Summary")', () => {
   it('says files were downloaded when there was no folder', () => {
     expect(
       summaryLines({ saved: ['01 A.wav'], folder: null, clipped: [], ending: 'done' }),
-    ).toEqual(['1 file sent to the browser’s downloads.']);
+    ).toEqual(['1 download requested from the browser.']);
   });
 
   it('explains how the recording ended early, and warns about clipping', () => {

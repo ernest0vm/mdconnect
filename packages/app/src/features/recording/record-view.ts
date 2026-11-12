@@ -74,12 +74,13 @@ export function progressLabel(progress: {
 }
 
 const files = (count: number) => `${String(count)} ${count === 1 ? 'file' : 'files'}`;
+const downloads = (count: number) => `${String(count)} ${count === 1 ? 'download' : 'downloads'}`;
 
 /** What the summary says: how many files were saved and where, how it ended, and any clipping. */
 export function summaryLines(summary: RecordingSummary): string[] {
   const where =
     summary.folder === null
-      ? `${files(summary.saved.length)} sent to the browser’s downloads`
+      ? `${downloads(summary.saved.length)} requested from the browser`
       : `${files(summary.saved.length)} saved to “${summary.folder}”`;
   const lines = [endingLine(summary.ending, where)];
   if (summary.clipped.length > 0) {

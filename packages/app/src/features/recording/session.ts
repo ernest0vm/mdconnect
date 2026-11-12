@@ -44,9 +44,12 @@ export type RecordingEnding =
   'done' | 'cancelled' | 'disconnected' | 'input-lost' | 'refused' | 'save-failed' | 'failed';
 
 export interface RecordingSummary {
-  /** Names of the files saved, in order. */
+  /**
+   * Names of the files, in order: written to the folder, or, without one, handed to the browser
+   * as downloads, which the browser may still block.
+   */
   readonly saved: readonly string[];
-  /** The folder's name, or null when the files were downloaded. */
+  /** The folder's name, or null when the files were requested as downloads. */
   readonly folder: string | null;
   /** Files whose audio went past full scale. */
   readonly clipped: readonly string[];
