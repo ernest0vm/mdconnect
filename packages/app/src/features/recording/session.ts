@@ -5,7 +5,7 @@ import type { PlaybackCommand } from '../disc/disc-reader';
 import { recordFrames } from './capture';
 import type { LiveCapture } from './capture-source';
 import { recordingFileName } from './file-name';
-import { encodeWav } from './wav';
+import { wavBlob } from './wav';
 
 /** Captured after each track's length, for the deck's start delay and the analogue path. */
 const MARGIN_SECONDS = 1.5;
@@ -40,7 +40,7 @@ export interface RecordingProgress {
   readonly share: number;
 }
 
-export type RecordingEnding = 'done' | 'cancelled' | 'disconnected' | 'refused';
+export type RecordingEnding = 'done' | 'cancelled' | 'disconnected' | 'refused' | 'failed';
 
 export interface RecordingSummary {
   /** Names of the files saved, in order. */
@@ -97,9 +97,7 @@ export async function recordTracks(
       await send({ kind: 'play' });
       const pcm = await recording;
       const name = recordingFileName(track, options.trackCount);
-      const wav = new Blob([encodeWav(pcm.samples(), capture.sampleRate, capture.channels)], {
-        type: 'audio/wav',
-      });
+      const wav = wavBlob(pcm, capture.sampleRate);
       const savedAs = save.kind === 'folder' ? await save.folder.write(name, wav) : name;
       if (save.kind === 'download') save.download(name, wav);
       saved.push(savedAs);
@@ -144,8 +142,14 @@ function atTrackStart(status: DeviceStatus | null, index: number): boolean {
   );
 }
 
+/**
+ * How a recording that threw ended. An abort wins over a refused command, since unplugging makes
+ * the next command fail too. Anything else (a file that could not be written) ends it as failed,
+ * so the files already saved are still reported.
+ */
 function endingFor(error: unknown, signal: AbortSignal): RecordingEnding {
-  if (error instanceof DeckRefused) return 'refused';
   if (signal.aborted) return signal.reason === 'disconnected' ? 'disconnected' : 'cancelled';
-  throw error;
+  if (error instanceof DeckRefused) return 'refused';
+  console.error('mdconnect: the recording stopped', error);
+  return 'failed';
 }

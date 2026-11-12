@@ -7,10 +7,9 @@ import {
 } from '@mdconnect/ui/components/glassyui/glass-dialog';
 import { GlassMeter } from '@mdconnect/ui/components/glassyui/glass-meter';
 
+import { percentText } from '../../percent';
 import { progressLabel, summaryLines } from './record-view';
 import type { RecordingProgress, RecordingSummary } from './session';
-
-const percent = (share: number) => `${String(Math.round(share * 100))}%`;
 
 /**
  * Shows the recording while it runs, with Cancel; it cannot be dismissed by accident. Once the
@@ -73,17 +72,22 @@ export function RecordProgressDialog({
             </GlassDialogDescription>
             <div className="mt-4 flex flex-col gap-3" aria-live="polite">
               <div className="flex flex-col gap-1">
-                <p className="text-sm">Recorded {percent(progress?.share ?? 0)}</p>
+                <p className="text-sm">Recorded {percentText(progress?.share ?? 0)}</p>
                 <GlassMeter
                   label="Track recorded"
                   value={progress?.share ?? 0}
                   max={1}
-                  valueText={percent(progress?.share ?? 0)}
+                  valueText={percentText(progress?.share ?? 0)}
                 />
               </div>
               <div className="flex flex-col gap-1">
                 <p className="text-sm">Input level</p>
-                <GlassMeter label="Input level" value={level} max={1} valueText={percent(level)} />
+                <GlassMeter
+                  label="Input level"
+                  value={level}
+                  max={1}
+                  valueText={percentText(level)}
+                />
               </div>
             </div>
             <div className="mt-4 flex justify-end">

@@ -10,9 +10,16 @@ import { GlassMeter } from '@mdconnect/ui/components/glassyui/glass-meter';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { browserStorage } from '../../browser-storage';
+import { percentText } from '../../percent';
 import { openInput } from './capture';
 import { startCapture, type LiveCapture } from './capture-source';
-import { chooseInput, inputProblem, longTrackWarning, type AudioInput } from './record-view';
+import {
+  chooseInput,
+  FOLDER_PROBLEM,
+  inputProblem,
+  longTrackWarning,
+  type AudioInput,
+} from './record-view';
 import type { RecordingTrack } from './session';
 import { useInputLevel } from './useInputLevel';
 
@@ -39,8 +46,6 @@ function rememberInput(deviceId: string): void {
     // Nothing to do: the next recording starts with the first input instead.
   }
 }
-
-const percent = (level: number) => `${String(Math.round(level * 100))}%`;
 
 /**
  * Explains the cabling, lets the user pick the audio input and watch its level, and hands the
@@ -167,7 +172,7 @@ export function RecordSetupDialog({
           </div>
           <div className="flex flex-col gap-1">
             <p className="text-sm">Input level</p>
-            <GlassMeter label="Input level" value={level} max={1} valueText={percent(level)} />
+            <GlassMeter label="Input level" value={level} max={1} valueText={percentText(level)} />
           </div>
           {problem !== null && (
             <GlassAlert tone="warning" title="The input cannot be used">
@@ -189,13 +194,21 @@ export function RecordSetupDialog({
                 if (inputId !== null) rememberInput(inputId);
                 setStarting(true);
                 handedOver.current = true;
-                void onStart(capture).then((started) => {
-                  // A cancelled folder picker leaves the setup open with the input still live.
-                  if (!started) {
-                    handedOver.current = false;
-                    setStarting(false);
-                  }
-                });
+                const keepSetup = () => {
+                  handedOver.current = false;
+                  setStarting(false);
+                };
+                onStart(capture).then(
+                  (started) => {
+                    // A cancelled folder picker leaves the setup open with the input still live.
+                    if (!started) keepSetup();
+                  },
+                  (error: unknown) => {
+                    console.error('mdconnect: the recording could not start', error);
+                    keepSetup();
+                    setProblem(FOLDER_PROBLEM);
+                  },
+                );
               }}
             >
               Start recording

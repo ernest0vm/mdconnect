@@ -240,4 +240,52 @@ describe('recordTracks', () => {
     });
     expect(summary.clipped).toEqual(['01 Loud.wav']);
   });
+
+  it('reports a failed save and keeps the files already saved, instead of failing silently', async () => {
+    const { deck } = fakeDeck();
+    const { capture, isClosed } = fakeCapture();
+    let writes = 0;
+    const folder = {
+      name: 'MiniDisc',
+      write: (name: string) => {
+        writes += 1;
+        return writes === 1 ? Promise.resolve(name) : Promise.reject(new Error('disk full'));
+      },
+    };
+    const summary = await recordTracks([track(0, 'One', 0.5), track(1, 'Two', 0.5)], {
+      deck,
+      capture,
+      trackCount: 2,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: new AbortController().signal,
+    });
+    expect(summary).toMatchObject({ saved: ['01 One.wav'], ending: 'failed' });
+    expect(isClosed()).toBe(true);
+  });
+
+  it('reports an unplug as disconnected even when a deck command fails at the same time', async () => {
+    const controller = new AbortController();
+    const { deck } = fakeDeck();
+    const unplugging: RecordingDeck = {
+      ...deck,
+      control: (command) => {
+        if (command.kind === 'goto') {
+          controller.abort('disconnected');
+          return Promise.resolve({ ok: false });
+        }
+        return deck.control(command);
+      },
+    };
+    const { folder } = fakeFolder();
+    const summary = await recordTracks([track(0, 'One', 1)], {
+      deck: unplugging,
+      capture: fakeCapture().capture,
+      trackCount: 1,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: controller.signal,
+    });
+    expect(summary.ending).toBe('disconnected');
+  });
 });

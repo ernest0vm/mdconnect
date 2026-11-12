@@ -52,6 +52,10 @@ export function inputProblem(error: unknown): string {
   return 'The input could not be opened. Close other apps that may be using it, then try again.';
 }
 
+/** Shown when the folder for the recordings could not be opened. */
+export const FOLDER_PROBLEM =
+  'The folder for the recordings could not be opened. Try again, or choose another folder.';
+
 /** The progress dialog's line for the track being recorded. */
 export function progressLabel(progress: {
   readonly position: number;
@@ -68,7 +72,7 @@ export function summaryLines(summary: {
   readonly saved: readonly string[];
   readonly folder: string | null;
   readonly clipped: readonly string[];
-  readonly ending: 'done' | 'cancelled' | 'disconnected' | 'refused';
+  readonly ending: 'done' | 'cancelled' | 'disconnected' | 'refused' | 'failed';
 }): string[] {
   const where =
     summary.folder === null
@@ -81,7 +85,9 @@ export function summaryLines(summary: {
         ? `Recording cancelled. ${where}; the track in progress was not kept.`
         : summary.ending === 'disconnected'
           ? `The device was disconnected. ${where}; the track in progress was not kept.`
-          : `The device refused a playback command, so recording stopped. ${where}.`,
+          : summary.ending === 'refused'
+            ? `The device refused a playback command, so recording stopped. ${where}.`
+            : `Recording stopped because a file could not be saved. ${where}. Check the folder and the free space, then record the rest again.`,
   ];
   if (summary.clipped.length > 0) {
     lines.push(

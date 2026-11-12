@@ -6,7 +6,7 @@ const BYTES_PER_SAMPLE = 2;
  * blocks it is built from, which matters for tracks of an hour or more.
  */
 export class PcmBuffer {
-  private readonly chunks: Int16Array[] = [];
+  private readonly chunks: Int16Array<ArrayBuffer>[] = [];
   private length = 0;
   /** The loudest sample so far, from 0 to 1 (or more when the input clipped). */
   peak = 0;
@@ -39,6 +39,11 @@ export class PcmBuffer {
     this.length += chunk.length;
   }
 
+  /** The sample chunks as appended, interleaved by channel within each chunk. */
+  chunkList(): readonly Int16Array<ArrayBuffer>[] {
+    return this.chunks;
+  }
+
   /** Every sample appended, interleaved by channel. */
   samples(): Int16Array {
     const all = new Int16Array(this.length);
@@ -56,15 +61,14 @@ function toInt16(sample: number): number {
   return Math.max(-32_768, Math.min(32_767, Math.round(sample * 32_768)));
 }
 
-/** A 16-bit PCM WAV file: the 44-byte RIFF header, then the interleaved samples. */
-export function encodeWav(
-  samples: Int16Array,
+/** The 44-byte RIFF header of a 16-bit PCM WAV file holding `dataBytes` of samples. */
+function wavHeader(
+  dataBytes: number,
   sampleRate: number,
   channels: number,
 ): Uint8Array<ArrayBuffer> {
-  const dataBytes = samples.length * BYTES_PER_SAMPLE;
-  const wav = new Uint8Array(HEADER_BYTES + dataBytes);
-  const view = new DataView(wav.buffer);
+  const header = new Uint8Array(HEADER_BYTES);
+  const view = new DataView(header.buffer);
   const ascii = (offset: number, text: string) => {
     for (let index = 0; index < text.length; index += 1) {
       view.setUint8(offset + index, text.charCodeAt(index));
@@ -82,8 +86,18 @@ export function encodeWav(
   view.setUint16(34, 16, true);
   ascii(36, 'data');
   view.setUint32(40, dataBytes, true);
-  for (let index = 0; index < samples.length; index += 1) {
-    view.setInt16(HEADER_BYTES + index * BYTES_PER_SAMPLE, samples[index] ?? 0, true);
-  }
-  return wav;
+  return header;
+}
+
+/**
+ * The captured audio as a 16-bit PCM WAV file. The sample chunks go into the Blob as they are,
+ * without being joined or copied first, so a long track is not held twice; they are already
+ * little-endian, as on every platform the app runs on.
+ */
+export function wavBlob(pcm: PcmBuffer, sampleRate: number): Blob {
+  const chunks = pcm.chunkList();
+  const dataBytes = chunks.reduce((bytes, chunk) => bytes + chunk.byteLength, 0);
+  return new Blob([wavHeader(dataBytes, sampleRate, pcm.channels), ...chunks], {
+    type: 'audio/wav',
+  });
 }

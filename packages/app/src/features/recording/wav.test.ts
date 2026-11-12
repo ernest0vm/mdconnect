@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { encodeWav, PcmBuffer } from './wav';
+import { PcmBuffer, wavBlob } from './wav';
 
 const ascii = (bytes: Uint8Array, start: number, length: number) =>
   String.fromCharCode(...bytes.subarray(start, start + length));
@@ -35,9 +35,11 @@ describe('PcmBuffer', () => {
   });
 });
 
-describe('encodeWav (deck-recording: "One track")', () => {
-  it('writes a 16-bit PCM RIFF header for the rate and channels, then the samples', () => {
-    const wav = encodeWav(new Int16Array([1, -1, 2, -2]), 48_000, 2);
+describe('wavBlob (deck-recording: "One track")', () => {
+  it('writes a 16-bit PCM RIFF header for the rate and channels, then the samples', async () => {
+    const pcm = new PcmBuffer(2);
+    pcm.append([new Float32Array([0.5, -0.25]), new Float32Array([-0.5, 0.25])]);
+    const wav = new Uint8Array(await wavBlob(pcm, 48_000).arrayBuffer());
     const view = new DataView(wav.buffer);
     expect(ascii(wav, 0, 4)).toBe('RIFF');
     expect(view.getUint32(4, true)).toBe(36 + 8);
@@ -51,8 +53,9 @@ describe('encodeWav (deck-recording: "One track")', () => {
     expect(view.getUint16(34, true)).toBe(16);
     expect(ascii(wav, 36, 4)).toBe('data');
     expect(view.getUint32(40, true)).toBe(8);
-    expect(view.getInt16(44, true)).toBe(1);
-    expect(view.getInt16(46, true)).toBe(-1);
+    expect([0, 1, 2, 3].map((index) => view.getInt16(44 + index * 2, true))).toEqual([
+      16384, -16384, -8192, 8192,
+    ]);
     expect(wav.length).toBe(52);
   });
 });
