@@ -6,7 +6,6 @@ import { installUsbHandlers } from './usb';
 
 vi.mock('electron', () => ({ ipcMain: { on: vi.fn() } }));
 
-type CheckHandler = (contents: unknown, permission: string, requestingOrigin: string) => boolean;
 type DeviceHandler = (details: {
   deviceType: string;
   origin: string;
@@ -15,12 +14,8 @@ type DeviceHandler = (details: {
 
 /** Installs the handlers on a fake Session and returns what was registered. */
 function install() {
-  let check: CheckHandler = () => false;
   let device: DeviceHandler = () => false;
   const session = {
-    setPermissionCheckHandler: (handler: CheckHandler) => {
-      check = handler;
-    },
     setDevicePermissionHandler: (handler: DeviceHandler) => {
       device = handler;
     },
@@ -31,7 +26,6 @@ function install() {
     devServerUrl: undefined,
   });
   return {
-    check: (...args: Parameters<CheckHandler>) => check(...args),
     device: (d: Parameters<DeviceHandler>[0]) => device(d),
   };
 }
@@ -39,19 +33,6 @@ function install() {
 const MZ_NE410 = { vendorId: 0x054c, productId: 0x00ca, usbVersionMajor: 1 };
 
 describe('installUsbHandlers (usb-device-access: "Connect screen")', () => {
-  it('grants the usb permission check for the app origin as Electron passes it, with a trailing slash', () => {
-    // Without this, Electron never emits select-usb-device and every Connect fails.
-    expect(install().check(null, 'usb', 'app://mdconnect/')).toBe(true);
-  });
-
-  it('denies other permissions and other origins', () => {
-    const { check } = install();
-    expect(check(null, 'hid', 'app://mdconnect/')).toBe(false);
-    expect(check(null, 'usb', 'https://evil.example/')).toBe(false);
-    expect(check(null, 'usb', 'app://mdconnect//')).toBe(false);
-    expect(check(null, 'usb', 'app://mdconnect.evil/')).toBe(false);
-  });
-
   it('grants supported devices to the app origin as the device handler receives it', () => {
     const { device } = install();
     expect(device({ deviceType: 'usb', origin: 'app://mdconnect', device: MZ_NE410 })).toBe(true);

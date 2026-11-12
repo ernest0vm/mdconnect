@@ -1,4 +1,4 @@
-import { App, type Platform } from '@mdconnect/app';
+import { App, bridgeRecordingFolders, type Platform } from '@mdconnect/app';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -19,6 +19,7 @@ const platform: Platform = {
       bridge.usb.respondChooseDevice(requestId, deviceId);
     },
   },
+  recordingFolders: bridgeRecordingFolders(bridge.recordings),
   appearance: {
     get: () => bridge.appearance.get(),
     onChange: (callback) => bridge.appearance.onChange(callback),

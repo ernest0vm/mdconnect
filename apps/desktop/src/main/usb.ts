@@ -9,18 +9,13 @@ import { isAppOrigin, type OriginContext } from './url-policy';
 
 /**
  * The main process alone decides which USB devices the renderer may use: only supported MiniDisc
- * devices, and only for the app's own origin.
+ * devices, and only for the app's own origin. The `usb` permission check is in permissions.ts.
  */
 export function installUsbHandlers(
   session: Session,
   bridge: ChooserBridge,
   origins: OriginContext,
 ): void {
-  session.setPermissionCheckHandler(
-    (_contents, permission, requestingOrigin) =>
-      permission === 'usb' && isAppOrigin(requestingOrigin, origins),
-  );
-
   session.setDevicePermissionHandler((details) => {
     if (details.deviceType !== 'usb' || !isAppOrigin(details.origin, origins)) return false;
     const { device } = details;

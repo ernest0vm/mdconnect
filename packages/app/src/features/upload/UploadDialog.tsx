@@ -7,6 +7,8 @@ import {
 } from '@mdconnect/ui/components/glassyui/glass-dialog';
 import { GlassMeter } from '@mdconnect/ui/components/glassyui/glass-meter';
 
+import { percentText } from '../../percent';
+
 /** What the upload dialog shows. `finished` holds the closing summary once the upload is over. */
 export interface UploadProgress {
   readonly total: number;
@@ -20,9 +22,6 @@ export interface UploadProgress {
   readonly stopping: boolean;
   readonly finished: readonly string[] | null;
 }
-
-const percent = (value: number, max: number) =>
-  `${String(Math.round(max > 0 ? (value / max) * 100 : 0))}%`;
 
 /**
  * Shows the upload while it runs. It cannot be dismissed then: closing it asks to cancel, which
@@ -65,23 +64,23 @@ export function UploadDialog({
             </GlassDialogDescription>
             <div className="mt-4 flex flex-col gap-3" aria-live="polite">
               <div className="flex flex-col gap-1">
-                <p className="text-sm">Converting {percent(progress.converting, 1)}</p>
+                <p className="text-sm">Converting {percentText(progress.converting, 1)}</p>
                 <GlassMeter
                   label="Conversion"
                   value={progress.converting}
                   max={1}
-                  valueText={percent(progress.converting, 1)}
+                  valueText={percentText(progress.converting, 1)}
                 />
               </div>
               <div className="flex flex-col gap-1">
                 <p className="text-sm">
-                  Writing to the disc {percent(progress.writtenBytes, progress.totalBytes)}
+                  Writing to the disc {percentText(progress.writtenBytes, progress.totalBytes)}
                 </p>
                 <GlassMeter
                   label="Writing to the disc"
                   value={progress.writtenBytes}
                   max={Math.max(progress.totalBytes, 1)}
-                  valueText={percent(progress.writtenBytes, progress.totalBytes)}
+                  valueText={percentText(progress.writtenBytes, progress.totalBytes)}
                 />
               </div>
             </div>

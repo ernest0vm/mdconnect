@@ -25,13 +25,6 @@ export function lockNavigation(contents: WebContents): void {
   });
 }
 
-/** USB is granted through device permissions (usb.ts); every other permission request is denied. */
-export function denyPermissionRequests(session: Session): void {
-  session.setPermissionRequestHandler((_contents, _permission, callback) => {
-    callback(false);
-  });
-}
-
 export function applyDevelopmentCsp(session: Session): void {
   session.webRequest.onHeadersReceived((details, callback) => {
     callback({

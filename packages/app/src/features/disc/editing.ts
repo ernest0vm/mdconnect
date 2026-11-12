@@ -1,5 +1,6 @@
 import type { EditOutcome } from './disc-reader';
 import type { EditPlan, GroupTracksResult, LayoutPlan } from './edit-plan';
+import { RECORDING_IN_PROGRESS } from '../recording/record-view';
 
 export type Selection = ReadonlySet<number>;
 
@@ -38,7 +39,12 @@ export function moveDestination(from: number, over: number, side: 'before' | 'af
 }
 
 /** Why editing is unavailable right now, or null when it is available. */
-export function editBlocker(state: { writeProtected: boolean; busy: boolean }): string | null {
+export function editBlocker(state: {
+  writeProtected: boolean;
+  busy: boolean;
+  recording?: boolean;
+}): string | null {
+  if (state.recording === true) return RECORDING_IN_PROGRESS;
   if (state.writeProtected) return 'The disc is write-protected. Slide its tab to edit it.';
   if (state.busy) return 'Wait for the current change to finish.';
   return null;

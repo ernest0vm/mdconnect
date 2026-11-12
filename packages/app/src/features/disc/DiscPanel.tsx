@@ -1,4 +1,4 @@
-import type { DeviceStatus, Disc } from '@mdconnect/netmd';
+import { FRAMES_PER_SECOND, type DeviceStatus, type Disc } from '@mdconnect/netmd';
 import { GlassAlert } from '@mdconnect/ui/components/glassyui/glass-alert';
 import { GlassBadge } from '@mdconnect/ui/components/glassyui/glass-badge';
 import { GlassButton } from '@mdconnect/ui/components/glassyui/glass-button';
@@ -9,7 +9,7 @@ import { GlassSpinner } from '@mdconnect/ui/components/glassyui/glass-spinner';
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
-import type { UsbDeviceHandle } from '../../platform';
+import type { PlatformRecordingFolders, UsbDeviceHandle } from '../../platform';
 import { Action } from './Action';
 import { csvFileName, formatCsv, importPlan, parseCsv, reviewImport, type CsvRow } from './csv';
 import { DeleteDialog } from './DeleteDialog';
@@ -61,6 +61,9 @@ import { browserClock, documentVisibility, StatusPoller } from './status-poller'
 import { TitleDialog } from './TitleDialog';
 import { trackActions, trackAfterAction, type TrackAction } from './track-menu';
 import { TrackTable, trackRow } from './TrackTable';
+import { recordBlocker } from '../recording/record-view';
+import type { RecordingSummary, RecordingTrack } from '../recording/session';
+import { useRecordFlow } from '../recording/useRecordFlow';
 import { useUploadFlow, type UploadFlow } from '../upload/useUploadFlow';
 
 /** The tracks region, a focus target that outlives the rows in it. */
@@ -137,6 +140,24 @@ interface EditorProps {
   readonly onControl: (command: PlaybackCommand) => void;
   /** Adding tracks: the button, the drop target and its state. */
   readonly upload: UploadFlow;
+  /** A recording is running: editing and the player wait for it. */
+  readonly recording: boolean;
+  /** Opens the recording setup for these tracks. */
+  readonly onRecord: (tracks: readonly RecordingTrack[]) => void;
+}
+
+/** The selected tracks in disc order, as a recording needs them. */
+function recordingTracks(raw: Disc, selection: Selection): RecordingTrack[] {
+  return raw.groups
+    .flatMap((group) => group.tracks)
+    .filter((track) => selection.has(track.index))
+    .sort((a, b) => a.index - b.index)
+    .map((track) => ({
+      index: track.index,
+      title: track.title,
+      fullWidthTitle: track.fullWidthTitle,
+      seconds: track.duration / FRAMES_PER_SECOND,
+    }));
 }
 
 /** The disc with its edit actions, selection and dialogs; it turns user actions into edit plans. */
@@ -152,6 +173,8 @@ function DiscEditor({
   playBlocker,
   onControl,
   upload,
+  recording,
+  onRecord,
 }: EditorProps) {
   const [chosen, setSelection] = useState<Selection>(new Set());
   /** The selection as last rendered, to tell whether the user changed it while a change saved. */
@@ -173,13 +196,19 @@ function DiscEditor({
     if (focusRequest !== null) trackRow(focusRequest.track)?.focus();
   }, [focusRequest]);
   const reasonId = useId();
-  const blocker = editBlocker({ writeProtected: raw.writeProtected, busy });
+  const blocker = editBlocker({ writeProtected: raw.writeProtected, busy, recording });
   const locked = blocker !== null;
   // Tracks that no longer exist after the disc is read again drop out of the selection.
   const selection = useMemo<Selection>(
     () => new Set([...chosen].filter((index) => index < raw.trackCount)),
     [chosen, raw.trackCount],
   );
+  const recordReason = recordBlocker({
+    selected: selection.size,
+    busy,
+    playBlocker,
+    recording,
+  });
 
   const selected = [...selection];
   const single = selected.length === 1 ? selected[0] : undefined;
@@ -364,7 +393,20 @@ function DiscEditor({
               setDialog({ kind: 'delete', tracks: selected });
             }}
           />
+          <Action
+            label="Record"
+            blocked={recordReason !== null}
+            describedBy={`${reasonId}-record`}
+            onRun={() => {
+              onRecord(recordingTracks(raw, selection));
+            }}
+          />
         </div>
+        {recordReason !== null && (
+          <p id={`${reasonId}-record`} className="sr-only">
+            {recordReason}
+          </p>
+        )}
         <p id={reasonId} className="text-xs opacity-80">
           {blocker ?? 'Select tracks to edit them, or drag a track to move it.'}
         </p>
@@ -533,6 +575,10 @@ export interface DiscPanelProps {
   readonly onChangelog?: () => void;
   /** Called once the session with the device has ended after Exit. */
   readonly onExit?: (device: UsbDeviceHandle) => void;
+  /** Where recordings are saved; undefined downloads each file. */
+  readonly recordingFolders?: PlatformRecordingFolders | undefined;
+  /** Receives the summary of a recording ended by unplugging the device, for the Connect screen. */
+  readonly onRecordingInterrupted?: (summary: RecordingSummary | null) => void;
 }
 
 type MenuDialog =
@@ -550,6 +596,8 @@ export function DiscPanel({
   onAbout,
   onChangelog,
   onExit,
+  recordingFolders,
+  onRecordingInterrupted,
 }: DiscPanelProps) {
   const reader = useMemo(
     () =>
@@ -567,13 +615,16 @@ export function DiscPanel({
   const [importError, setImportError] = useState<string | null>(null);
   const [controlError, setControlError] = useState<string | null>(null);
   const mounted = useRef(true);
+  const [recording, setRecording] = useState(false);
 
   // Keep the player current while the app is visible; reads share the device queue. Only a
   // device whose disc could be read (or that has no disc) is polled: one in use, in Hi-MD mode or
   // failing would be reopened every second.
   const pollable = result !== 'reading' && (result.kind === 'disc' || result.kind === 'no-disc');
+  // A recording reads the status itself while it starts each track.
+  const polling = pollable && !recording;
   useEffect(() => {
-    if (!pollable) return;
+    if (!polling) return;
     const poller = new StatusPoller(
       () => reader.status(),
       (next) => {
@@ -586,7 +637,7 @@ export function DiscPanel({
     return () => {
       poller.stop();
     };
-  }, [reader, pollable]);
+  }, [reader, polling]);
 
   useEffect(() => {
     mounted.current = true;
@@ -659,11 +710,19 @@ export function DiscPanel({
     device,
     disc: status.kind === 'disc' ? status.raw : null,
     busy: saving || status.kind === 'reading',
+    recording,
     onFinished: ({ result: next }) => {
       setResult(next);
       // A read cannot tell that the earlier status belongs to this disc: the next poll sets it.
       setDeviceStatus(null);
     },
+  });
+  const record = useRecordFlow({
+    reader,
+    trackCount: status.kind === 'disc' ? status.raw.trackCount : 0,
+    folders: recordingFolders,
+    onRecordingChange: setRecording,
+    onInterrupted: onRecordingInterrupted,
   });
   const editNotice =
     editState.kind === 'failed' ? (
@@ -698,9 +757,9 @@ export function DiscPanel({
       }}
       variant="soft"
       size="sm"
-      aria-disabled={status.kind === 'reading' || saving || upload.uploading}
+      aria-disabled={status.kind === 'reading' || saving || upload.uploading || recording}
       onClick={(event) => {
-        if (status.kind === 'reading' || saving || upload.uploading) return;
+        if (status.kind === 'reading' || saving || upload.uploading || recording) return;
         keepRefreshFocus.current = document.activeElement === event.currentTarget;
         refresh();
       }}
@@ -727,6 +786,7 @@ export function DiscPanel({
     saving: saving || upload.uploading,
     readable,
     noDisc: result !== 'reading' && result.kind === 'no-disc',
+    recording,
   });
   /** Sends a playback control and shows the status or failure it leads to. */
   const runControl = (command: PlaybackCommand) => {
@@ -752,7 +812,7 @@ export function DiscPanel({
   const availability = menuAvailability({
     discRead: raw !== null,
     writeProtected: raw?.writeProtected ?? false,
-    busy: saving || upload.uploading || status.kind === 'reading',
+    busy: saving || upload.uploading || recording || status.kind === 'reading',
   });
   /** Reads a chosen CSV and shows the review, or says why it cannot be used. */
   const startImport = (file: File) => {
@@ -848,8 +908,11 @@ export function DiscPanel({
         {menu}
         {dialogs}
         {upload.dialogs}
+        {record.dialogs}
         <DiscEditor
           upload={upload}
+          recording={recording}
+          onRecord={record.record}
           player={player}
           deviceStatus={shownStatus}
           playBlocker={blocker}
@@ -869,6 +932,7 @@ export function DiscPanel({
       {menu}
       {/* The read after an upload may find no disc; the upload summary must still show. */}
       {upload.dialogs}
+      {record.dialogs}
       <DiscAreas
         busy={status.kind === 'reading'}
         summary={

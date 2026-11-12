@@ -1,4 +1,10 @@
-import type { OperatingSystem, Platform } from '@mdconnect/app';
+import {
+  directoryRecordingFolders,
+  type DirectoryHandleLike,
+  type OperatingSystem,
+  type Platform,
+  type PlatformRecordingFolders,
+} from '@mdconnect/app';
 
 export interface OsSignals {
   /** `navigator.userAgentData.platform` where the browser provides it (Chromium). */
@@ -45,6 +51,22 @@ type NavigatorWithUaData = Navigator & {
   readonly userAgentData?: { readonly platform?: string };
 };
 
+type WindowWithDirectoryPicker = Window & {
+  readonly showDirectoryPicker?: (options: {
+    readonly mode: 'readwrite';
+    readonly id?: string;
+  }) => Promise<DirectoryHandleLike>;
+};
+
+/** Folders from the File System Access API, where the browser has it (Chromium); else none. */
+function recordingFolders(): PlatformRecordingFolders | undefined {
+  const picker = (window as WindowWithDirectoryPicker).showDirectoryPicker;
+  if (picker === undefined) return undefined;
+  return directoryRecordingFolders(() =>
+    picker.call(window, { mode: 'readwrite', id: 'mdconnect-recordings' }),
+  );
+}
+
 /** The browser Platform: the browser's own chooser and grants, NetMD devices only. */
 export function webPlatform(commit: string, version: string): Platform {
   const nav = navigator as NavigatorWithUaData;
@@ -55,6 +77,7 @@ export function webPlatform(commit: string, version: string): Platform {
     deviceKinds: ['netmd'],
     buildCommit: commit,
     version,
+    recordingFolders: recordingFolders(),
     appearance: {
       // Browsers expose no platform signal; GlassProvider reads the media queries itself.
       get: () => ({}),

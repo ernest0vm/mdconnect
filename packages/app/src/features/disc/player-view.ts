@@ -1,4 +1,5 @@
 import type { DeviceStatus, OperatingState } from '@mdconnect/netmd';
+import { RECORDING_IN_PROGRESS } from '../recording/record-view';
 
 const STATE_LABELS: Readonly<Record<OperatingState, string>> = {
   ready: 'Stopped',
@@ -66,7 +67,9 @@ export function playerBlocker(state: {
   readable: boolean;
   /** True when the last read found no disc; a later status showing a disc overrides it. */
   noDisc?: boolean;
+  recording?: boolean;
 }): string | null {
+  if (state.recording === true) return RECORDING_IN_PROGRESS;
   if (state.reading) return 'Wait until the disc is read.';
   if (!state.readable) return 'The device cannot be read, so it cannot play.';
   if (state.saving) return 'Wait for the current change to finish.';
