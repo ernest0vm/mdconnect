@@ -15,6 +15,7 @@ All notable changes to mdconnect are listed here, newest first. The format follo
 - Wipe the disc.
 - Add tracks from audio files in SP, LP2 or LP4, encoded by the built-in encoder or, with your consent, by Sony's encoder online.
 - Record tracks from the deck's output through the computer's audio input into WAV files, saved to a folder you pick.
+- Identify the songs on a disc and turn them into track titles: by listening to the deck with Shazam (desktop app) or AcoustID, or by searching MusicBrainz by name.
 - Settings: theme and transparency, full-width title fields on or off, the defaults for adding tracks, and withdrawing consent to the online encoder.
 - See what changed in each version in the Changelog, which opens by itself once after an update.
 - Links to the MiniDisc guide, the source code and donations in the More menu.

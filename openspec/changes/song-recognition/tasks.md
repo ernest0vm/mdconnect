@@ -25,7 +25,7 @@
 
 ## 4. Desktop shell
 
-- [ ] 4.1 Add the `recognition.shazam` bridge:
+- [x] 4.1 Add the `recognition.shazam` bridge:
   - the IPC channel and the preload entry;
   - a main-process handler that checks the origin and the signature, then sends with `net.fetch` to Shazam's endpoint, with a 15-second timeout;
   - the desktop platform's Shazam client.
@@ -48,12 +48,14 @@
   - "Short track listened to whole";
   - "Cancel", "Deck unplugged" and "Deck stopped at the end";
   - Cancel while a Shazam call never resolves: the deck stops and `deckBusy` is released before the call settles, and a late reply changes no result.
-- [ ] 5.4 Add the resampling to 16 kHz mono with `OfflineAudioContext`, behind a function the session takes. Verify with a unit test on a fake context that the length and channel count are right, and in the browser with `?demo` on a generated tone.
+- [x] 5.4 Add the resampling to 16 kHz mono with `OfflineAudioContext`, behind a function the session takes. Verify with a unit test on a fake context that the length and channel count are right, and in the browser with `?demo` on a generated tone.
+
+  Checked on `yarn dev:web`: 12 s of a 440 Hz stereo tone at 48 kHz came out as 192,000 samples of 16 kHz mono at the same level, and its signature passed `checkShazamSignature`.
 
 ## 6. Dialogs and wiring
 
-- [ ] 6.1 Replace the `recording` flag with `deckBusy` and add `identifyBlocker`. Verify with tests that each blocker names what is running (song-recognition: "Nothing selected", "During a recording", "Blocked controls"). The existing deck-recording "Controls blocked" tests must still pass.
-- [ ] 6.2 Add the Identify dialog:
+- [x] 6.1 Replace the `recording` flag with `deckBusy` and add `identifyBlocker`. Verify with tests that each blocker names what is running (song-recognition: "Nothing selected", "During a recording", "Blocked controls"). The existing deck-recording "Controls blocked" tests must still pass.
+- [x] 6.2 Add the Identify dialog:
   - the method choice, with Shazam unavailable when the platform has no Shazam client;
   - the input choice, which reuses the setup dialog's input list and meter;
   - the title format;
@@ -61,12 +63,15 @@
 
   Verify the view logic with tests (song-recognition: "Shazam in the web app", "Same input as recording", "Search needs no input", "Untitled track", "Edit a new title", "Leave a track out", "Try the rest another way"). Check it with `?demo` by keyboard.
 
-- [ ] 6.3 Add the consent notices, one per service, which say what is sent and that Shazam's API is unofficial. Verify with tests that nothing is sent before confirming (song-recognition: "First use of AcoustID", "Declined").
-- [ ] 6.4 Add the progress dialog. Verify its view logic with tests (song-recognition: "Progress").
-- [ ] 6.5 Add applying as a title-only plan: `setTrackTitle` commands for the changed titles and no group commands. With the setting on, a full-width title is set only when the title has a character, such as kanji or kana, that the full-width title stores and the half-width title cannot (design decision 6); otherwise the track's full-width title is emptied. Apply is blocked on a write-protected disc or when the titles do not fit. Verify with tests (song-recognition: "Apply", "Accented title", "Full-width title", "Full-width letters only", "Full-width space", "Accents only", "Unsupported character in a Japanese title", "Old full-width title cleared", "Groups unchanged", "Write-protected disc").
-- [ ] 6.6 Wire Identify into the track toolbar next to Record, and block the deck while listening. Check with `?demo` that Identify opens for the selected tracks and is blocked while recording (song-recognition: "Identify selected tracks").
-- [ ] 6.7 Add the Song recognition section to Settings, with one withdraw action per service. Verify with tests (app-settings: "Open from the Connect screen", "Withdraw one service", "Nothing to withdraw").
-- [ ] 6.8 Add a line for Identify to `CHANGELOG.md`. Verify that the repo-policy tests pass.
+- [x] 6.3 Add the consent notices, one per service, which say what is sent and that Shazam's API is unofficial. Verify with tests that nothing is sent before confirming (song-recognition: "First use of AcoustID", "Declined").
+- [x] 6.4 Add the progress dialog. Verify its view logic with tests (song-recognition: "Progress").
+- [x] 6.5 Add applying as a title-only plan: `setTrackTitle` commands for the changed titles and no group commands. With the setting on, a full-width title is set only when the title has a character, such as kanji or kana, that the full-width title stores and the half-width title cannot (design decision 6); otherwise the track's full-width title is emptied. Apply is blocked on a write-protected disc or when the titles do not fit. Verify with tests (song-recognition: "Apply", "Accented title", "Full-width title", "Full-width letters only", "Full-width space", "Accents only", "Unsupported character in a Japanese title", "Old full-width title cleared", "Groups unchanged", "Write-protected disc").
+- [x] 6.6 Wire Identify into the track toolbar next to Record, and block the deck while listening. Check with `?demo` that Identify opens for the selected tracks and is blocked while recording (song-recognition: "Identify selected tracks").
+
+  Checked with `?demo` on `yarn dev:web` (2026-11-12): Identify says “Select tracks to identify them.” with nothing selected; with tracks 2 and 5 selected it opens “Identify 2 tracks” listing both; Shazam shows “Shazam works only in the desktop app.” and AcoustID is chosen; Search by name hides the input; the MusicBrainz notice appeared before any request; the search (first answered 503, then retried) listed ten results; picking one gave “IVY - Dawn Dawn Dawn” in Artist – Title; typing “Te Lloré un Río” showed “Saved as “Te Llore un Rio””; Apply reached the device, which the demo refuses (it only replays recorded commands), so the dialog stayed open with “Change not saved”; Escape returned focus to Identify; Settings listed the three services and withdrawing MusicBrainz kept focus in the dialog. The microphone is blocked in the browser pane, so listening is checked in 7.
+
+- [x] 6.7 Add the Song recognition section to Settings, with one withdraw action per service. Verify with tests (app-settings: "Open from the Connect screen", "Withdraw one service", "Nothing to withdraw").
+- [x] 6.8 Add a line for Identify to `CHANGELOG.md`. Verify that the repo-policy tests pass.
 
 ## 7. Manual verification
 

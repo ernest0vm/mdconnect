@@ -48,7 +48,7 @@ export interface RecordFlow {
 }
 
 /** The deck controls of the reader, each queued with the reader's other work. */
-function readerDeck(reader: DiscReader, trackCount: number): RecordingDeck {
+export function readerDeck(reader: DiscReader, trackCount: number): RecordingDeck {
   return {
     control: (command) =>
       reader

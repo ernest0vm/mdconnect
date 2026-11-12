@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState, type DragEvent, type React
 import type { UsbDeviceHandle } from '../../platform';
 import { holdWakeLock } from '../../wake-lock';
 import { Action } from '../disc/Action';
+import type { DeckBusy } from '../disc/deck-busy';
 import type { DiscReader, UploadResult } from '../disc/disc-reader';
 import { ConvertDialog, type UploadJob } from './ConvertDialog';
 import { convertTrack } from './convert-track';
@@ -32,8 +33,8 @@ export interface UploadFlowOptions {
   readonly disc: Disc | null;
   /** Another change is being saved or the disc is being read. */
   readonly busy: boolean;
-  /** A recording is running; adding tracks waits for it. */
-  readonly recording?: boolean;
+  /** What is using the deck (a recording, identification); adding tracks waits for it. */
+  readonly deckBusy?: DeckBusy;
   /** Called with the disc read after the upload. */
   readonly onFinished: (result: UploadResult) => void;
 }
@@ -63,7 +64,7 @@ export function useUploadFlow({
   device,
   disc,
   busy,
-  recording = false,
+  deckBusy = null,
   onFinished,
 }: UploadFlowOptions): UploadFlow {
   const { preferences, setPreferences: remember } = useUploadPreferences();
@@ -102,7 +103,7 @@ export function useUploadFlow({
   const blocker = addTracksBlocker({
     writeProtected: disc?.writeProtected ?? false,
     busy: busy || uploading,
-    recording,
+    deckBusy,
   });
   const modes = useMemo(() => recordingModes(device.vendorId, device.productId), [device]);
 

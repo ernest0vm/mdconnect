@@ -21,7 +21,19 @@ import {
   RECORDING_MODES,
   TITLE_SOURCE_LABELS,
 } from '../upload/upload-view';
-import { consentStatus, SAVE_FAILED_TEXT } from './settings-view';
+import {
+  RECOGNITION_SERVICES,
+  withdrawRecognitionConsent,
+} from '../recognition/recognition-preferences';
+import { useRecognitionPreferences } from '../recognition/RecognitionPreferencesContext';
+import {
+  consentStatus,
+  recognitionConsentStatus,
+  SAVE_FAILED_TEXT,
+  SETTINGS_SECTIONS,
+} from './settings-view';
+
+const [APPEARANCE, TITLES, UPLOADS, RECOGNITION] = SETTINGS_SECTIONS;
 
 const selectClass =
   'rounded-lg border border-[var(--lg-border)] bg-[var(--lg-control-surface)] px-2 py-1.5 text-sm';
@@ -86,7 +98,7 @@ function TitlesSection() {
   const { preferences, setPreferences } = useUploadPreferences();
   const hint = useId();
   return (
-    <Section title="Titles">
+    <Section title={TITLES}>
       <div className="flex flex-col gap-1">
         <label className="flex items-center gap-2 text-sm">
           <GlassCheckbox
@@ -112,7 +124,7 @@ function UploadsSection() {
   const consent = consentStatus(preferences);
   const consentText = useRef<HTMLParagraphElement>(null);
   return (
-    <Section title="Uploads">
+    <Section title={UPLOADS}>
       <p className="text-sm opacity-80">The Add tracks dialog starts with these choices.</p>
       <Select<RecordingMode>
         label="Recording mode"
@@ -175,9 +187,50 @@ function UploadsSection() {
   );
 }
 
-/** The header's Settings control: Appearance, Titles and Uploads, applied as they change. */
+/** The consent given to each recognition service, each with its own withdraw action. */
+function RecognitionSection() {
+  const { preferences, setPreferences } = useRecognitionPreferences();
+  const status = useRef<HTMLDivElement>(null);
+  return (
+    <Section title={RECOGNITION}>
+      <p className="text-sm opacity-80">
+        Identify asks before it first sends data to each of these services.
+      </p>
+      <div ref={status} tabIndex={-1} className="flex flex-col items-start gap-2 outline-none">
+        {RECOGNITION_SERVICES.map((service) => {
+          const consent = recognitionConsentStatus(preferences, service);
+          return (
+            <div key={service} className="flex flex-col items-start gap-1">
+              <p className="text-sm" aria-live="polite">
+                {consent.text}
+              </p>
+              {consent.canWithdraw && (
+                <GlassButton
+                  type="button"
+                  variant="soft"
+                  size="sm"
+                  onClick={() => {
+                    setPreferences(withdrawRecognitionConsent(preferences, service));
+                    // The button goes away with the consent; keep focus in the section.
+                    status.current?.focus();
+                  }}
+                >
+                  Withdraw consent
+                </GlassButton>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
+/** The header's Settings control: its sections, applied as they change. */
 export function SettingsDialog() {
-  const { saved } = useUploadPreferences();
+  const { saved: uploadsSaved } = useUploadPreferences();
+  const { saved: recognitionSaved } = useRecognitionPreferences();
+  const saved = uploadsSaved && recognitionSaved;
   return (
     <GlassDialog>
       {/* The trigger is where Radix returns focus when the dialog closes. */}
@@ -210,11 +263,12 @@ export function SettingsDialog() {
         )}
         {/* Only the sections scroll, so the title and the close button stay in view. */}
         <div className="mt-4 -mr-2 flex max-h-[calc(100dvh-12rem)] flex-col gap-6 overflow-y-auto pr-2">
-          <Section title="Appearance">
+          <Section title={APPEARANCE}>
             <AppearanceSection />
           </Section>
           <TitlesSection />
           <UploadsSection />
+          <RecognitionSection />
         </div>
       </GlassDialogContent>
     </GlassDialog>

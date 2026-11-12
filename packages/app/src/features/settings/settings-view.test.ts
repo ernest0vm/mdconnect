@@ -1,8 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
+import {
+  DEFAULT_RECOGNITION_PREFERENCES,
+  withConsent,
+  withdrawRecognitionConsent,
+} from '../recognition/recognition-preferences';
 import { DEFAULT_UPLOAD_PREFERENCES } from '../upload/upload-preferences';
 import { initialMode, RECORDING_MODES, recordingModes } from '../upload/upload-view';
-import { consentStatus, SAVE_FAILED_TEXT } from './settings-view';
+import {
+  consentStatus,
+  recognitionConsentStatus,
+  SAVE_FAILED_TEXT,
+  SETTINGS_SECTIONS,
+} from './settings-view';
 
 /** Sony MZ-N510/N610, which has no native mono upload. */
 const N510 = { vendorId: 0x054c, productId: 0x00c9 };
@@ -38,5 +48,29 @@ describe('Settings view', () => {
   it('says an unsaved change lasts only until a reload, and how to withdraw consent for good', () => {
     expect(SAVE_FAILED_TEXT).toMatch(/until the app is reloaded/u);
     expect(SAVE_FAILED_TEXT).toMatch(/clear this site’s stored data/u);
+  });
+});
+
+describe('Song recognition in Settings', () => {
+  it('has its own section (app-settings: "Open from the Connect screen")', () => {
+    expect(SETTINGS_SECTIONS).toEqual(['Appearance', 'Titles', 'Uploads', 'Song recognition']);
+  });
+
+  it('says each service’s consent and offers to withdraw only that one (app-settings: "Withdraw one service")', () => {
+    const agreed = withConsent(withConsent(DEFAULT_RECOGNITION_PREFERENCES, 'shazam'), 'acoustid');
+    expect(recognitionConsentStatus(agreed, 'shazam')).toEqual({
+      text: 'Shazam: you agreed to send it signatures of what mdconnect hears.',
+      canWithdraw: true,
+    });
+    const withdrawn = withdrawRecognitionConsent(agreed, 'shazam');
+    expect(recognitionConsentStatus(withdrawn, 'shazam').canWithdraw).toBe(false);
+    expect(recognitionConsentStatus(withdrawn, 'acoustid').canWithdraw).toBe(true);
+  });
+
+  it('offers nothing to withdraw without consent (app-settings: "Nothing to withdraw")', () => {
+    expect(recognitionConsentStatus(DEFAULT_RECOGNITION_PREFERENCES, 'musicbrainz')).toEqual({
+      text: 'MusicBrainz: no consent given. Identify asks before the first search.',
+      canWithdraw: false,
+    });
   });
 });

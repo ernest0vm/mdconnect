@@ -62,6 +62,10 @@ import { TitleDialog } from './TitleDialog';
 import { trackActions, trackAfterAction, type TrackAction } from './track-menu';
 import { TrackTable, trackRow } from './TrackTable';
 import { recordBlocker } from '../recording/record-view';
+import type { ShazamAsk } from '../recognition/identifiers';
+import { identifyBlocker } from '../recognition/identify-view';
+import { useIdentifyFlow } from '../recognition/useIdentifyFlow';
+import type { DeckBusy } from './deck-busy';
 import type { RecordingSummary, RecordingTrack } from '../recording/session';
 import { useRecordFlow } from '../recording/useRecordFlow';
 import { useUploadFlow, type UploadFlow } from '../upload/useUploadFlow';
@@ -140,10 +144,12 @@ interface EditorProps {
   readonly onControl: (command: PlaybackCommand) => void;
   /** Adding tracks: the button, the drop target and its state. */
   readonly upload: UploadFlow;
-  /** A recording is running: editing and the player wait for it. */
-  readonly recording: boolean;
+  /** What is using the deck (a recording, identification): editing and the player wait for it. */
+  readonly deckBusy: DeckBusy;
   /** Opens the recording setup for these tracks. */
   readonly onRecord: (tracks: readonly RecordingTrack[]) => void;
+  /** Opens the Identify dialog for these tracks. */
+  readonly onIdentify: (tracks: readonly RecordingTrack[]) => void;
 }
 
 /** The selected tracks in disc order, as a recording needs them. */
@@ -173,8 +179,9 @@ function DiscEditor({
   playBlocker,
   onControl,
   upload,
-  recording,
+  deckBusy,
   onRecord,
+  onIdentify,
 }: EditorProps) {
   const [chosen, setSelection] = useState<Selection>(new Set());
   /** The selection as last rendered, to tell whether the user changed it while a change saved. */
@@ -196,19 +203,16 @@ function DiscEditor({
     if (focusRequest !== null) trackRow(focusRequest.track)?.focus();
   }, [focusRequest]);
   const reasonId = useId();
-  const blocker = editBlocker({ writeProtected: raw.writeProtected, busy, recording });
+  const blocker = editBlocker({ writeProtected: raw.writeProtected, busy, deckBusy });
   const locked = blocker !== null;
   // Tracks that no longer exist after the disc is read again drop out of the selection.
   const selection = useMemo<Selection>(
     () => new Set([...chosen].filter((index) => index < raw.trackCount)),
     [chosen, raw.trackCount],
   );
-  const recordReason = recordBlocker({
-    selected: selection.size,
-    busy,
-    playBlocker,
-    recording,
-  });
+  const deckUse = { selected: selection.size, busy, playBlocker, deckBusy };
+  const recordReason = recordBlocker(deckUse);
+  const identifyReason = identifyBlocker(deckUse);
 
   const selected = [...selection];
   const single = selected.length === 1 ? selected[0] : undefined;
@@ -401,10 +405,23 @@ function DiscEditor({
               onRecord(recordingTracks(raw, selection));
             }}
           />
+          <Action
+            label="Identify"
+            blocked={identifyReason !== null}
+            describedBy={`${reasonId}-identify`}
+            onRun={() => {
+              onIdentify(recordingTracks(raw, selection));
+            }}
+          />
         </div>
         {recordReason !== null && (
           <p id={`${reasonId}-record`} className="sr-only">
             {recordReason}
+          </p>
+        )}
+        {identifyReason !== null && (
+          <p id={`${reasonId}-identify`} className="sr-only">
+            {identifyReason}
           </p>
         )}
         <p id={reasonId} className="text-xs opacity-80">
@@ -579,7 +596,17 @@ export interface DiscPanelProps {
   readonly recordingFolders?: PlatformRecordingFolders | undefined;
   /** Receives the summary of a recording ended by unplugging the device, for the Connect screen. */
   readonly onRecordingInterrupted?: (summary: RecordingSummary | null) => void;
+  /** Asks Shazam; undefined where Shazam cannot be used (the web app). */
+  readonly shazam?: ShazamAsk | undefined;
+  /**
+   * Called with true when unplugging the device stopped identification, for the Connect screen,
+   * and with false when a new identification starts.
+   */
+  readonly onIdentifyInterrupted?: (interrupted: boolean) => void;
 }
+
+/** A stable callback for an optional prop, so effects that depend on it do not rerun. */
+const noop = () => undefined;
 
 type MenuDialog =
   | { readonly kind: 'wipe' }
@@ -598,6 +625,8 @@ export function DiscPanel({
   onExit,
   recordingFolders,
   onRecordingInterrupted,
+  shazam,
+  onIdentifyInterrupted = noop,
 }: DiscPanelProps) {
   const reader = useMemo(
     () =>
@@ -615,14 +644,14 @@ export function DiscPanel({
   const [importError, setImportError] = useState<string | null>(null);
   const [controlError, setControlError] = useState<string | null>(null);
   const mounted = useRef(true);
-  const [recording, setRecording] = useState(false);
+  const [deckBusy, setDeckBusy] = useState<DeckBusy>(null);
 
   // Keep the player current while the app is visible; reads share the device queue. Only a
   // device whose disc could be read (or that has no disc) is polled: one in use, in Hi-MD mode or
   // failing would be reopened every second.
   const pollable = result !== 'reading' && (result.kind === 'disc' || result.kind === 'no-disc');
-  // A recording reads the status itself while it starts each track.
-  const polling = pollable && !recording;
+  // A recording or identification reads the status itself while it starts each track.
+  const polling = pollable && deckBusy === null;
   useEffect(() => {
     if (!polling) return;
     const poller = new StatusPoller(
@@ -710,7 +739,7 @@ export function DiscPanel({
     device,
     disc: status.kind === 'disc' ? status.raw : null,
     busy: saving || status.kind === 'reading',
-    recording,
+    deckBusy,
     onFinished: ({ result: next }) => {
       setResult(next);
       // A read cannot tell that the earlier status belongs to this disc: the next poll sets it.
@@ -721,8 +750,20 @@ export function DiscPanel({
     reader,
     trackCount: status.kind === 'disc' ? status.raw.trackCount : 0,
     folders: recordingFolders,
-    onRecordingChange: setRecording,
+    onRecordingChange: (recording) => {
+      setDeckBusy(recording ? 'recording' : null);
+    },
     onInterrupted: onRecordingInterrupted,
+  });
+  const identify = useIdentifyFlow({
+    reader,
+    disc: status.kind === 'disc' ? status.raw : null,
+    shazam,
+    onEdit: runEdit,
+    onListeningChange: (listening) => {
+      setDeckBusy(listening ? 'identifying' : null);
+    },
+    onInterrupted: onIdentifyInterrupted,
   });
   const editNotice =
     editState.kind === 'failed' ? (
@@ -757,9 +798,9 @@ export function DiscPanel({
       }}
       variant="soft"
       size="sm"
-      aria-disabled={status.kind === 'reading' || saving || upload.uploading || recording}
+      aria-disabled={status.kind === 'reading' || saving || upload.uploading || deckBusy !== null}
       onClick={(event) => {
-        if (status.kind === 'reading' || saving || upload.uploading || recording) return;
+        if (status.kind === 'reading' || saving || upload.uploading || deckBusy !== null) return;
         keepRefreshFocus.current = document.activeElement === event.currentTarget;
         refresh();
       }}
@@ -786,7 +827,7 @@ export function DiscPanel({
     saving: saving || upload.uploading,
     readable,
     noDisc: result !== 'reading' && result.kind === 'no-disc',
-    recording,
+    deckBusy,
   });
   /** Sends a playback control and shows the status or failure it leads to. */
   const runControl = (command: PlaybackCommand) => {
@@ -812,7 +853,7 @@ export function DiscPanel({
   const availability = menuAvailability({
     discRead: raw !== null,
     writeProtected: raw?.writeProtected ?? false,
-    busy: saving || upload.uploading || recording || status.kind === 'reading',
+    busy: saving || upload.uploading || deckBusy !== null || status.kind === 'reading',
   });
   /** Reads a chosen CSV and shows the review, or says why it cannot be used. */
   const startImport = (file: File) => {
@@ -909,10 +950,12 @@ export function DiscPanel({
         {dialogs}
         {upload.dialogs}
         {record.dialogs}
+        {identify.dialogs}
         <DiscEditor
           upload={upload}
-          recording={recording}
+          deckBusy={deckBusy}
           onRecord={record.record}
+          onIdentify={identify.identify}
           player={player}
           deviceStatus={shownStatus}
           playBlocker={blocker}

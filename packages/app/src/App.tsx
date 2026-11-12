@@ -1,6 +1,7 @@
 import { AppearanceRoot } from './AppearanceBridge';
 import { WhatsNew } from './features/changelog/WhatsNew';
 import { ConnectScreen } from './features/connect/ConnectScreen';
+import { RecognitionPreferencesProvider } from './features/recognition/RecognitionPreferencesContext';
 import { UploadPreferencesProvider } from './features/upload/UploadPreferencesContext';
 import type { Platform } from './platform';
 
@@ -12,7 +13,9 @@ export function App({ platform }: { readonly platform: Platform }) {
   return (
     <AppearanceRoot appearance={platform.appearance}>
       <UploadPreferencesProvider>
-        <ConnectScreen platform={platform} />
+        <RecognitionPreferencesProvider>
+          <ConnectScreen platform={platform} />
+        </RecognitionPreferencesProvider>
       </UploadPreferencesProvider>
       <WhatsNew version={platform.version} />
     </AppearanceRoot>
