@@ -95,7 +95,7 @@ function endingLine(ending: RecordingEnding, where: string): string {
     case 'done':
       return `${where}.`;
     case 'cancelled':
-      return `Recording cancelled. ${where}; the track in progress was not kept.`;
+      return `Recording cancelled. ${where}.`;
     case 'disconnected':
       return `The device was disconnected. ${where}; the track in progress was not kept.`;
     case 'input-lost':

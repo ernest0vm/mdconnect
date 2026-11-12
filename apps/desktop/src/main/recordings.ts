@@ -30,6 +30,8 @@ interface OpenFile {
 export class RecordingFolders {
   private readonly paths = new Map<string, string>();
   private readonly files = new Map<string, OpenFile>();
+  /** How many times each page went away, so a file it was still creating can be dropped. */
+  private readonly departures = new Map<number, number>();
 
   constructor(private readonly dependencies: RecordingFolderDependencies) {}
 
@@ -49,6 +51,7 @@ export class RecordingFolders {
     const folder = this.paths.get(folderId);
     if (folder === undefined) throw new Error('No recording folder was picked');
     if (!isSafeFileName(fileName)) throw new Error('The file name is not allowed');
+    const departures = this.departures.get(owner) ?? 0;
     const taken = new Set<string>();
     for (;;) {
       const name = uniqueFileName(fileName, (candidate) => taken.has(candidate));
@@ -56,6 +59,12 @@ export class RecordingFolders {
       try {
         // `wx` creates the file only if no file has the name, even one made a moment ago.
         const handle = await open(path, 'wx');
+        if ((this.departures.get(owner) ?? 0) !== departures) {
+          // The page went away while the file was being created, so nobody will finish it.
+          await handle.close().catch(() => undefined);
+          await rm(path, { force: true });
+          throw new Error('The page that asked for the file is gone');
+        }
         const id = this.dependencies.newId();
         this.files.set(id, { handle, path, owner });
         return { id, name };
@@ -95,6 +104,7 @@ export class RecordingFolders {
 
   /** Discards the files a page still has open, for a page that reloaded, crashed or closed. */
   async discardOwnedBy(owner: number): Promise<void> {
+    this.departures.set(owner, (this.departures.get(owner) ?? 0) + 1);
     const owned = [...this.files].filter(([, file]) => file.owner === owner);
     await Promise.all(owned.map(([fileId]) => this.discard(fileId)));
   }

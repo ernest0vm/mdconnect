@@ -70,6 +70,8 @@ export function RecordSetupDialog({
   const [problem, setProblem] = useState<string | null>(null);
   const [capture, setCapture] = useState<LiveCapture | null>(null);
   const [starting, setStarting] = useState(false);
+  /** Bumped by Try again, to open the same input once more after it failed or stopped. */
+  const [attempt, setAttempt] = useState(0);
   const handedOver = useRef(false);
   const level = useInputLevel(capture);
 
@@ -126,7 +128,7 @@ export function RecordSetupDialog({
       setCapture(null);
       if (opened !== null && !handedOver.current) void opened.close();
     };
-  }, [inputId]);
+  }, [inputId, attempt]);
 
   const warning = longTrackWarning(tracks);
   const count = tracks.length;
@@ -184,6 +186,20 @@ export function RecordSetupDialog({
           {problem !== null && (
             <GlassAlert tone="warning" title="The input cannot be used">
               <p>{problem}</p>
+              {inputId !== null && (
+                <GlassButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    setProblem(null);
+                    setAttempt((count) => count + 1);
+                  }}
+                >
+                  Try again
+                </GlassButton>
+              )}
             </GlassAlert>
           )}
           {warning !== null && <p className="text-sm">{warning}</p>}

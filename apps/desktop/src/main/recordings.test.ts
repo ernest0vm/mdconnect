@@ -111,6 +111,15 @@ describe('RecordingFolders', () => {
     expect(await readdir(root)).toEqual([]);
   });
 
+  it('removes a file whose page went away while it was being created', async () => {
+    const recordings = folders();
+    await recordings.choose();
+    const creating = recordings.create('id-1', '01 One.wav', 7);
+    await recordings.discardOwnedBy(7);
+    await expect(creating).rejects.toThrow();
+    expect(await readdir(root)).toEqual([]);
+  });
+
   it("discards a page's open files when it goes away, such as a reload or a closed window", async () => {
     const recordings = folders();
     await recordings.choose();

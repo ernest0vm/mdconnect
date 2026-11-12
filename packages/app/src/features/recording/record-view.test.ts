@@ -150,7 +150,7 @@ describe('summaryLines (deck-recording: "Summary")', () => {
         ending: 'cancelled',
       }),
     ).toEqual([
-      'Recording cancelled. 1 file saved to “MD”; the track in progress was not kept.',
+      'Recording cancelled. 1 file saved to “MD”.',
       'The input was too loud in 01 A.wav. Lower the deck’s volume or the input gain and record it again.',
     ]);
     expect(summaryLines({ saved: [], folder: 'MD', clipped: [], ending: 'refused' })[0]).toMatch(
