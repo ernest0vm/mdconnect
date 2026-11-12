@@ -1,0 +1,36 @@
+# Tasks
+
+## 1. Desktop permissions and folder access
+
+- [ ] 1.1 Spike on Electron 44 (macOS, then Windows and Linux): call `showDirectoryPicker` and write a file from the app's page, and capture audio with `getUserMedia`. Record which permission requests (`media`, `fileSystem`) and events arrive. If folder access does not work, update design decision 3 to a narrow preload API before continuing.
+- [ ] 1.2 Grant `media` (audio-only requests) and `fileSystem` to the app origin in the request and check handlers, keeping USB as it is and denying everything else. Verify with unit tests on the handlers (desktop-shell: "Audio capture allowed", "Video refused", "Other permission refused").
+- [ ] 1.3 Add `NSMicrophoneUsageDescription` to the macOS build in `electron-builder.yml`. Verify with a repo-policy or config test that the key is present (desktop-shell: "macOS asks once").
+
+## 2. Capture and files
+
+- [ ] 2.1 Add `encodeWav(samples, sampleRate, channels)` and the 16-bit conversion of float blocks. Verify with tests on the header fields, sample order and clipping (deck-recording: "One track").
+- [ ] 2.2 Add `recordingFileName(track, disc)`. Verify with tests (deck-recording: "File name", "Untitled track"), plus full-width titles, 100+ track discs, Windows-forbidden endings and the length limit.
+- [ ] 2.3 Add the save targets behind `RecordingSink`: a folder sink (File System Access, with unique names) and a download sink (the download helper generalised to a `Blob`). Verify the unique-name logic with a fake directory handle (deck-recording: "Name already taken", "Folder chosen once").
+- [ ] 2.4 Add the capture: the audio worklet module, the input stream with the constraints and the 44.1 kHz fallback, sample counting and the peak level. Verify the stream-constraint fallback and the block handling with unit tests on a fake stream and worklet port.
+
+## 3. Recording session
+
+- [ ] 3.1 Add the session that records a list of tracks through `DiscReader` (prime, rewind, capture, play, stop on sample count) with a fake reader, capture and sink. Verify with tests (deck-recording: "Several tracks", "Deck stopped at the end", "Cancel", "Unplugged").
+- [ ] 3.2 Add the Record availability rule next to the other track-action blockers. Verify with tests (deck-recording: "Nothing selected", "Write-protected disc", and the busy and player-blocked cases).
+
+## 4. Dialogs and wiring
+
+- [ ] 4.1 Add the setup dialog: cabling steps, input list, live level meter, the remembered input, and messages for refused permission and no input. Verify the view logic (messages and remembered input) with unit tests (deck-recording: "Remembered input", "Permission refused", "No input"). Check it in the browser with `?demo`, by keyboard.
+- [ ] 4.2 Add the progress and summary dialog. Verify the view logic with tests (deck-recording: "Progress", "Summary").
+- [ ] 4.3 Wire Record into the track toolbar, block editing, uploads and the player while recording, pause status polling, and hold the wake lock. Check in the browser with `?demo` that the controls are blocked with the recording reason (deck-recording: "Record selected tracks", "Controls blocked"). The demo device has no audio, so the recording itself is checked in 5.
+
+## 5. Manual verification
+
+- [ ] 5.1 **Desktop app on macOS:**
+  1. Connect the deck's line-out (or headphone out) to the Mac's audio input, or through a USB audio interface.
+  2. Record two short tracks into a new folder. Check that macOS asked for microphone access once, that the meter moved, and that the two WAV files play back with the right audio, names and lengths.
+  3. Record again while the window is hidden for the whole of one track. Check that the file is complete.
+  4. Cancel during the second of three tracks. Check that one file is saved and the deck stops.
+  5. Unplug the deck during a recording. Check that the app reports it and keeps the earlier file.
+- [ ] 5.2 **Web app in Chrome**, on `yarn dev:web` and on production: repeat steps 2 and 4 of 5.1. Check the browser's microphone prompt and the folder picker.
+- [ ] 5.3 **Windows and Linux:** if they cannot be run here, add steps 5.1.2 and 5.1.4 to #8, with the Windows microphone privacy setting and a PipeWire or PulseAudio input.

@@ -1,0 +1,100 @@
+# Design
+
+## Context
+
+- **Deck control:** `DiscReader` queues every device operation (reads, edits, uploads, playback controls) so they never interleave. Playback already supports `goto`, `play`, `pause`, `stop` and `playTrack`, and `status()` reports the state, the track under the head and the time into it. There is no go-to-time command, so recording always starts at a track's beginning.
+- **Status polling:** the disc panel reads the status about once a second while the app is visible, and stops while it is hidden (playback spec).
+- **Upload as a model:** `useUploadFlow` already blocks other work while it runs, holds a screen wake lock, and shows a progress dialog that cannot be dismissed by accident. Recording follows the same shape.
+- **Saving files:** the app saves files today by creating a download link (`downloadText`). The desktop app denies every permission request except USB.
+- **webminidisc:** its "Record" feature (MIT-licensed `recorderjs` plus a worker) stops the deck, goes to the track, plays until the deck reports the track at 0:00:01, pauses, goes to the track again, starts capturing, plays, sleeps for the track's length, then downloads a WAV per track.
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- One recording path in `packages/app` that works in the desktop app and in Chromium browsers.
+- A capture that the next change (song recognition) can reuse for a short excerpt.
+- No new runtime dependency.
+
+**Non-Goals:**
+
+- Sample-accurate track boundaries. The analogue path has latency, and the deck starts on its own clock. Files may carry a fraction of a second of silence at either end.
+- Recording longer than the track (gapless joins between tracks).
+
+## Decisions
+
+### 1. Capture with `getUserMedia` and an `AudioWorklet`, not `MediaRecorder` or `recorderjs`
+
+- **Capture:** `getUserMedia({ audio: { deviceId, channelCount: 2, sampleRate: 44100, echoCancellation: false, noiseSuppression: false, autoGainControl: false } })`. When the sample-rate constraint is refused (`OverconstrainedError`), the app retries without it, as webminidisc does.
+- **Worklet:** an `AudioWorkletNode` posts each block of stereo samples to the page.
+- **Conversion:** the page converts each block to 16-bit integers as it arrives and appends it to the current track's buffer. A 10-minute stereo track is about 106 MB at 44.1 kHz, which fits in memory; float samples would double that.
+- **WAV encoding:** `encodeWav(samples, sampleRate, channels)` writes the 44-byte RIFF header. It is a pure function with unit tests.
+- **Level meter:** the meter reads the peak of each block, so the setup and progress dialogs share one source.
+
+Alternatives:
+
+- `MediaRecorder` produces Opus/WebM, not PCM, so it would need decoding before WAV.
+- `recorderjs` is unmaintained since 2016 and uses the deprecated `ScriptProcessorNode`.
+
+**Worklet loading:** the module is bundled by Vite (`new URL('./capture.worklet.ts', import.meta.url)`) and served from the app's origin. That satisfies both CSPs (`script-src 'self'`) and the web app's cross-origin isolation.
+
+### 2. Starting a track: prime, rewind, capture, play
+
+The order is the same as webminidisc's, run through `DiscReader`'s queue:
+
+1. Stop, go to the track and play.
+2. Poll the status until the deck reports that track at 0:00 or 0:01 (at most 10 s), then pause and go to the track again.
+3. Start the capture, then play.
+
+Priming makes the deck spin up and load the track, so the real `play` starts almost at once, and the capture starts just before it rather than seconds early.
+
+The capture runs for the track's length plus 1.5 s, measured on the audio clock (the count of samples received), not with timers. Timers are throttled in hidden tabs; the sample count is not. The session then stops the capture and, after the last track, stops the deck.
+
+Alternative: stop when the status shows the next track. That works only while status polling runs, and it stops while the app is hidden.
+
+### 3. Saving through the File System Access API, with downloads as the fallback
+
+- **Folder access available** (Chrome, Edge and other Chromium browsers, and Electron): `showDirectoryPicker({ mode: 'readwrite' })` once at start. Each finished track is written with `getFileHandle(name, { create: true })`, after checking for an existing name and adding ` (2)`, ` (3)` and so on.
+- **Folder access unavailable**, or the API missing: each finished track is downloaded with the existing download-link helper, generalised to take a `Blob`.
+- **Testing:** the save target sits behind a small interface (`RecordingSink`: `write(name, blob)`), so the session is tested with a fake sink.
+
+Alternative: a new preload API for the desktop app (native folder dialog and `fs.writeFile`). It would need a second code path and widen the privileged bridge. The File System Access API covers both apps through Chromium.
+
+### 4. Desktop permissions
+
+- **Request handler:** it grants, only for the app origin (`isAppOrigin`):
+  - `media`, when every requested media type is `audio`;
+  - `fileSystem`, for the folder the user picks.
+- **Check handler:** it answers `media` and `fileSystem` the same way for the app origin, and keeps answering `usb` as today.
+- **Everything else** stays denied: other permissions, video, and other origins.
+- **macOS:** `electron-builder.yml` adds `mac.extendInfo.NSMicrophoneUsageDescription`. Without it, macOS kills the app the first time it captures audio. macOS then asks the user once; the answer can be changed later in System Settings → Privacy & Security → Microphone.
+- **Windows:** desktop apps need "Let desktop apps access your microphone" on (Settings → Privacy → Microphone). The setup dialog's refused-permission message names it.
+- **Linux:** capture goes through PulseAudio or PipeWire; no packaging change. The deb and AppImage builds need no extra permission.
+
+### 5. Web app
+
+- **Headers:** none needed. The CSP has no `media-src` limit on capture, there is no `Permissions-Policy` header (the microphone is allowed for the page itself), and the worklet is same-origin.
+- **Permission:** the browser asks for microphone permission per origin.
+- **Folders:** Chromium browsers support `showDirectoryPicker`. A browser without it falls back to downloads.
+
+### 6. Blocking other work, and unplug
+
+- **Blocking:** the recording session marks the disc panel busy, like an upload, so the edit, upload and player blockers say "Wait for the recording to finish."
+- **Status polling** pauses while recording, so it cannot interleave with the session's own status reads. The session reads the status itself while priming.
+- **Unplug:** the connection controller's disconnect handling unmounts the disc panel. The session listens for that abort, stops the capture and reports the files already saved.
+
+### 7. File names
+
+`recordingFileName(track, disc)` is a pure function:
+
+- the zero-padded number (two digits, three when the disc has 100 tracks or more), then the half-width title, then the full-width title in parentheses;
+- `Track NN` when the track is untitled;
+- `\ / : * ? " < > |` and control characters replaced by `-`, trailing dots and spaces trimmed (Windows), and the result limited to 200 characters.
+
+## Risks / Trade-offs
+
+- **Electron's File System Access support:** Electron implements `showDirectoryPicker`, but the permission flow (`fileSystem` requests and the "restricted" event) has changed across versions. → The first task checks it on Electron 44 on all three OSes. If it fails, that task switches to a narrow preload API (choose folder, write file, both limited to the chosen folder).
+- **Start offset:** the deck may take a moment to start after `play`, so a recording can begin with up to about a second of silence, and the 1.5 s margin can catch the start of the next track. → This is documented in the dialog. Trimming is out of scope.
+- **Memory:** a very long LP4 track (over 60 minutes) needs about 600 MB of samples. → The setup dialog warns when a selected track is longer than 60 minutes. Streaming to disk is left for later.
+- **Input level:** clipping or a very low level ruins a recording, and the app cannot fix either. → The live meter in setup and during recording, and a peak warning in the summary when a track clipped.
+- **Background tabs:** Chromium keeps audio capture running in hidden tabs, but may throttle the page's timers. → The capture is timed by sample count (decision 2), and the wake lock keeps the screen on.
