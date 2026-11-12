@@ -55,7 +55,7 @@ For Shazam and AcoustID, the dialog SHALL offer the same input choice, level met
 
 ### Requirement: Listening with Shazam
 
-For each track, the app SHALL play the track on the deck from its beginning and capture the input for 12 seconds, then ask Shazam about that excerpt. When Shazam finds no song, the app SHALL keep listening to the next 12 seconds, up to three excerpts. A track shorter than 12 seconds SHALL NOT be played and SHALL be marked too short.
+For each track, the app SHALL play the track on the deck from its beginning and capture the input for 12 seconds, then ask Shazam about that excerpt. When Shazam finds no song, the app SHALL keep listening to the next 12 seconds, up to three excerpts, and only while a whole excerpt still fits in the track. A track shorter than 12 seconds SHALL NOT be played and SHALL be marked too short.
 
 #### Scenario: Found on the first excerpt
 
@@ -66,6 +66,11 @@ For each track, the app SHALL play the track on the deck from its beginning and 
 
 - **WHEN** Shazam finds nothing in seconds 0 to 12 of a track but finds a song in seconds 12 to 24
 - **THEN** the track shows the song found, and the deck played the track without stopping between excerpts
+
+#### Scenario: Excerpts stay within the track
+
+- **WHEN** a selected track is 20 seconds long and Shazam finds nothing in its first 12 seconds
+- **THEN** no second excerpt is taken, because it would run into the next track, and the track shows "Not recognised"
 
 #### Scenario: Not found
 
@@ -225,7 +230,7 @@ The dialog SHALL list each track with its number, current title and new title, o
 
 ### Requirement: Applying new titles
 
-Apply new titles SHALL write the new titles of the ticked tracks to the disc with the same title conversion and title-space rules as renaming a track, and SHALL show the converted titles before applying. When full-width titles are on, a new title that differs once converted to half-width SHALL also be saved as the full-width title. Apply SHALL be unavailable, with the reason, on a write-protected disc or when the titles do not fit.
+Apply new titles SHALL change only the titles of the ticked tracks, leaving groups and every other title as they are, with the same title conversion and title-space rules as renaming a track, and SHALL show the converted titles before applying. When full-width titles are on, a new title that differs once converted to half-width SHALL also be saved as the full-width title. Apply SHALL be unavailable, with the reason, on a write-protected disc or when the titles do not fit.
 
 #### Scenario: Apply
 
@@ -241,6 +246,11 @@ Apply new titles SHALL write the new titles of the ticked tracks to the disc wit
 
 - **WHEN** full-width titles are on and the new title is "夜明け"
 - **THEN** the track's full-width title is set to "夜明け"
+
+#### Scenario: Groups unchanged
+
+- **WHEN** tracks 1 to 3 form the group "Side A" and the user applies a new title to track 5 only
+- **THEN** only track 5's title changes, and "Side A" keeps its name and its tracks
 
 #### Scenario: Write-protected disc
 

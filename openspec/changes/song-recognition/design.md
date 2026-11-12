@@ -12,7 +12,8 @@
 - **Titles:**
   - `edit-plan.ts` builds `renameTrackPlan` commands.
   - The CSV import (`csv.ts`, `reviewImport` and `importPlan`) already converts many titles at once, checks that they fit the disc, and shows the converted titles before applying them.
-  - Recognition results can follow the same path.
+  - `importPlan` also rebuilds the groups from its rows and always rewrites them, so it is not used here: a group with no ticked track would have no row and would be lost.
+  - `disc-titles.ts` (`titleSpaceWithStoredTitle`) checks that changed titles fit.
 - **Consent:** the online encoder's consent lives in `upload-preferences.ts`. A `ConsentGuard` there keeps a withdrawal in effect across tabs, and Settings shows the consent and lets the user withdraw it.
 - **Network policy:** `packages/core/src/security.ts` holds the one Content Security Policy. The desktop app sends it, and `apps/web/vercel.json` must repeat it exactly. Its `connect-src` allows only `'self'` and `https://atrac.minidisc.wiki`.
 - **What the services accept**, as checked from a page origin on 2026-11-12:
@@ -29,7 +30,7 @@
 **Goals:**
 
 - One identification flow in `packages/app` for both apps. The only platform difference is whether a Shazam client exists.
-- Reuse the recording capture and deck priming unchanged, and the title conversion and fit check of the CSV import.
+- Reuse the recording capture and deck priming unchanged, and the title conversion and fit check that renaming and the CSV import use.
 - Service clients that take an injected `fetch` and are unit-tested against recorded responses, with no network in tests.
 
 **Non-Goals:**
@@ -63,7 +64,7 @@ interface Identifier {
 }
 ```
 
-- Shazam's plan is 12 seconds, three attempts.
+- Shazam's plan is 12 seconds, with as many attempts as whole 12-second excerpts fit in the track, at most three. A 20-second track gets one, so an excerpt never runs into the next track.
 - AcoustID's plan is `min(120, trackSeconds)` seconds, one attempt.
 - Search by name has no session: the dialog calls the MusicBrainz client directly.
 
@@ -92,6 +93,7 @@ Why a port instead of the package:
 - The preload exposes `recognition.shazam({ uri, sampleMs })`.
 - The main process sends it with Electron's `net.fetch` to `https://amp.shazam.com/discovery/v5/en/US/android/-/tag/<uuid>/<uuid>`, with the body and headers `shazam-api` uses.
 - It returns `{ title, artist, album, year } | null`, read from the track's `title`, `subtitle` and its metadata section.
+- **Cancel:** the page's Shazam client races the bridge call against the session's `AbortSignal`. On abort it rejects at once and ignores a late reply, so the session reaches its `finally` and stops the deck without waiting for Shazam. The main process gives each request a 15-second timeout.
 
 The main process checks the request before sending it:
 
@@ -114,9 +116,10 @@ Alternatives considered:
 
 **How it is used:**
 
-- Its `processAudioFile(buffer)` decodes a file with the page's `AudioContext`. The app gives it the captured excerpt as a WAV (`wavBlob`, which already exists).
-- The module runs top-level `await` to instantiate the WebAssembly, so it is loaded with a dynamic `import()` only when AcoustID is chosen. Its WebAssembly is fetched from the app's origin, which `script-src 'wasm-unsafe-eval'` already allows in both apps.
-- It sits behind a `Fingerprinter` interface (`(wav: ArrayBuffer) => Promise<string>`), so tests use a fake and the package can be replaced.
+- Its `processAudioFile(buffer)` is not used: it decodes the file with a new `AudioContext` that it never closes, so each track would leave a context open, and the app already has the PCM.
+- Instead, the app imports the package's Emscripten module (`@unimusic/chromaprint/dist/chromaprint.js`, typed by its `chromaprint.d.ts`) and calls Chromaprint's C API on the captured 16-bit samples: `chromaprint_new`, `start(sampleRate, channels)`, `feed`, `finish`, `get_fingerprint`, then `free` for the context and every buffer it allocated, in a `finally`.
+- The module is loaded with a dynamic `import()` only when AcoustID is chosen, and instantiated once. Its WebAssembly is fetched from the app's origin, which `script-src 'wasm-unsafe-eval'` already allows in both apps.
+- It sits behind a `Fingerprinter` interface (`(pcm: Int16Array, sampleRate: number, channels: number) => Promise<string>`), so tests use a fake and the package can be replaced.
 
 **The lookup:**
 
@@ -180,9 +183,10 @@ Alternatives considered:
 - `formatTitle(song, format)` builds the raw title. It joins only the parts that are present, with " - ".
 - An edited title replaces the formatted one for that track.
 
-**Applying** reuses the CSV import's review:
+**Applying** uses a title-only plan:
 
-- The ticked tracks with a title become rows, which go through the same conversion and fit check as an import (`reviewImport`, `importPlan`).
+- Each ticked track with a title is converted with `sanitizeHalfWidthTitle` and `sanitizeFullWidthTitle`, like a rename, and becomes `setTrackTitle` commands only for the titles that change. No group command is emitted, so groups and the other titles stay as they are.
+- The fit is checked with the disc-title space helpers on the disc with the new titles.
 - The dialog shows the converted titles and whether they fit, and Apply runs the plan through the reader's edit queue.
 - When full-width titles are on, a title whose half-width conversion differs from it is also written as the full-width title, as in webminidisc.
 

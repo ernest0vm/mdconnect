@@ -17,13 +17,15 @@
 - [ ] 3.2 Add the AcoustID client on an injected `fetch`: a form-encoded POST, the best result scored 0.5 or more, the artist credit joined, and the album chosen. Verify with tests on recorded responses (song-recognition: "Match", "Weak or no match"), and that the request carries only the client key, duration, fingerprint and `meta` (song-recognition: "What recognition sends").
 - [ ] 3.3 Add the MusicBrainz search client: Lucene escaping, `limit=10`, the result fields, and one second between requests. Verify with tests on recorded responses (song-recognition: "Pick a result", "No results", "Search request"), and with fake timers for the spacing.
 - [ ] 3.4 Add the retry rule: one more attempt after a pause, then unreachable. It covers a network error, HTTP 429 and 503, and Shazam's refusal. Verify with tests on each case (song-recognition: "Service down").
-- [ ] 3.5 Add the `Fingerprinter` over `@unimusic/chromaprint`, loaded with `import()` on first use. Verify with a test comparing its fingerprint of a committed synthetic WAV with `fpcalc`'s output for the same file, recorded once and committed with the command used.
+- [ ] 3.5 Add the `Fingerprinter` over the package's Emscripten module (`@unimusic/chromaprint/dist/chromaprint.js`), loaded with `import()` on first use. It feeds the captured 16-bit PCM to Chromaprint's C API, creates no `AudioContext`, and frees the context and every buffer in a `finally`. Verify with these tests:
+  - its fingerprint of a committed synthetic WAV equals `fpcalc`'s output for the same file, which is recorded once and committed with the command used;
+  - after 20 fingerprints, including one that fails partway, every allocation was freed and no `AudioContext` was created.
 
 ## 4. Desktop shell
 
 - [ ] 4.1 Add the `recognition.shazam` bridge:
   - the IPC channel and the preload entry;
-  - a main-process handler that checks the origin and the signature, then sends with `net.fetch` to Shazam's endpoint;
+  - a main-process handler that checks the origin and the signature, then sends with `net.fetch` to Shazam's endpoint, with a 15-second timeout;
   - the desktop platform's Shazam client.
 
   Verify the handler with unit tests using a fake `fetch`: a recognised excerpt, a malformed request that sends nothing, and another origin (desktop-shell: "Recognised excerpt", "Malformed request", "Other origin").
@@ -38,10 +40,12 @@
 - [ ] 5.3 Add `identifyTracks` with the `Identifier` plans, reusing `prime`, `recordFrames` and the stop in a `finally`. Verify with a fake deck, capture and identifiers:
   - "Found on the first excerpt";
   - "Found on a later excerpt", where the captured frames are contiguous and play is sent once;
+  - "Excerpts stay within the track", where a 20-second track gets one excerpt;
   - "Not found";
   - "Too short", for both methods;
   - "Short track listened to whole";
-  - "Cancel", "Deck unplugged" and "Deck stopped at the end".
+  - "Cancel", "Deck unplugged" and "Deck stopped at the end";
+  - Cancel while a Shazam call never resolves: the deck stops and `deckBusy` is released before the call settles, and a late reply changes no result.
 - [ ] 5.4 Add the resampling to 16 kHz mono with `OfflineAudioContext`, behind a function the session takes. Verify with a unit test on a fake context that the length and channel count are right, and in the browser with `?demo` on a generated tone.
 
 ## 6. Dialogs and wiring
@@ -57,7 +61,7 @@
 
 - [ ] 6.3 Add the consent notices, one per service, which say what is sent and that Shazam's API is unofficial. Verify with tests that nothing is sent before confirming (song-recognition: "First use of AcoustID", "Declined").
 - [ ] 6.4 Add the progress dialog. Verify its view logic with tests (song-recognition: "Progress").
-- [ ] 6.5 Add applying: rows go through `reviewImport` and `importPlan`, a full-width title is set when the setting is on, and Apply is blocked on a write-protected disc or when the titles do not fit. Verify with tests (song-recognition: "Apply", "Accented title", "Full-width title", "Write-protected disc").
+- [ ] 6.5 Add applying as a title-only plan: `setTrackTitle` commands for the changed titles and no group commands. A full-width title is set when the setting is on, and Apply is blocked on a write-protected disc or when the titles do not fit. Verify with tests (song-recognition: "Apply", "Accented title", "Full-width title", "Groups unchanged", "Write-protected disc").
 - [ ] 6.6 Wire Identify into the track toolbar next to Record, and block the deck while listening. Check with `?demo` that Identify opens for the selected tracks and is blocked while recording (song-recognition: "Identify selected tracks").
 - [ ] 6.7 Add the Song recognition section to Settings, with one withdraw action per service. Verify with tests (app-settings: "Open from the Connect screen", "Withdraw one service", "Nothing to withdraw").
 - [ ] 6.8 Add a line for Identify to `CHANGELOG.md`. Verify that the repo-policy tests pass.

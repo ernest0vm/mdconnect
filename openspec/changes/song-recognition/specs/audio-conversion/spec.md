@@ -14,4 +14,4 @@ The app SHALL NOT send audio, file names or tags anywhere except to the online A
 #### Scenario: Recognition sends no audio
 
 - **WHEN** the user identifies a track with Shazam or AcoustID
-- **THEN** the requests carry a signature or fingerprint and the track's length, and no audio samples
+- **THEN** Shazam's requests carry a signature and the excerpt's length, AcoustID's carry a fingerprint and the track's length, and none carries audio samples
