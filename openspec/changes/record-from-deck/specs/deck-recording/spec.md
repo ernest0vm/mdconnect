@@ -110,10 +110,20 @@ Where the platform lets the app write to a folder, the user SHALL pick the folde
 - **WHEN** the folder already has `03 Dawn.wav` and track 3 "Dawn" is recorded
 - **THEN** the new file is saved as `03 Dawn (2).wav`
 
+#### Scenario: Name written by another program at the same moment
+
+- **WHEN** in the web app, another program writes `03 Dawn.wav` between the app's check that the name is free and its creating the file
+- **THEN** that file may be overwritten, since the browser has no exclusive file creation; this is the only case where a file can be overwritten
+
 #### Scenario: Unfinished file
 
-- **WHEN** writing a file fails or the recording is cancelled while the file is written
+- **WHEN** writing a file fails or the recording is cancelled before the file is complete
 - **THEN** no part of that file is left in the folder
+
+#### Scenario: Cancelled as a file completes
+
+- **WHEN** the recording is cancelled while a complete file is being closed
+- **THEN** the file is kept and listed as saved, and the recording is reported as cancelled
 
 #### Scenario: Folder picking cancelled
 
@@ -122,7 +132,7 @@ Where the platform lets the app write to a folder, the user SHALL pick the folde
 
 ### Requirement: Recording progress and cancel
 
-While recording, a dialog SHALL show which track is being recorded out of how many, its title, how far into it the recording is, and the live input level. It SHALL offer Cancel, which stops the deck and the capture at once, keeps the files already saved and discards the track in progress. When the recording ends, the dialog SHALL say how many files were saved and where.
+While recording, a dialog SHALL show which track is being recorded out of how many, its title, how far into it the recording is, and the live input level. It SHALL offer Cancel, which stops the deck and the capture at once, keeps the files already saved and discards the track in progress (a track whose file is already complete counts as saved). When the recording ends, the dialog SHALL say how many files were saved and where.
 
 #### Scenario: Progress
 

@@ -115,7 +115,11 @@ async function fileExists(directory: DirectoryHandleLike, name: string): Promise
   }
 }
 
-/** A folder from the File System Access API that never overwrites a file. */
+/**
+ * A folder from the File System Access API that does not overwrite an existing file. The API has
+ * no exclusive create, so only a file another program writes under the same name between the check
+ * and the create could still be overwritten; that risk is accepted (see the design's risks).
+ */
 function directoryFolder(directory: DirectoryHandleLike, batchBytes: number): RecordingFolder {
   return {
     name: directory.name,

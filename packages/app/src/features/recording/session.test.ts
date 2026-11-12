@@ -365,7 +365,7 @@ describe('recordTracks', () => {
     expect(summary.ending).toBe('failed');
   });
 
-  it('keeps a file finished as Cancel was pressed, and reports the recording as cancelled', async () => {
+  it('keeps a file finished as Cancel was pressed, and reports the recording as cancelled (deck-recording: "Cancelled as a file completes")', async () => {
     const controller = new AbortController();
     const folder: RecordingFolder = {
       name: 'MiniDisc',

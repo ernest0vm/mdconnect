@@ -94,6 +94,7 @@ Why not `showDirectoryPicker` in Electron as well: the spike on Electron 44 (tas
 ## Risks / Trade-offs
 
 - **The desktop folder bridge widens the privileged API:** it is limited to a folder the user picked in a native dialog during the session. The main process validates every file name and never overwrites a file, and the renderer cannot name a path.
+- **No exclusive create on the web:** the File System Access API cannot create a file only if the name is free, so the web folder checks the name and then creates it. Another program writing the same name in that moment could see its file overwritten when ours completes; a failed or cancelled write removes the entry only while it is still empty. → Accepted: the folder is one the user picked for this recording. The desktop app creates with `wx` and has no such gap.
 - **Start offset:** the deck may take a moment to start after `play`, so a recording can begin with up to about a second of silence, and the 1.5 s margin can catch the start of the next track. → This is documented in the dialog. Trimming is out of scope.
 - **Memory:** a very long LP4 track (over 60 minutes) needs about 600 MB of samples. → The setup dialog warns when a selected track is longer than 60 minutes. Streaming to disk is left for later.
 - **Input level:** clipping or a very low level ruins a recording, and the app cannot fix either. → The live meter in setup and during recording, and a peak warning in the summary when a track clipped.
