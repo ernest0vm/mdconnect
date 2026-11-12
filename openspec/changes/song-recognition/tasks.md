@@ -14,12 +14,14 @@
 ## 3. Service clients (packages/app)
 
 - [x] 3.1 Add the Shazam response reader, which turns Shazam's JSON into `{ title, artist, album, year } | null`. Verify with tests on a recorded match response and a no-match response, both trimmed and committed. Done in `packages/core/src/recognition/shazam-request.ts` instead of `packages/app`, since the desktop main process sends the request and reads the answer. The response fixture is trimmed to the fields upstream reads; no live request was made.
-- [ ] 3.2 Add the AcoustID client on an injected `fetch`: a form-encoded POST, the best result scored 0.5 or more, the artist credit joined, and the album chosen. Verify with tests on recorded responses (song-recognition: "Match", "Weak or no match"), and that the request carries only the client key, duration, fingerprint and `meta` (song-recognition: "What recognition sends").
-- [ ] 3.3 Add the MusicBrainz search client: Lucene escaping, `limit=10`, the result fields, and one second between requests. Verify with tests on recorded responses (song-recognition: "Pick a result", "No results", "Search request"), and with fake timers for the spacing.
-- [ ] 3.4 Add the retry rule: one more attempt after a pause, then unreachable. It covers a network error, HTTP 429 and 503, and Shazam's refusal. Verify with tests on each case (song-recognition: "Service down").
-- [ ] 3.5 Add the `Fingerprinter` over the package's Emscripten module (`@unimusic/chromaprint/dist/chromaprint.js`), loaded with `import()` on first use. It feeds the captured 16-bit PCM to Chromaprint's C API, creates no `AudioContext`, and frees the context and every buffer in a `finally`. Verify with these tests:
+- [x] 3.2 Add the AcoustID client on an injected `fetch`: a form-encoded POST, the best result scored 0.5 or more, the artist credit joined, and the album chosen. Verify with tests on recorded responses (song-recognition: "Match", "Weak or no match"), and that the request carries only the client key, duration, fingerprint and `meta` (song-recognition: "What recognition sends").
+- [x] 3.3 Add the MusicBrainz search client: Lucene escaping, `limit=10`, the result fields, and one second between requests. Verify with tests on recorded responses (song-recognition: "Pick a result", "No results", "Search request"), and with fake timers for the spacing.
+- [x] 3.4 Add the retry rule: one more attempt after a pause, then unreachable. It covers a network error, HTTP 429 and 503, and Shazam's refusal. Verify with tests on each case (song-recognition: "Service down").
+- [x] 3.5 Add the `Fingerprinter` over the package's Emscripten module (`@unimusic/chromaprint/dist/chromaprint.js`), loaded with `import()` on first use. It feeds the captured 16-bit PCM to Chromaprint's C API, creates no `AudioContext`, and frees the context and every buffer in a `finally`. Verify with these tests:
   - its fingerprint of a committed synthetic WAV equals `fpcalc`'s output for the same file, which is recorded once and committed with the command used;
   - after 20 fingerprints, including one that fails partway, every allocation was freed and no `AudioContext` was created.
+
+  Done with Chromaprint's own vector instead of `fpcalc` (not installed here): `tests/test_api.cpp`'s `Test2SilenceFp` expects `AQAAA0mUaEkSRZEGAA` for 130 blocks of 1024 zero samples at 44.1 kHz mono, and the real module gives it. The module is instantiated through Vite's `?init` import, so it does not depend on the package's own `new URL` loader.
 
 ## 4. Desktop shell
 

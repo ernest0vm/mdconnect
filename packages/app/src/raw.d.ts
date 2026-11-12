@@ -9,3 +9,9 @@ declare module '*?worker&url' {
   const url: string;
   export default url;
 }
+
+/** WebAssembly imported with Vite's `?init` suffix: a function that instantiates it with imports. */
+declare module '*.wasm?init' {
+  const init: (imports?: WebAssembly.Imports) => Promise<WebAssembly.Instance>;
+  export default init;
+}
