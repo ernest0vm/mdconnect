@@ -16,8 +16,8 @@
 
 ## 3. Recording session
 
-- [ ] 3.1 Add the session that records a list of tracks through `DiscReader` (prime, rewind, capture, play, stop on sample count) with a fake reader, capture and sink. Verify with tests (deck-recording: "Several tracks", "Deck stopped at the end", "Cancel", "Unplugged").
-- [ ] 3.2 Add the Record availability rule next to the other track-action blockers. Verify with tests (deck-recording: "Nothing selected", "Write-protected disc", and the busy and player-blocked cases).
+- [x] 3.1 Add the session that records a list of tracks through `DiscReader` (prime, rewind, capture, play, stop on sample count) with a fake reader, capture and sink. Verify with tests (deck-recording: "Several tracks", "Deck stopped at the end", "Cancel", "Unplugged").
+- [x] 3.2 Add the Record availability rule next to the other track-action blockers. Verify with tests (deck-recording: "Nothing selected", "Write-protected disc", and the busy and player-blocked cases).
 
 ## 4. Dialogs and wiring
 

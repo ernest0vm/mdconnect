@@ -9,6 +9,7 @@ import {
 } from '@mdconnect/netmd';
 
 import { formatDuration } from '../disc/disc-view';
+import { RECORDING_IN_PROGRESS } from '../recording/record-view';
 import type { ConversionFailure, Encoder, RecordingMode } from './convert-track';
 import type { AudioTags } from './tags';
 import { titleFromSource, type TitleSource } from './title-source';
@@ -79,7 +80,9 @@ export function audioFiles(files: readonly File[]): {
 export function addTracksBlocker(state: {
   readonly writeProtected: boolean;
   readonly busy: boolean;
+  readonly recording?: boolean;
 }): string | null {
+  if (state.recording === true) return RECORDING_IN_PROGRESS;
   if (state.writeProtected) return 'The disc is write-protected. Slide its tab to add tracks.';
   if (state.busy) return 'Wait for the current change or upload to finish.';
   return null;

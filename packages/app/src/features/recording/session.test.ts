@@ -1,0 +1,243 @@
+import type { DeviceStatus } from '@mdconnect/netmd';
+import { describe, expect, it } from 'vitest';
+
+import type { LiveCapture } from './capture-source';
+import type { PlaybackCommand } from '../disc/disc-reader';
+import { recordTracks, type RecordingDeck, type RecordingTrack } from './session';
+
+const RATE = 100; // 100 frames a second keeps the fake audio small.
+
+/** A deck that records the commands it gets and reports the track it is on, at 0:00. */
+function fakeDeck(options: { refuse?: PlaybackCommand['kind'] } = {}) {
+  const commands: string[] = [];
+  let track = 0;
+  let state: DeviceStatus['state'] = 'ready';
+  const status = (): DeviceStatus => ({
+    discPresent: true,
+    state,
+    track,
+    time: { minute: 0, second: 1, frame: 0 },
+  });
+  const deck: RecordingDeck = {
+    control(command) {
+      commands.push(command.kind === 'goto' ? `goto ${String(command.track)}` : command.kind);
+      if (command.kind === options.refuse) return Promise.resolve({ ok: false });
+      if (command.kind === 'goto') track = command.track;
+      if (command.kind === 'play') state = 'playing';
+      if (command.kind === 'pause') state = 'paused';
+      if (command.kind === 'stop') state = 'ready';
+      return Promise.resolve({ ok: true });
+    },
+    status: () => Promise.resolve(status()),
+  };
+  return { deck, commands };
+}
+
+/** A capture that delivers 50-frame blocks whenever someone listens, as an input would. */
+function fakeCapture() {
+  let closed = false;
+  const capture: LiveCapture = {
+    channels: 2,
+    sampleRate: RATE,
+    onBlock(listener) {
+      let listening = true;
+      const tick = () => {
+        if (!listening) return;
+        listener([new Float32Array(50).fill(0.2), new Float32Array(50).fill(-0.2)]);
+        setTimeout(tick, 0);
+      };
+      setTimeout(tick, 0);
+      return () => {
+        listening = false;
+      };
+    },
+    close() {
+      closed = true;
+      return Promise.resolve();
+    },
+  };
+  return { capture, isClosed: () => closed };
+}
+
+function fakeFolder() {
+  const files = new Map<string, Blob>();
+  return {
+    files,
+    folder: {
+      name: 'MiniDisc',
+      write: (name: string, data: Blob) => {
+        files.set(name, data);
+        return Promise.resolve(name);
+      },
+    },
+  };
+}
+
+const track = (index: number, title: string, seconds: number): RecordingTrack => ({
+  index,
+  title,
+  fullWidthTitle: '',
+  seconds,
+});
+
+const noSleep = () => Promise.resolve();
+
+describe('recordTracks', () => {
+  it('primes, rewinds, captures and plays each track, then stops the deck (deck-recording: "Several tracks", "Deck stopped at the end")', async () => {
+    const { deck, commands } = fakeDeck();
+    const { capture, isClosed } = fakeCapture();
+    const { folder, files } = fakeFolder();
+    const summary = await recordTracks([track(1, 'Two', 2), track(4, 'Five', 1)], {
+      deck,
+      capture,
+      trackCount: 12,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: new AbortController().signal,
+    });
+    expect(commands).toEqual([
+      'stop',
+      'goto 1',
+      'play',
+      'pause',
+      'goto 1',
+      'play',
+      'goto 4',
+      'play',
+      'pause',
+      'goto 4',
+      'play',
+      'stop',
+    ]);
+    expect([...files.keys()]).toEqual(['02 Two.wav', '05 Five.wav']);
+    expect(summary).toEqual({
+      saved: ['02 Two.wav', '05 Five.wav'],
+      folder: 'MiniDisc',
+      clipped: [],
+      ending: 'done',
+    });
+    expect(isClosed()).toBe(true);
+  });
+
+  it('records the track length plus a 1.5-second margin (deck-recording: "One track")', async () => {
+    const { deck } = fakeDeck();
+    const { capture } = fakeCapture();
+    const { folder, files } = fakeFolder();
+    await recordTracks([track(0, 'One', 2)], {
+      deck,
+      capture,
+      trackCount: 1,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: new AbortController().signal,
+    });
+    const file = files.get('01 One.wav');
+    if (file === undefined) throw new Error('no file saved');
+    const wav = new Uint8Array(await file.arrayBuffer());
+    const dataBytes = new DataView(wav.buffer).getUint32(40, true);
+    // 3.5 s at 100 frames a second, stereo, 16-bit, rounded up to whole 50-frame blocks.
+    expect(dataBytes).toBe(350 * 2 * 2);
+  });
+
+  it('downloads each file when there is no folder', async () => {
+    const { deck } = fakeDeck();
+    const { capture } = fakeCapture();
+    const downloads: string[] = [];
+    const summary = await recordTracks([track(0, 'One', 1)], {
+      deck,
+      capture,
+      trackCount: 1,
+      save: { kind: 'download', download: (name) => downloads.push(name) },
+      sleep: noSleep,
+      signal: new AbortController().signal,
+    });
+    expect(downloads).toEqual(['01 One.wav']);
+    expect(summary.folder).toBeNull();
+  });
+
+  it('stops at once on cancel, keeps earlier files and drops the track in progress (deck-recording: "Cancel")', async () => {
+    const { deck, commands } = fakeDeck();
+    const { capture } = fakeCapture();
+    const { folder, files } = fakeFolder();
+    const controller = new AbortController();
+    const summary = await recordTracks(
+      [track(0, 'One', 0.5), track(1, 'Two', 60), track(2, 'Three', 1)],
+      {
+        deck,
+        capture,
+        trackCount: 3,
+        save: { kind: 'folder', folder },
+        sleep: noSleep,
+        signal: controller.signal,
+        onProgress: (progress) => {
+          if (progress.position === 1 && progress.share > 0.1) controller.abort('cancelled');
+        },
+      },
+    );
+    expect([...files.keys()]).toEqual(['01 One.wav']);
+    expect(summary.ending).toBe('cancelled');
+    expect(commands.at(-1)).toBe('stop');
+    expect(commands).not.toContain('goto 2');
+  });
+
+  it('reports a disconnected device and keeps earlier files (deck-recording: "Unplugged")', async () => {
+    const { deck } = fakeDeck();
+    const { capture } = fakeCapture();
+    const { folder, files } = fakeFolder();
+    const controller = new AbortController();
+    const summary = await recordTracks([track(0, 'One', 0.5), track(1, 'Two', 60)], {
+      deck,
+      capture,
+      trackCount: 2,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: controller.signal,
+      onProgress: (progress) => {
+        if (progress.position === 1 && progress.share > 0.1) controller.abort('disconnected');
+      },
+    });
+    expect([...files.keys()]).toEqual(['01 One.wav']);
+    expect(summary.ending).toBe('disconnected');
+  });
+
+  it('stops when the deck refuses a command, and says so', async () => {
+    const { deck } = fakeDeck({ refuse: 'play' });
+    const { capture } = fakeCapture();
+    const { folder, files } = fakeFolder();
+    const summary = await recordTracks([track(0, 'One', 1)], {
+      deck,
+      capture,
+      trackCount: 1,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: new AbortController().signal,
+    });
+    expect(summary.ending).toBe('refused');
+    expect(files.size).toBe(0);
+  });
+
+  it('lists the tracks whose audio clipped', async () => {
+    const { deck } = fakeDeck();
+    const loud: LiveCapture = {
+      ...fakeCapture().capture,
+      onBlock(listener) {
+        const id = setInterval(() => {
+          listener([new Float32Array(50).fill(1.2), new Float32Array(50).fill(0)]);
+        }, 0);
+        return () => {
+          clearInterval(id);
+        };
+      },
+    };
+    const { folder } = fakeFolder();
+    const summary = await recordTracks([track(0, 'Loud', 1)], {
+      deck,
+      capture: loud,
+      trackCount: 1,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: new AbortController().signal,
+    });
+    expect(summary.clipped).toEqual(['01 Loud.wav']);
+  });
+});
