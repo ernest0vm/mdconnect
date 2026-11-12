@@ -192,6 +192,8 @@ export function RecordSetupDialog({
                   variant="ghost"
                   size="sm"
                   className="mt-2"
+                  // The capture belongs to the starting recording until it starts or fails.
+                  disabled={starting}
                   onClick={() => {
                     setProblem(null);
                     setAttempt((count) => count + 1);
