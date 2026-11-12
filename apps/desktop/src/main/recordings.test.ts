@@ -1,4 +1,5 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, writeFile, type FileHandle } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -7,6 +8,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RecordingFolders } from './recordings';
 
 vi.mock('electron', () => ({ dialog: {}, ipcMain: { handle: vi.fn() } }));
+vi.mock('node:fs/promises', async (original) => {
+  const actual = await original<typeof fs>();
+  return { ...actual, open: vi.fn(actual.open) };
+});
+
+/** Makes the next file opened behave like `change` says, on top of a real file handle. */
+function nextOpen(change: (handle: FileHandle) => Partial<FileHandle>) {
+  const open = vi.mocked(fs.open);
+  const real = open.getMockImplementation();
+  if (real === undefined) throw new Error('open is not mocked');
+  open.mockImplementationOnce(async (...args) => {
+    const handle = await real(...args);
+    return Object.assign(Object.create(handle) as FileHandle, change(handle));
+  });
+}
 
 let root: string;
 beforeEach(async () => {
@@ -61,6 +77,36 @@ describe('RecordingFolders', () => {
     await recordings.choose();
     const file = await recordings.create('id-1', '03 Dawn.wav');
     await recordings.append(file.id, bytes('RIFF'));
+    await recordings.discard(file.id);
+    expect(await readdir(root)).toEqual([]);
+  });
+
+  it('writes every byte when the system writes only part of a batch', async () => {
+    nextOpen((handle) => ({
+      // Writes at most two bytes per call, as a busy disk may.
+      write: ((data: Uint8Array, offset = 0, length = data.byteLength) =>
+        handle.write(data, offset, Math.min(length, 2))) as FileHandle['write'],
+    }));
+    const recordings = folders();
+    await recordings.choose();
+    await writeAll(recordings, 'id-1', '01 One.wav', ['RIFF-data']);
+    expect(await readFile(join(root, '01 One.wav'), 'utf8')).toBe('RIFF-data');
+  });
+
+  it('still removes a file whose close failed, when it is then discarded', async () => {
+    let fail = true;
+    nextOpen((handle) => ({
+      close: () => {
+        if (!fail) return handle.close();
+        fail = false;
+        return Promise.reject(new Error('EIO'));
+      },
+    }));
+    const recordings = folders();
+    await recordings.choose();
+    const file = await recordings.create('id-1', '01 One.wav');
+    await recordings.append(file.id, bytes('RIFF'));
+    await expect(recordings.finish(file.id)).rejects.toThrow('EIO');
     await recordings.discard(file.id);
     expect(await readdir(root)).toEqual([]);
   });

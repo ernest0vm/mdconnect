@@ -25,7 +25,7 @@
 
 ### 1. Capture with `getUserMedia` and an `AudioWorklet`, not `MediaRecorder` or `recorderjs`
 
-- **Capture:** `getUserMedia({ audio: { deviceId, channelCount: 2, sampleRate: 44100, echoCancellation: false, noiseSuppression: false, autoGainControl: false } })`. When the sample-rate constraint is refused (`OverconstrainedError`), the app retries without it, as webminidisc does. If the opened track still reports echo cancellation, noise suppression or automatic gain as on, the input is released and refused, since it would change the music.
+- **Capture:** `getUserMedia({ audio: { deviceId, channelCount: 2, sampleRate: 44100, echoCancellation: false, noiseSuppression: false, autoGainControl: false } })`. When the sample-rate constraint is refused (`OverconstrainedError`), the app retries without it, as webminidisc does. Unless the opened track reports echo cancellation, noise suppression and automatic gain all as off, the input is released and refused, since it could change the music.
 - **Worklet:** an `AudioWorkletNode` posts each block of stereo samples to the page.
 - **Conversion:** the page converts each block to 16-bit integers as it arrives and appends it to the current track's buffer. A 10-minute stereo track is about 106 MB at 44.1 kHz, which fits in memory; float samples would double that.
 - **WAV encoding:** `encodeWav(samples, sampleRate, channels)` writes the 44-byte RIFF header. It is a pure function with unit tests.

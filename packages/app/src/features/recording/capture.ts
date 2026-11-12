@@ -33,10 +33,11 @@ export async function openInput(media: MediaDevicesLike, deviceId: string): Prom
     stream = await media.getUserMedia({ audio: withoutRate });
   }
   const settings = stream.getAudioTracks()[0]?.getSettings() ?? {};
+  // Only an input that reports each kind of processing as off is known to leave the music alone.
   if (
-    settings.echoCancellation === true ||
-    settings.noiseSuppression === true ||
-    settings.autoGainControl === true
+    settings.echoCancellation !== false ||
+    settings.noiseSuppression !== false ||
+    settings.autoGainControl !== false
   ) {
     for (const track of stream.getTracks()) track.stop();
     throw new InputProcessingError();

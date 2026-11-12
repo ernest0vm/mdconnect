@@ -3,7 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { blockPeak, openInput, recordFrames, type BlockSource } from './capture';
 
 /** A stream whose one audio track reports `settings`, and records whether it was stopped. */
-function fakeStream(settings: MediaTrackSettings = {}) {
+const UNPROCESSED: MediaTrackSettings = {
+  echoCancellation: false,
+  noiseSuppression: false,
+  autoGainControl: false,
+};
+
+function fakeStream(settings: MediaTrackSettings = UNPROCESSED) {
   let stopped = false;
   const track = {
     getSettings: () => settings,
@@ -104,7 +110,15 @@ describe('openInput', () => {
   });
 
   it('refuses and releases an input that keeps cleaning up the sound', async () => {
-    const { stream, isStopped } = fakeStream({ noiseSuppression: true });
+    const { stream, isStopped } = fakeStream({ ...UNPROCESSED, noiseSuppression: true });
+    await expect(
+      openInput({ getUserMedia: () => Promise.resolve(stream) }, 'built-in'),
+    ).rejects.toMatchObject({ name: 'InputProcessingError' });
+    expect(isStopped()).toBe(true);
+  });
+
+  it('refuses an input that does not say its processing is off, since that cannot be checked', async () => {
+    const { stream, isStopped } = fakeStream({ echoCancellation: false, noiseSuppression: false });
     await expect(
       openInput({ getUserMedia: () => Promise.resolve(stream) }, 'built-in'),
     ).rejects.toMatchObject({ name: 'InputProcessingError' });
