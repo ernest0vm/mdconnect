@@ -1,0 +1,86 @@
+# Tasks
+
+## 1. Service setup and dependency
+
+- [ ] 1.1 **Manual, maintainer:** register mdconnect as an application at https://acoustid.org/new-application (name "mdconnect", website the GitHub repository). Put the client key in `packages/core/src/recognition/services.ts` with the three service origins. Verify by sending one lookup with the key from a terminal (`curl` with a fingerprint from `fpcalc`), which must answer `"status": "ok"`.
+- [ ] 1.2 Add `@unimusic/chromaprint` 0.1.4 to `packages/app` with Yarn, and confirm that no `dependenciesMeta` entry is needed. Verify that `yarn install` passes the 7-day age gate and that `yarn check:affected` passes, including repo-policy.
+
+## 2. Shazam signature (packages/core)
+
+- [ ] 2.1 Port the radix-2 real FFT. Verify with tests against known transforms: an impulse, a sine at a bin frequency, and Parseval's identity.
+- [ ] 2.2 Port `SignatureGenerator` and the signature encoder from `shazam-api` 0.3.0, with the GPL-2.0 header and attribution. Verify with a test on a committed synthetic 12-second, 16 kHz WAV (two sine sweeps; no copyrighted audio), whose expected URI is generated once with `shazam-api` in the scratchpad and committed with the script's command in the test's comment (song-recognition: "Shazam request").
+- [ ] 2.3 Add the signature check used by the desktop main process (data URI prefix, magic numbers, CRC, sample length at most 15 s). Verify with tests on a valid signature, a wrong CRC, other data, and one 16 seconds long (desktop-shell: "Malformed request").
+
+## 3. Service clients (packages/app)
+
+- [ ] 3.1 Add the Shazam response reader, which turns Shazam's JSON into `{ title, artist, album, year } | null`. Verify with tests on a recorded match response and a no-match response, both trimmed and committed.
+- [ ] 3.2 Add the AcoustID client on an injected `fetch`: a form-encoded POST, the best result scored 0.5 or more, the artist credit joined, and the album chosen. Verify with tests on recorded responses (song-recognition: "Match", "Weak or no match"), and that the request carries only the client key, duration, fingerprint and `meta` (song-recognition: "What recognition sends").
+- [ ] 3.3 Add the MusicBrainz search client: Lucene escaping, `limit=10`, the result fields, and one second between requests. Verify with tests on recorded responses (song-recognition: "Pick a result", "No results", "Search request"), and with fake timers for the spacing.
+- [ ] 3.4 Add the retry rule: one more attempt after a pause, then unreachable. It covers a network error, HTTP 429 and 503, and Shazam's refusal. Verify with tests on each case (song-recognition: "Service down").
+- [ ] 3.5 Add the `Fingerprinter` over the package's Emscripten module (`@unimusic/chromaprint/dist/chromaprint.js`), loaded with `import()` on first use. It feeds the captured 16-bit PCM to Chromaprint's C API, creates no `AudioContext`, and frees the context and every buffer in a `finally`. Verify with these tests:
+  - its fingerprint of a committed synthetic WAV equals `fpcalc`'s output for the same file, which is recorded once and committed with the command used;
+  - after 20 fingerprints, including one that fails partway, every allocation was freed and no `AudioContext` was created.
+
+## 4. Desktop shell
+
+- [ ] 4.1 Add the `recognition.shazam` bridge:
+  - the IPC channel and the preload entry;
+  - a main-process handler that checks the origin and the signature, then sends with `net.fetch` to Shazam's endpoint, with a 15-second timeout;
+  - the desktop platform's Shazam client.
+
+  Verify the handler with unit tests using a fake `fetch`: a recognised excerpt, a malformed request that sends nothing, and another origin (desktop-shell: "Recognised excerpt", "Malformed request", "Other origin").
+
+- [ ] 4.2 Set mdconnect's User-Agent on requests to `musicbrainz.org` and `api.acoustid.org` with `session.webRequest.onBeforeSendHeaders`. Verify with a unit test on the header function, and that other requests keep their headers.
+- [ ] 4.3 Add both origins to `connect-src` in `packages/core/src/security.ts` and in `apps/web/vercel.json`. Verify with the CSP tests (desktop-shell: "Recognition services allowed", "Other origins blocked"); also add a test in `apps/web` that the CSP in `vercel.json` equals the shared policy, which today only a comment in `security.ts` asks for.
+
+## 5. Identification session and preferences
+
+- [ ] 5.1 Add `recognition-preferences.ts`, which stores the method, the title format and the consent per service, with the `ConsentGuard` pattern. Verify with tests (song-recognition: "Remembered method", "Consent per service"; app-settings: "Withdraw one service").
+- [ ] 5.2 Add `formatTitle`. Verify with tests on all five formats and on missing parts (song-recognition: "Artist - Title", "Album unknown").
+- [ ] 5.3 Add `identifyTracks` with the `Identifier` plans, reusing `prime`, `recordFrames` and the stop in a `finally`. Verify with a fake deck, capture and identifiers:
+  - "Found on the first excerpt";
+  - "Found on a later excerpt", where the captured frames are contiguous and play is sent once;
+  - "Excerpts stay within the track", where a 20-second track gets one excerpt;
+  - "Not found";
+  - "Too short", for both methods;
+  - "Short track listened to whole";
+  - "Cancel", "Deck unplugged" and "Deck stopped at the end";
+  - Cancel while a Shazam call never resolves: the deck stops and `deckBusy` is released before the call settles, and a late reply changes no result.
+- [ ] 5.4 Add the resampling to 16 kHz mono with `OfflineAudioContext`, behind a function the session takes. Verify with a unit test on a fake context that the length and channel count are right, and in the browser with `?demo` on a generated tone.
+
+## 6. Dialogs and wiring
+
+- [ ] 6.1 Replace the `recording` flag with `deckBusy` and add `identifyBlocker`. Verify with tests that each blocker names what is running (song-recognition: "Nothing selected", "During a recording", "Blocked controls"). The existing deck-recording "Controls blocked" tests must still pass.
+- [ ] 6.2 Add the Identify dialog:
+  - the method choice, with Shazam unavailable when the platform has no Shazam client;
+  - the input choice, which reuses the setup dialog's input list and meter;
+  - the title format;
+  - the results table, with ticks, editing and per-track search.
+
+  Verify the view logic with tests (song-recognition: "Shazam in the web app", "Same input as recording", "Search needs no input", "Untitled track", "Edit a new title", "Leave a track out", "Try the rest another way"). Check it with `?demo` by keyboard.
+
+- [ ] 6.3 Add the consent notices, one per service, which say what is sent and that Shazam's API is unofficial. Verify with tests that nothing is sent before confirming (song-recognition: "First use of AcoustID", "Declined").
+- [ ] 6.4 Add the progress dialog. Verify its view logic with tests (song-recognition: "Progress").
+- [ ] 6.5 Add applying as a title-only plan: `setTrackTitle` commands for the changed titles and no group commands. With the setting on, a full-width title is set only when the title has a character, such as kanji or kana, that the full-width title stores and the half-width title cannot (design decision 6); otherwise the track's full-width title is emptied. Apply is blocked on a write-protected disc or when the titles do not fit. Verify with tests (song-recognition: "Apply", "Accented title", "Full-width title", "Full-width letters only", "Full-width space", "Accents only", "Unsupported character in a Japanese title", "Old full-width title cleared", "Groups unchanged", "Write-protected disc").
+- [ ] 6.6 Wire Identify into the track toolbar next to Record, and block the deck while listening. Check with `?demo` that Identify opens for the selected tracks and is blocked while recording (song-recognition: "Identify selected tracks").
+- [ ] 6.7 Add the Song recognition section to Settings, with one withdraw action per service. Verify with tests (app-settings: "Open from the Connect screen", "Withdraw one service", "Nothing to withdraw").
+- [ ] 6.8 Add a line for Identify to `CHANGELOG.md`. Verify that the repo-policy tests pass.
+
+## 7. Manual verification
+
+- [ ] 7.1 **Desktop app on macOS**, with the deck's output cabled to the Mac's input. Verify each of these:
+  1. Identify three well-known commercial tracks with Shazam. Check that the consent notice appears once, the deck plays each track from 0:00, the dialog shows each song, and the deck stops at the end.
+  2. Identify the same tracks with AcoustID. Note how many match and their scores. Check that the dialog said how long it would take.
+  3. Search one track by name and pick a result.
+  4. Apply the titles in Artist - Title format, read the disc again, and check the titles.
+  5. Cancel during the second of three tracks. Check that the deck stops and the first track keeps its result.
+  6. Withdraw Shazam's consent in Settings. Check that the next use asks again.
+- [ ] 7.2 **Web app in Chrome**, on `yarn dev:web` and, after merging, on production:
+  1. Check that Shazam shows that it works only in the desktop app.
+  2. Repeat steps 2 to 4 of 7.1.
+  3. In DevTools' Network panel, check that requests go only to `api.acoustid.org` and `musicbrainz.org`, and that no request carries audio.
+- [ ] 7.3 **Windows**, on the maintainer's HP Omen: repeat 7.1 steps 1, 2 and 4 with the deck cabled to its input. Linux goes to #8, with the same steps.
+
+## Workflow follow-up
+
+- Archive `record-from-deck` first, then archive this change after its PR is merged and 7.2 is checked on production.
