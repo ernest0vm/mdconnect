@@ -96,8 +96,10 @@ export function useRecordFlow({
     controller.current = abort;
     let save: RecordingSave = { kind: 'download', download: downloadBlob };
     if (folders !== undefined) {
-      const folder = await folders.choose().catch((error: unknown) => {
+      const folder = await folders.choose().catch(async (error: unknown) => {
         controller.current = null;
+        // With the setup gone (the device was unplugged), nobody else will close the capture.
+        if (abort.signal.aborted) await capture.close().catch(() => undefined);
         throw error;
       });
       if (abort.signal.aborted) {

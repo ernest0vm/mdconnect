@@ -67,14 +67,21 @@ export class RecordingFolders {
   }
 
   async append(fileId: string, bytes: Uint8Array): Promise<void> {
-    await this.file(fileId).handle.write(bytes);
+    const { handle } = this.file(fileId);
+    // A write may take only part of the bytes, so it is repeated until all of them are written.
+    for (let offset = 0; offset < bytes.byteLength;) {
+      const { bytesWritten } = await handle.write(bytes, offset, bytes.byteLength - offset);
+      offset += bytesWritten;
+    }
   }
 
-  /** Closes a file that is complete. */
+  /**
+   * Closes a file that is complete. If closing fails the file stays open here, so a `discard`
+   * that follows can still remove it.
+   */
   async finish(fileId: string): Promise<void> {
-    const file = this.file(fileId);
+    await this.file(fileId).handle.close();
     this.files.delete(fileId);
-    await file.handle.close();
   }
 
   /** Closes and removes a file that will not be completed, so no partial recording is left. */

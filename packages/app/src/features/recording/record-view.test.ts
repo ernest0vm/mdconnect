@@ -157,8 +157,11 @@ describe('summaryLines (deck-recording: "Summary")', () => {
       /device refused/u,
     );
     expect(
-      summaryLines({ saved: ['01 A.wav'], folder: 'MD', clipped: [], ending: 'failed' })[0],
+      summaryLines({ saved: ['01 A.wav'], folder: 'MD', clipped: [], ending: 'save-failed' })[0],
     ).toMatch(/could not be saved/u);
+    const failed = summaryLines({ saved: [], folder: 'MD', clipped: [], ending: 'failed' })[0];
+    expect(failed).toMatch(/unexpected error/u);
+    expect(failed).not.toMatch(/could not be saved|free space/u);
   });
 });
 

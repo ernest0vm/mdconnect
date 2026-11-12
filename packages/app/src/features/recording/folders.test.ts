@@ -16,11 +16,15 @@ function fakeDirectory(
   name: string,
   existing: readonly string[] = [],
   fail: 'write' | 'open' | null = null,
+  folders: readonly string[] = [],
 ) {
   const files = new Map<string, number[]>(existing.map((file) => [file, [...text('old')]]));
   const handle: DirectoryHandleLike = {
     name,
     getFileHandle(fileName, options) {
+      if (folders.includes(fileName)) {
+        return Promise.reject(new DOMException('a folder', 'TypeMismatchError'));
+      }
       if (!files.has(fileName) && options?.create !== true) {
         return Promise.reject(new DOMException('missing', 'NotFoundError'));
       }
@@ -76,6 +80,13 @@ describe('directoryRecordingFolders', () => {
     const folder = await directoryRecordingFolders(() => Promise.resolve(handle)).choose();
     expect(await folder?.write('03 Dawn.wav', [text('new')])).toBe('03 Dawn (2).wav');
     expect(files.get('03 Dawn.wav')).toEqual([...text('old')]);
+  });
+
+  it('treats a folder with the file name as a taken name', async () => {
+    const { handle, files } = fakeDirectory('MiniDisc', [], null, ['03 Dawn.wav']);
+    const folder = await directoryRecordingFolders(() => Promise.resolve(handle)).choose();
+    expect(await folder?.write('03 Dawn.wav', [text('new')])).toBe('03 Dawn (2).wav');
+    expect([...files.keys()]).toEqual(['03 Dawn (2).wav']);
   });
 
   it('resolves null when the user cancels the picker (deck-recording: "Folder picking cancelled")', async () => {

@@ -103,6 +103,8 @@ function endingLine(ending: RecordingEnding, where: string): string {
     case 'refused':
       return `The device refused a playback command, so recording stopped. ${where}.`;
     case 'failed':
+      return `Recording stopped because of an unexpected error. ${where}; the track in progress was not kept. Check the device, then record the rest again.`;
+    case 'save-failed':
       return `Recording stopped because a file could not be saved. ${where}. Check the folder and the free space, then record the rest again.`;
   }
 }

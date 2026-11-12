@@ -260,7 +260,7 @@ describe('recordTracks', () => {
       sleep: noSleep,
       signal: new AbortController().signal,
     });
-    expect(summary).toMatchObject({ saved: ['01 One.wav'], ending: 'failed' });
+    expect(summary).toMatchObject({ saved: ['01 One.wav'], ending: 'save-failed' });
     expect(isClosed()).toBe(true);
   });
 
@@ -349,5 +349,39 @@ describe('recordTracks', () => {
     });
     expect([...files.keys()]).toEqual(['01 One.wav']);
     expect(summary.ending).toBe('input-lost');
+  });
+
+  it('reports a deck that stops answering as a failure, not as a save problem', async () => {
+    const { deck } = fakeDeck();
+    const { folder } = fakeFolder();
+    const summary = await recordTracks([track(0, 'One', 0.5)], {
+      deck: { ...deck, status: () => Promise.reject(new Error('USB transfer failed')) },
+      capture: fakeCapture().capture,
+      trackCount: 1,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: new AbortController().signal,
+    });
+    expect(summary.ending).toBe('failed');
+  });
+
+  it('keeps a file finished as Cancel was pressed, and reports the recording as cancelled', async () => {
+    const controller = new AbortController();
+    const folder: RecordingFolder = {
+      name: 'MiniDisc',
+      write: (name) => {
+        controller.abort('cancelled');
+        return Promise.resolve(name);
+      },
+    };
+    const summary = await recordTracks([track(0, 'One', 0.5)], {
+      deck: fakeDeck().deck,
+      capture: fakeCapture().capture,
+      trackCount: 1,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: controller.signal,
+    });
+    expect(summary).toMatchObject({ saved: ['01 One.wav'], ending: 'cancelled' });
   });
 });

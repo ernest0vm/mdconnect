@@ -106,6 +106,8 @@ async function fileExists(directory: DirectoryHandleLike, name: string): Promise
     return true;
   } catch (error) {
     if (error instanceof DOMException && error.name === 'NotFoundError') return false;
+    // A folder with that name takes the name as surely as a file does.
+    if (error instanceof DOMException && error.name === 'TypeMismatchError') return true;
     throw error;
   }
 }

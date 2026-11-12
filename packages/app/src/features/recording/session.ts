@@ -41,7 +41,7 @@ export interface RecordingProgress {
 }
 
 export type RecordingEnding =
-  'done' | 'cancelled' | 'disconnected' | 'input-lost' | 'refused' | 'failed';
+  'done' | 'cancelled' | 'disconnected' | 'input-lost' | 'refused' | 'save-failed' | 'failed';
 
 export interface RecordingSummary {
   /** Names of the files saved, in order. */
@@ -66,6 +66,24 @@ export interface RecordingOptions {
 }
 
 class DeckRefused extends Error {}
+
+/** A file that could not be written, kept apart from deck and input failures. */
+class SaveFailed extends Error {}
+
+/** Writes a file to the folder; a failure that is not a cancel becomes a `SaveFailed`. */
+async function writeFile(
+  folder: RecordingFolder,
+  name: string,
+  parts: readonly Uint8Array[],
+  signal: AbortSignal,
+): Promise<string> {
+  try {
+    return await folder.write(name, parts, signal);
+  } catch (error) {
+    if (signal.aborted) throw error;
+    throw new SaveFailed('A recording file could not be written', { cause: error });
+  }
+}
 
 /**
  * Records tracks from the deck's output, one file each. Every track is started from its
@@ -101,11 +119,13 @@ export async function recordTracks(
       const name = recordingFileName(track, options.trackCount);
       const savedAs =
         save.kind === 'folder'
-          ? await save.folder.write(name, wavParts(pcm, capture.sampleRate), signal)
+          ? await writeFile(save.folder, name, wavParts(pcm, capture.sampleRate), signal)
           : name;
       if (save.kind === 'download') save.download(name, wavBlob(pcm, capture.sampleRate));
       saved.push(savedAs);
       if (pcm.clipped) clipped.push(savedAs);
+      // A file finished just as Cancel was pressed is complete, so it is kept and listed.
+      signal.throwIfAborted();
     }
   } catch (error) {
     ending = endingFor(error, signal);
@@ -150,13 +170,18 @@ function atTrackStart(status: DeviceStatus | null, index: number): boolean {
 
 /**
  * How a recording that threw ended. An abort wins over a refused command, since unplugging makes
- * the next command fail too. Anything else (a file that could not be written) ends it as failed,
- * so the files already saved are still reported.
+ * the next command fail too. A file that could not be written ends it as save-failed, and
+ * anything else (a deck that stopped answering) as failed, so the files already saved are still
+ * reported.
  */
 function endingFor(error: unknown, signal: AbortSignal): RecordingEnding {
   if (signal.aborted) return signal.reason === 'disconnected' ? 'disconnected' : 'cancelled';
   if (error instanceof InputLostError) return 'input-lost';
   if (error instanceof DeckRefused) return 'refused';
+  if (error instanceof SaveFailed) {
+    console.error('mdconnect: a recording file could not be written', error.cause);
+    return 'save-failed';
+  }
   console.error('mdconnect: the recording stopped', error);
   return 'failed';
 }
