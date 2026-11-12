@@ -1,4 +1,5 @@
-const MAX_LENGTH = 200;
+/** Bytes of UTF-8, well under the 255 most file systems allow, leaving room for ` (2)`. */
+const MAX_BYTES = 200;
 const EXTENSION = '.wav';
 
 /** What a file name needs to know about a track. */
@@ -22,7 +23,19 @@ export function recordingFileName(track: NamedTrack, trackCount: number): string
   const stem = `${number} ${title}`
     // eslint-disable-next-line no-control-regex -- control characters are refused in file names.
     .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/gu, '-')
-    .slice(0, MAX_LENGTH - EXTENSION.length)
     .replace(/[. ]+$/u, '');
-  return `${stem}${EXTENSION}`;
+  return `${withinBytes(stem, MAX_BYTES - EXTENSION.length).replace(/[. ]+$/u, '')}${EXTENSION}`;
+}
+
+/** The longest start of `text` whose UTF-8 encoding fits in `bytes`, cut between characters. */
+function withinBytes(text: string, bytes: number): string {
+  const encoder = new TextEncoder();
+  let kept = '';
+  let used = 0;
+  for (const character of text) {
+    used += encoder.encode(character).length;
+    if (used > bytes) break;
+    kept += character;
+  }
+  return kept;
 }

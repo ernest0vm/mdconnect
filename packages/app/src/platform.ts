@@ -79,8 +79,11 @@ export interface PlatformAppearance {
 export interface RecordingFolder {
   /** The folder's own name, to tell the user where files went. */
   readonly name: string;
-  /** Writes a file, or a free variant of its name; resolves with the name used. */
-  write(fileName: string, data: Blob): Promise<string>;
+  /**
+   * Writes a file made of the parts, in order, under its name or a free variant of it; resolves
+   * with the name used. A write that fails or is aborted through `signal` leaves no file.
+   */
+  write(fileName: string, parts: readonly Uint8Array[], signal?: AbortSignal): Promise<string>;
 }
 
 export interface PlatformRecordingFolders {

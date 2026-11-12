@@ -90,14 +90,19 @@ function wavHeader(
 }
 
 /**
- * The captured audio as a 16-bit PCM WAV file. The sample chunks go into the Blob as they are,
- * without being joined or copied first, so a long track is not held twice; they are already
- * little-endian, as on every platform the app runs on.
+ * The captured audio as the parts of a 16-bit PCM WAV file: the header, then each sample chunk as
+ * bytes. The chunks are viewed, not joined or copied, so a long track is not held twice; they are
+ * already little-endian, as on every platform the app runs on.
  */
-export function wavBlob(pcm: PcmBuffer, sampleRate: number): Blob {
-  const chunks = pcm.chunkList();
+export function wavParts(pcm: PcmBuffer, sampleRate: number): Uint8Array<ArrayBuffer>[] {
+  const chunks = pcm
+    .chunkList()
+    .map((chunk) => new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength));
   const dataBytes = chunks.reduce((bytes, chunk) => bytes + chunk.byteLength, 0);
-  return new Blob([wavHeader(dataBytes, sampleRate, pcm.channels), ...chunks], {
-    type: 'audio/wav',
-  });
+  return [wavHeader(dataBytes, sampleRate, pcm.channels), ...chunks];
+}
+
+/** The captured audio as a 16-bit PCM WAV file, for a download. */
+export function wavBlob(pcm: PcmBuffer, sampleRate: number): Blob {
+  return new Blob(wavParts(pcm, sampleRate), { type: 'audio/wav' });
 }

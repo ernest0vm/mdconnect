@@ -35,6 +35,10 @@ describe('isSafeFileName (desktop-shell: "Path in a file name")', () => {
     ['a\\b.wav', 'backslash'],
     ['a\u0000b.wav', 'control character'],
     ['x'.repeat(256), 'too long'],
+    ['漢'.repeat(86), 'over 255 bytes in UTF-8'],
+    ['a:b.wav', 'colon (an alternate data stream on Windows)'],
+    ['a*b?.wav', 'wildcards'],
+    ['a<b>c|d".wav', 'other characters Windows refuses'],
   ])('refuses %j (%s)', (name) => {
     expect(isSafeFileName(name)).toBe(false);
   });

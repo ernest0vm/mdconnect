@@ -6,6 +6,7 @@ import {
   IPC,
   type AppearancePayload,
   type ChooseDeviceRequestPayload,
+  type RecordingFilePayload,
   type RecordingFolderPayload,
 } from '../shared/ipc';
 
@@ -36,8 +37,12 @@ const bridge: MdconnectBridge = {
   recordings: {
     chooseFolder: () =>
       ipcRenderer.invoke(IPC.recordingsChooseFolder) as Promise<RecordingFolderPayload | null>,
-    write: (folderId, fileName, bytes) =>
-      ipcRenderer.invoke(IPC.recordingsWrite, folderId, fileName, bytes) as Promise<string>,
+    create: (folderId, fileName) =>
+      ipcRenderer.invoke(IPC.recordingsCreate, folderId, fileName) as Promise<RecordingFilePayload>,
+    append: (fileId, bytes) =>
+      ipcRenderer.invoke(IPC.recordingsAppend, fileId, bytes) as Promise<void>,
+    finish: (fileId) => ipcRenderer.invoke(IPC.recordingsFinish, fileId) as Promise<void>,
+    discard: (fileId) => ipcRenderer.invoke(IPC.recordingsDiscard, fileId) as Promise<void>,
   },
   appearance: {
     get: () => appearance,

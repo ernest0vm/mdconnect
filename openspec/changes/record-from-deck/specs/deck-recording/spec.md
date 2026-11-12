@@ -51,7 +51,7 @@ Before recording, a setup dialog SHALL explain that the deck's line-out or headp
 
 ### Requirement: Recording a track
 
-For each track, the app SHALL start the track on the deck from its beginning, capture the chosen input while the track plays, and stop capturing after the track's length plus a short margin. The audio SHALL be captured without echo cancellation, noise suppression or automatic gain, in stereo at 44.1 kHz where the input offers it, and otherwise with the input's own channels and rate. When every track is done, or the recording is cancelled, the deck SHALL be stopped.
+For each track, the app SHALL start the track on the deck from its beginning, capture the chosen input while the track plays, and stop capturing after the track's length plus a short margin. When every track is done, or the recording is cancelled, the deck SHALL be stopped. When the input stops during a recording, the recording SHALL stop, keep the files already saved and say that the input stopped.
 
 #### Scenario: One track
 
@@ -67,6 +67,20 @@ For each track, the app SHALL start the track on the deck from its beginning, ca
 
 - **WHEN** the last track has been recorded
 - **THEN** the deck is stopped
+
+#### Scenario: Input lost
+
+- **WHEN** the audio input stops while track 2 of 3 is being recorded, such as an unplugged USB audio interface
+- **THEN** the deck stops, the file for track 1 stays, and the app says that the input stopped
+
+### Requirement: Captured sound
+
+The audio SHALL be captured without echo cancellation, noise suppression or automatic gain, in stereo at 44.1 kHz where the input offers it, and otherwise with the input's own channels and rate. An input that cannot turn that processing off SHALL be refused, with the reason.
+
+#### Scenario: Processing that cannot be turned off
+
+- **WHEN** the chosen input keeps noise suppression on although the app asked for it off
+- **THEN** the setup dialog says the input would change the music and recording cannot start
 
 ### Requirement: Recording file names
 
@@ -84,7 +98,7 @@ Each recorded track SHALL be saved as a 16-bit PCM WAV file at the capture's sam
 
 ### Requirement: Where recordings are saved
 
-Where the platform lets the app write to a folder, the user SHALL pick the folder once when recording starts, and every file SHALL be written there. An existing file with the same name SHALL NOT be overwritten. Where folder access is not available, each file SHALL be downloaded as it is finished.
+Where the platform lets the app write to a folder, the user SHALL pick the folder once when recording starts, and every file SHALL be written there. An existing file with the same name SHALL NOT be overwritten, and a file that cannot be completed SHALL NOT be left in the folder. Where folder access is not available, each file SHALL be handed to the browser's downloads as it is finished.
 
 #### Scenario: Folder chosen once
 
@@ -95,6 +109,11 @@ Where the platform lets the app write to a folder, the user SHALL pick the folde
 
 - **WHEN** the folder already has `03 Dawn.wav` and track 3 "Dawn" is recorded
 - **THEN** the new file is saved as `03 Dawn (2).wav`
+
+#### Scenario: Unfinished file
+
+- **WHEN** writing a file fails or the recording is cancelled while the file is written
+- **THEN** no part of that file is left in the folder
 
 #### Scenario: Folder picking cancelled
 

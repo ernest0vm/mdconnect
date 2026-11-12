@@ -1,4 +1,4 @@
-import { App, type Platform } from '@mdconnect/app';
+import { App, bridgeRecordingFolders, type Platform } from '@mdconnect/app';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -19,17 +19,7 @@ const platform: Platform = {
       bridge.usb.respondChooseDevice(requestId, deviceId);
     },
   },
-  recordingFolders: {
-    async choose() {
-      const folder = await bridge.recordings.chooseFolder();
-      if (folder === null) return null;
-      return {
-        name: folder.name,
-        write: async (fileName, data) =>
-          bridge.recordings.write(folder.id, fileName, new Uint8Array(await data.arrayBuffer())),
-      };
-    },
-  },
+  recordingFolders: bridgeRecordingFolders(bridge.recordings),
   appearance: {
     get: () => bridge.appearance.get(),
     onChange: (callback) => bridge.appearance.onChange(callback),

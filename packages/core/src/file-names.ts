@@ -1,15 +1,17 @@
-/** Most file systems refuse names longer than 255 bytes; this stays under it for any script. */
-const MAX_NAME_LENGTH = 255;
+/** Most file systems refuse a name longer than 255 bytes of UTF-8 (ext4, APFS) or 255 units (NTFS). */
+const MAX_NAME_BYTES = 255;
 const MAX_ATTEMPTS = 1000;
 
 /**
- * Whether a name can be used as a file name inside a folder: not empty, not `.` or `..`, no path
- * separator and no control character, so it can never point outside the folder.
+ * Whether a name can be used as a file name inside a folder on any of the app's systems: not
+ * empty, not `.` or `..`, within 255 bytes, and with no path separator, control character or
+ * character Windows refuses (a colon there would name an alternate data stream instead).
  */
 export function isSafeFileName(name: string): boolean {
-  if (name === '' || name === '.' || name === '..' || name.length > MAX_NAME_LENGTH) return false;
+  if (name === '' || name === '.' || name === '..') return false;
+  if (new TextEncoder().encode(name).length > MAX_NAME_BYTES) return false;
   // eslint-disable-next-line no-control-regex -- control characters are exactly what is refused.
-  return !/[/\\\u0000-\u001f\u007f]/u.test(name);
+  return !/[/\\:*?"<>|\u0000-\u001f\u007f]/u.test(name);
 }
 
 /** `name`, or `name (2)`, `name (3)`… with the number before the extension, whichever is free. */

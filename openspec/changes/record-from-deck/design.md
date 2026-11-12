@@ -25,7 +25,7 @@
 
 ### 1. Capture with `getUserMedia` and an `AudioWorklet`, not `MediaRecorder` or `recorderjs`
 
-- **Capture:** `getUserMedia({ audio: { deviceId, channelCount: 2, sampleRate: 44100, echoCancellation: false, noiseSuppression: false, autoGainControl: false } })`. When the sample-rate constraint is refused (`OverconstrainedError`), the app retries without it, as webminidisc does.
+- **Capture:** `getUserMedia({ audio: { deviceId, channelCount: 2, sampleRate: 44100, echoCancellation: false, noiseSuppression: false, autoGainControl: false } })`. When the sample-rate constraint is refused (`OverconstrainedError`), the app retries without it, as webminidisc does. If the opened track still reports echo cancellation, noise suppression or automatic gain as on, the input is released and refused, since it would change the music.
 - **Worklet:** an `AudioWorkletNode` posts each block of stereo samples to the page.
 - **Conversion:** the page converts each block to 16-bit integers as it arrives and appends it to the current track's buffer. A 10-minute stereo track is about 106 MB at 44.1 kHz, which fits in memory; float samples would double that.
 - **WAV encoding:** `encodeWav(samples, sampleRate, channels)` writes the 44-byte RIFF header. It is a pure function with unit tests.
@@ -54,10 +54,10 @@ Alternative: stop when the status shows the next track. That works only while st
 
 ### 3. Saving: a recording folder from the platform, downloads as the fallback
 
-The app asks the platform for a recording folder once at start (`Platform.recordingFolder`): `choose()` returns a folder with a `name` and `write(fileName, bytes)`, or null when the user cancels. A platform with no folder access leaves it undefined, and each finished track is downloaded instead, with the download helper generalised to a `Blob`. Unique names (` (2)`, ` (3)`…) come from one pure function, `uniqueFileName(name, exists)`, in `packages/core`, used by both implementations.
+The app asks the platform for a recording folder once at start (`Platform.recordingFolder`): `choose()` returns a folder with a `name` and `write(fileName, parts, signal)`, or null when the user cancels. The parts are the WAV header and the sample chunks as they were captured, written in batches of about 4 MB, so a long track is never copied whole. A write that fails or is cancelled removes the file, so no partial recording is left in the folder. A platform with no folder access leaves it undefined, and each finished track is downloaded instead, with the download helper generalised to a `Blob`. Unique names (` (2)`, ` (3)`…) come from one pure function, `uniqueFileName(name, exists)`, in `packages/core`, used by both implementations.
 
-- **Web app:** `showDirectoryPicker({ mode: 'readwrite' })` (Chrome, Edge and other Chromium browsers), then `getFileHandle(name, { create: true })` per file.
-- **Desktop app:** a narrow bridge in the preload, `recordings.chooseFolder()` and `recordings.write(folderId, fileName, bytes)`. The main process shows the native folder dialog, keeps the chosen path behind an opaque id for the session, refuses a file name with a path separator, `..` or a control character, picks a free name, and writes the file with `fs.writeFile`. The renderer never sees or sends a path.
+- **Web app:** `showDirectoryPicker({ mode: 'readwrite' })` (Chrome, Edge and other Chromium browsers), then `getFileHandle(name, { create: true })` and a writable stream per file; on failure or cancel the stream is aborted and the entry removed.
+- **Desktop app:** a narrow bridge in the preload, `recordings.chooseFolder()`, then `create(folderId, fileName)`, `append(fileId, bytes)`, `finish(fileId)` and `discard(fileId)`. The main process shows the native folder dialog, keeps the chosen path and each open file behind opaque ids, refuses a file name with a path separator, `..`, a control character or more than 255 bytes, and creates the file with the `wx` flag under a free name, so an existing file is never opened. `discard` closes and removes a file that will not be completed. The renderer never sees or sends a path.
 
 Why not `showDirectoryPicker` in Electron as well: the spike on Electron 44 (task 1.1) found that it rejects at once with `AbortError`, shows no dialog and sends no permission request, even with the window in front and a user gesture.
 
@@ -81,6 +81,7 @@ Why not `showDirectoryPicker` in Electron as well: the spike on Electron 44 (tas
 - **Blocking:** the recording session marks the disc panel busy, like an upload, so the edit, upload and player blockers say "Wait for the recording to finish."
 - **Status polling** pauses while recording, so it cannot interleave with the session's own status reads. The session reads the status itself while priming.
 - **Unplug:** the connection controller's disconnect handling unmounts the disc panel. The session listens for that abort, stops the capture and reports the files already saved.
+- **Input lost:** when the input's track ends (an unplugged USB interface, a revoked permission), the capture rejects, the deck is stopped, and the summary says the input stopped and keeps the files already saved.
 
 ### 7. File names
 

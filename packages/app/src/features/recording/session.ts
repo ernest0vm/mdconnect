@@ -2,10 +2,10 @@ import type { DeviceStatus } from '@mdconnect/netmd';
 
 import type { RecordingFolder } from '../../platform';
 import type { PlaybackCommand } from '../disc/disc-reader';
-import { recordFrames } from './capture';
+import { InputLostError, recordFrames } from './capture';
 import type { LiveCapture } from './capture-source';
 import { recordingFileName } from './file-name';
-import { wavBlob } from './wav';
+import { wavBlob, wavParts } from './wav';
 
 /** Captured after each track's length, for the deck's start delay and the analogue path. */
 const MARGIN_SECONDS = 1.5;
@@ -40,7 +40,8 @@ export interface RecordingProgress {
   readonly share: number;
 }
 
-export type RecordingEnding = 'done' | 'cancelled' | 'disconnected' | 'refused' | 'failed';
+export type RecordingEnding =
+  'done' | 'cancelled' | 'disconnected' | 'input-lost' | 'refused' | 'failed';
 
 export interface RecordingSummary {
   /** Names of the files saved, in order. */
@@ -96,10 +97,13 @@ export async function recordTracks(
       });
       await send({ kind: 'play' });
       const pcm = await recording;
+      signal.throwIfAborted();
       const name = recordingFileName(track, options.trackCount);
-      const wav = wavBlob(pcm, capture.sampleRate);
-      const savedAs = save.kind === 'folder' ? await save.folder.write(name, wav) : name;
-      if (save.kind === 'download') save.download(name, wav);
+      const savedAs =
+        save.kind === 'folder'
+          ? await save.folder.write(name, wavParts(pcm, capture.sampleRate), signal)
+          : name;
+      if (save.kind === 'download') save.download(name, wavBlob(pcm, capture.sampleRate));
       saved.push(savedAs);
       if (pcm.clipped) clipped.push(savedAs);
     }
@@ -107,7 +111,9 @@ export async function recordTracks(
     ending = endingFor(error, signal);
   } finally {
     await deck.control({ kind: 'stop' }).catch(() => undefined);
-    await capture.close();
+    await capture.close().catch((error: unknown) => {
+      console.error('mdconnect: the audio input did not close', error);
+    });
   }
   return { saved, folder: save.kind === 'folder' ? save.folder.name : null, clipped, ending };
 }
@@ -149,6 +155,7 @@ function atTrackStart(status: DeviceStatus | null, index: number): boolean {
  */
 function endingFor(error: unknown, signal: AbortSignal): RecordingEnding {
   if (signal.aborted) return signal.reason === 'disconnected' ? 'disconnected' : 'cancelled';
+  if (error instanceof InputLostError) return 'input-lost';
   if (error instanceof DeckRefused) return 'refused';
   console.error('mdconnect: the recording stopped', error);
   return 'failed';

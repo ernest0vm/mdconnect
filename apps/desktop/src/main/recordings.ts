@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { access, writeFile } from 'node:fs/promises';
+import { open, rm, type FileHandle } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 
 import { isSafeFileName, uniqueFileName } from '@mdconnect/core';
-
 import { dialog, ipcMain, type BrowserWindow } from 'electron';
 
-import { IPC, type RecordingFolderPayload } from '../shared/ipc';
+import { IPC, type RecordingFilePayload, type RecordingFolderPayload } from '../shared/ipc';
 import { isAppOrigin, type OriginContext } from './url-policy';
 
 export interface RecordingFolderDependencies {
@@ -15,18 +14,20 @@ export interface RecordingFolderDependencies {
   readonly newId: () => string;
 }
 
-const exists = (path: string) =>
-  access(path).then(
-    () => true,
-    () => false,
-  );
+interface OpenFile {
+  readonly handle: FileHandle;
+  readonly path: string;
+}
 
 /**
- * Folders the user picked for recordings, kept behind opaque ids so the page never sees or sends
- * a path. Files are written only into a picked folder, under a checked name, never over a file.
+ * Folders the user picked for recordings, and the files being written into them, kept behind
+ * opaque ids so the page never sees or sends a path. Files are created only in a picked folder,
+ * under a checked name, never over a file, and written in parts so a long recording is never
+ * copied whole through IPC.
  */
 export class RecordingFolders {
   private readonly paths = new Map<string, string>();
+  private readonly files = new Map<string, OpenFile>();
 
   constructor(private readonly dependencies: RecordingFolderDependencies) {}
 
@@ -38,27 +39,55 @@ export class RecordingFolders {
     return { id, name: basename(path) };
   }
 
-  /** Writes `bytes` as `fileName` in the folder, or under a free variant of it; returns the name used. */
-  async write(folderId: string, fileName: string, bytes: Uint8Array): Promise<string> {
+  /**
+   * Opens a new file in the folder under `fileName`, or a free variant of it, for writing in
+   * parts; resolves with the file's id and the name it got. An existing file is never opened.
+   */
+  async create(folderId: string, fileName: string): Promise<RecordingFilePayload> {
     const folder = this.paths.get(folderId);
     if (folder === undefined) throw new Error('No recording folder was picked');
     if (!isSafeFileName(fileName)) throw new Error('The file name is not allowed');
     const taken = new Set<string>();
-    // Checked one name at a time on disk; `wx` refuses to replace a file created meanwhile.
     for (;;) {
       const name = uniqueFileName(fileName, (candidate) => taken.has(candidate));
-      if (await exists(join(folder, name))) {
-        taken.add(name);
-        continue;
-      }
+      const path = join(folder, name);
       try {
-        await writeFile(join(folder, name), bytes, { flag: 'wx' });
-        return name;
+        // `wx` creates the file only if no file has the name, even one made a moment ago.
+        const handle = await open(path, 'wx');
+        const id = this.dependencies.newId();
+        this.files.set(id, { handle, path });
+        return { id, name };
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
         taken.add(name);
       }
     }
+  }
+
+  async append(fileId: string, bytes: Uint8Array): Promise<void> {
+    await this.file(fileId).handle.write(bytes);
+  }
+
+  /** Closes a file that is complete. */
+  async finish(fileId: string): Promise<void> {
+    const file = this.file(fileId);
+    this.files.delete(fileId);
+    await file.handle.close();
+  }
+
+  /** Closes and removes a file that will not be completed, so no partial recording is left. */
+  async discard(fileId: string): Promise<void> {
+    const file = this.files.get(fileId);
+    if (file === undefined) return;
+    this.files.delete(fileId);
+    await file.handle.close().catch(() => undefined);
+    await rm(file.path, { force: true });
+  }
+
+  private file(fileId: string): OpenFile {
+    const file = this.files.get(fileId);
+    if (file === undefined) throw new Error('No such recording file is open');
+    return file;
   }
 }
 
@@ -84,25 +113,24 @@ export function installRecordingHandlers(
     },
     newId: randomUUID,
   });
-  const fromApp = (event: Electron.IpcMainInvokeEvent) =>
-    isAppOrigin(event.senderFrame?.origin ?? '', origins);
-
-  ipcMain.handle(IPC.recordingsChooseFolder, (event) => {
-    if (!fromApp(event)) throw new Error('Not allowed');
-    return folders.choose();
-  });
-  ipcMain.handle(
-    IPC.recordingsWrite,
-    (event, folderId: unknown, fileName: unknown, bytes: unknown) => {
-      if (!fromApp(event)) throw new Error('Not allowed');
-      if (
-        typeof folderId !== 'string' ||
-        typeof fileName !== 'string' ||
-        !(bytes instanceof Uint8Array)
-      ) {
-        throw new Error('Bad recording write');
-      }
-      return folders.write(folderId, fileName, bytes);
-    },
+  const handle = (channel: string, run: (...args: unknown[]) => Promise<unknown>) => {
+    ipcMain.handle(channel, (event, ...args: unknown[]) => {
+      if (!isAppOrigin(event.senderFrame?.origin ?? '', origins)) throw new Error('Not allowed');
+      return run(...args);
+    });
+  };
+  const text = (value: unknown): string => {
+    if (typeof value !== 'string') throw new Error('Bad recording call');
+    return value;
+  };
+  handle(IPC.recordingsChooseFolder, () => folders.choose());
+  handle(IPC.recordingsCreate, (folderId, fileName) =>
+    folders.create(text(folderId), text(fileName)),
   );
+  handle(IPC.recordingsAppend, (fileId, bytes) => {
+    if (!(bytes instanceof Uint8Array)) throw new Error('Bad recording call');
+    return folders.append(text(fileId), bytes);
+  });
+  handle(IPC.recordingsFinish, (fileId) => folders.finish(text(fileId)));
+  handle(IPC.recordingsDiscard, (fileId) => folders.discard(text(fileId)));
 }

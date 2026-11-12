@@ -91,14 +91,26 @@ export function useRecordFlow({
 
   /** Picks where files go, then records; false when the user cancelled the folder picker. */
   const start = async (tracks: readonly RecordingTrack[], capture: LiveCapture) => {
-    let save: RecordingSave = { kind: 'download', download: downloadBlob };
-    if (folders !== undefined) {
-      const folder = await folders.choose();
-      if (folder === null) return false;
-      save = { kind: 'folder', folder };
-    }
+    // Set before the folder picker, so an unplug while it is open is not missed.
     const abort = new AbortController();
     controller.current = abort;
+    let save: RecordingSave = { kind: 'download', download: downloadBlob };
+    if (folders !== undefined) {
+      const folder = await folders.choose().catch((error: unknown) => {
+        controller.current = null;
+        throw error;
+      });
+      if (abort.signal.aborted) {
+        // The device went away meanwhile; the capture was handed over, so it is closed here.
+        await capture.close().catch(() => undefined);
+        return false;
+      }
+      if (folder === null) {
+        controller.current = null;
+        return false;
+      }
+      save = { kind: 'folder', folder };
+    }
     setStopping(false);
     setPhase({ kind: 'recording', capture, progress: null });
     onRecordingChange(true);

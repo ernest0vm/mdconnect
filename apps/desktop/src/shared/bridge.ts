@@ -2,6 +2,7 @@ import type {
   AppearancePayload,
   ChooseDeviceRequestPayload,
   DesktopOs,
+  RecordingFilePayload,
   RecordingFolderPayload,
 } from './ipc';
 
@@ -16,9 +17,15 @@ export interface MdconnectBridge {
     get(): AppearancePayload;
     onChange(callback: (signals: AppearancePayload) => void): () => void;
   };
-  /** A folder the user picks for recordings, and writes into it; no paths cross the bridge. */
+  /**
+   * A folder the user picks for recordings, and files written into it in parts; only opaque ids
+   * and names cross the bridge, never a path.
+   */
   readonly recordings: {
     chooseFolder(): Promise<RecordingFolderPayload | null>;
-    write(folderId: string, fileName: string, bytes: Uint8Array): Promise<string>;
+    create(folderId: string, fileName: string): Promise<RecordingFilePayload>;
+    append(fileId: string, bytes: Uint8Array): Promise<void>;
+    finish(fileId: string): Promise<void>;
+    discard(fileId: string): Promise<void>;
   };
 }

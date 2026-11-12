@@ -41,4 +41,10 @@ describe('recordingFileName', () => {
     expect(name.length).toBeLessThanOrEqual(200);
     expect(name.endsWith('.wav')).toBe(true);
   });
+
+  it('keeps names within 200 bytes of UTF-8 without splitting a character', () => {
+    const name = recordingFileName(track(0, '漢'.repeat(100)), 1);
+    expect(new TextEncoder().encode(name).length).toBeLessThanOrEqual(200);
+    expect(name).toMatch(/^01 漢+\.wav$/u);
+  });
 });

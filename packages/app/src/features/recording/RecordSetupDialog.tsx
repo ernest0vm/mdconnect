@@ -181,7 +181,13 @@ export function RecordSetupDialog({
           )}
           {warning !== null && <p className="text-sm">{warning}</p>}
           <div className="flex justify-end gap-2">
-            <GlassButton type="button" variant="ghost" size="sm" onClick={onClose}>
+            <GlassButton
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={starting}
+              onClick={onClose}
+            >
               Cancel
             </GlassButton>
             <GlassButton

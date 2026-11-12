@@ -12,6 +12,7 @@ import {
   recordBlocker,
   summaryLines,
 } from './record-view';
+import { InputProcessingError } from './capture';
 
 const free = { selected: 2, busy: false, playBlocker: null, recording: false } as const;
 
@@ -98,6 +99,10 @@ describe('inputProblem', () => {
   it('describes other failures plainly', () => {
     expect(inputProblem(new Error('busy'))).toMatch(/could not be opened/u);
   });
+
+  it('asks for another input when this one cannot turn off its sound processing (deck-recording: "Processing that cannot be turned off")', () => {
+    expect(inputProblem(new InputProcessingError())).toMatch(/would change the music/u);
+  });
 });
 
 describe('progressLabel (deck-recording: "Progress")', () => {
@@ -107,6 +112,14 @@ describe('progressLabel (deck-recording: "Progress")', () => {
 });
 
 describe('summaryLines (deck-recording: "Summary")', () => {
+  it('says when the audio input went away', () => {
+    expect(
+      summaryLines({ saved: ['01 A.wav'], folder: 'MD', clipped: [], ending: 'input-lost' }),
+    ).toEqual([
+      'The audio input stopped, so recording stopped. 1 file saved to “MD”; the track in progress was not kept. Check the cable or the audio interface, then record the rest again.',
+    ]);
+  });
+
   it('says how many files were saved and where', () => {
     expect(
       summaryLines({
@@ -121,7 +134,7 @@ describe('summaryLines (deck-recording: "Summary")', () => {
   it('says files were downloaded when there was no folder', () => {
     expect(
       summaryLines({ saved: ['01 A.wav'], folder: null, clipped: [], ending: 'done' }),
-    ).toEqual(['1 file downloaded.']);
+    ).toEqual(['1 file sent to the browser’s downloads.']);
   });
 
   it('explains how the recording ended early, and warns about clipping', () => {

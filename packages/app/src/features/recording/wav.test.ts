@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { PcmBuffer, wavBlob } from './wav';
+import { PcmBuffer, wavBlob, wavParts } from './wav';
 
 const ascii = (bytes: Uint8Array, start: number, length: number) =>
   String.fromCharCode(...bytes.subarray(start, start + length));
@@ -57,5 +57,20 @@ describe('wavBlob (deck-recording: "One track")', () => {
       16384, -16384, -8192, 8192,
     ]);
     expect(wav.length).toBe(52);
+  });
+});
+
+describe('wavParts', () => {
+  it('gives the header, then each sample chunk as bytes without copying it', () => {
+    const pcm = new PcmBuffer(1);
+    pcm.append([new Float32Array([0.5, -0.5])]);
+    pcm.append([new Float32Array([0.25])]);
+    const [header, ...chunks] = wavParts(pcm, 44_100);
+    expect(header?.length).toBe(44);
+    expect(new DataView(header?.buffer ?? new ArrayBuffer(44)).getUint32(40, true)).toBe(6);
+    expect(chunks.map((chunk) => chunk.buffer)).toEqual(
+      pcm.chunkList().map((chunk) => chunk.buffer),
+    );
+    expect(chunks.map((chunk) => chunk.length)).toEqual([4, 2]);
   });
 });

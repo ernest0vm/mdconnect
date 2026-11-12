@@ -34,7 +34,7 @@ NetMD cannot copy tracks from a disc to the computer on most decks, so the only 
 
 - **`packages/app`:** a new `features/recording` (setup and progress dialogs, the recording session that drives the deck and the capture, WAV encoding, file naming and saving). `DiscEditor` gains the Record action and blocks other work while recording.
 - **`packages/netmd`:** no change. Recording uses the existing go-to-track, play, pause, stop and status commands.
-- **`apps/desktop`:** the permission handlers allow `media` (audio only) for the app origin. The preload gains `recordings.chooseFolder` and `recordings.write`, backed by the main process. `electron-builder.yml` adds `NSMicrophoneUsageDescription` for macOS.
+- **`apps/desktop`:** the permission handlers allow `media` (audio only) for the app origin. The preload gains `recordings.chooseFolder` and `recordings.create`, `append`, `finish` and `discard`, which write a file in parts, backed by the main process. `electron-builder.yml` adds `NSMicrophoneUsageDescription` for macOS.
 - **`apps/web`:** the web platform implements the recording folder with `showDirectoryPicker`.
 - **`packages/core`:** `uniqueFileName`, shared by both implementations.
 - **Web headers:** no change; the page already allows the microphone and its own scripts, which the audio worklet needs.

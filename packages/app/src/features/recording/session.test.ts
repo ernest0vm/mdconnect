@@ -1,6 +1,7 @@
 import type { DeviceStatus } from '@mdconnect/netmd';
 import { describe, expect, it } from 'vitest';
 
+import type { RecordingFolder } from '../../platform';
 import type { LiveCapture } from './capture-source';
 import type { PlaybackCommand } from '../disc/disc-reader';
 import { recordTracks, type RecordingDeck, type RecordingTrack } from './session';
@@ -51,6 +52,7 @@ function fakeCapture() {
         listening = false;
       };
     },
+    onEnded: () => () => undefined,
     close() {
       closed = true;
       return Promise.resolve();
@@ -61,16 +63,14 @@ function fakeCapture() {
 
 function fakeFolder() {
   const files = new Map<string, Blob>();
-  return {
-    files,
-    folder: {
-      name: 'MiniDisc',
-      write: (name: string, data: Blob) => {
-        files.set(name, data);
-        return Promise.resolve(name);
-      },
+  const folder: RecordingFolder = {
+    name: 'MiniDisc',
+    write: (name, parts) => {
+      files.set(name, new Blob(parts as Uint8Array<ArrayBuffer>[]));
+      return Promise.resolve(name);
     },
   };
+  return { files, folder };
 }
 
 const track = (index: number, title: string, seconds: number): RecordingTrack => ({
@@ -245,9 +245,9 @@ describe('recordTracks', () => {
     const { deck } = fakeDeck();
     const { capture, isClosed } = fakeCapture();
     let writes = 0;
-    const folder = {
+    const folder: RecordingFolder = {
       name: 'MiniDisc',
-      write: (name: string) => {
+      write: (name) => {
         writes += 1;
         return writes === 1 ? Promise.resolve(name) : Promise.reject(new Error('disk full'));
       },
@@ -287,5 +287,67 @@ describe('recordTracks', () => {
       signal: controller.signal,
     });
     expect(summary.ending).toBe('disconnected');
+  });
+
+  it('cancels a file being written, and reports the recording as cancelled', async () => {
+    const controller = new AbortController();
+    let signalGiven: AbortSignal | undefined;
+    const folder: RecordingFolder = {
+      name: 'MiniDisc',
+      write: (_name, _parts, signal) => {
+        signalGiven = signal;
+        controller.abort('cancelled');
+        return Promise.reject(new DOMException('cancelled', 'AbortError'));
+      },
+    };
+    const summary = await recordTracks([track(0, 'One', 0.5)], {
+      deck: fakeDeck().deck,
+      capture: fakeCapture().capture,
+      trackCount: 1,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: controller.signal,
+    });
+    expect(signalGiven).toBe(controller.signal);
+    expect(summary).toMatchObject({ saved: [], ending: 'cancelled' });
+  });
+
+  it('still reports how the recording ended when closing the input fails', async () => {
+    const { capture } = fakeCapture();
+    const { folder } = fakeFolder();
+    const summary = await recordTracks([track(0, 'One', 0.5)], {
+      deck: fakeDeck().deck,
+      capture: { ...capture, close: () => Promise.reject(new Error('already closed')) },
+      trackCount: 1,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: new AbortController().signal,
+    });
+    expect(summary).toMatchObject({ saved: ['01 One.wav'], ending: 'done' });
+  });
+
+  it('reports a lost input and keeps earlier files (deck-recording: "Input lost")', async () => {
+    const { capture } = fakeCapture();
+    let ended: (() => void) | undefined;
+    const { folder, files } = fakeFolder();
+    const summary = await recordTracks([track(0, 'One', 0.5), track(1, 'Two', 60)], {
+      deck: fakeDeck().deck,
+      capture: {
+        ...capture,
+        onEnded: (listener) => {
+          ended = listener;
+          return () => undefined;
+        },
+      },
+      trackCount: 2,
+      save: { kind: 'folder', folder },
+      sleep: noSleep,
+      signal: new AbortController().signal,
+      onProgress: (progress) => {
+        if (progress.position === 1 && progress.share > 0.01) ended?.();
+      },
+    });
+    expect([...files.keys()]).toEqual(['01 One.wav']);
+    expect(summary.ending).toBe('input-lost');
   });
 });

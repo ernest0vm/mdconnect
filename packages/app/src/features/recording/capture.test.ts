@@ -2,9 +2,26 @@ import { describe, expect, it } from 'vitest';
 
 import { blockPeak, openInput, recordFrames, type BlockSource } from './capture';
 
+/** A stream whose one audio track reports `settings`, and records whether it was stopped. */
+function fakeStream(settings: MediaTrackSettings = {}) {
+  let stopped = false;
+  const track = {
+    getSettings: () => settings,
+    stop: () => {
+      stopped = true;
+    },
+  };
+  const stream = {
+    getAudioTracks: () => [track],
+    getTracks: () => [track],
+  } as unknown as MediaStream;
+  return { stream, isStopped: () => stopped };
+}
+
 /** A block source the test feeds by hand. */
 function fakeSource(channels = 2, sampleRate = 44_100) {
   const listeners = new Set<(block: Float32Array[]) => void>();
+  const endListeners = new Set<() => void>();
   const source: BlockSource = {
     channels,
     sampleRate,
@@ -12,12 +29,19 @@ function fakeSource(channels = 2, sampleRate = 44_100) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    onEnded(listener) {
+      endListeners.add(listener);
+      return () => endListeners.delete(listener);
+    },
   };
   const feed = (frames: number, value = 0.1) => {
     const block = Array.from({ length: channels }, () => new Float32Array(frames).fill(value));
     for (const listener of [...listeners]) listener(block);
   };
-  return { source, feed, listeners };
+  const end = () => {
+    for (const listener of [...endListeners]) listener();
+  };
+  return { source, feed, end, listeners, endListeners };
 }
 
 describe('openInput', () => {
@@ -26,7 +50,7 @@ describe('openInput', () => {
 
   it('asks for the chosen input in stereo at 44.1 kHz with no processing (deck-recording: "One track")', async () => {
     const calls: MediaStreamConstraints[] = [];
-    const stream = {} as MediaStream;
+    const { stream } = fakeStream();
     await openInput(
       {
         getUserMedia: (constraints) => {
@@ -61,7 +85,7 @@ describe('openInput', () => {
                   constraint: 'sampleRate',
                 }),
               )
-            : Promise.resolve({} as MediaStream);
+            : Promise.resolve(fakeStream().stream);
         },
       },
       'line-in',
@@ -77,6 +101,14 @@ describe('openInput', () => {
     await expect(
       openInput({ getUserMedia: () => Promise.reject(refused) }, 'line-in'),
     ).rejects.toBe(refused);
+  });
+
+  it('refuses and releases an input that keeps cleaning up the sound', async () => {
+    const { stream, isStopped } = fakeStream({ noiseSuppression: true });
+    await expect(
+      openInput({ getUserMedia: () => Promise.resolve(stream) }, 'built-in'),
+    ).rejects.toMatchObject({ name: 'InputProcessingError' });
+    expect(isStopped()).toBe(true);
   });
 });
 
@@ -113,6 +145,16 @@ describe('recordFrames', () => {
     controller.abort();
     await expect(recording).rejects.toMatchObject({ name: 'AbortError' });
     expect(listeners.size).toBe(0);
+  });
+
+  it('rejects and stops listening when the input goes away, such as an unplugged interface', async () => {
+    const { source, feed, end, listeners, endListeners } = fakeSource();
+    const recording = recordFrames(source, 1000, new AbortController().signal);
+    feed(128);
+    end();
+    await expect(recording).rejects.toMatchObject({ name: 'InputLostError' });
+    expect(listeners.size).toBe(0);
+    expect(endListeners.size).toBe(0);
   });
 });
 

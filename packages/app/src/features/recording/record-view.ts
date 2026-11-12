@@ -1,3 +1,5 @@
+import type { RecordingEnding, RecordingSummary } from './session';
+
 /** The reason every other control gives while a recording runs. */
 export const RECORDING_IN_PROGRESS = 'Wait for the recording to finish.';
 
@@ -46,6 +48,9 @@ export function inputProblem(error: unknown): string {
   if (name === 'NotAllowedError' || name === 'SecurityError') {
     return 'mdconnect cannot hear the input because audio capture was refused. Allow microphone access for mdconnect: on macOS in System Settings → Privacy & Security → Microphone, on Windows in Settings → Privacy → Microphone (with “Let desktop apps access your microphone” on), or in the browser through the site settings.';
   }
+  if (name === 'InputProcessingError') {
+    return 'This input keeps cleaning up the sound (echo cancellation, noise suppression or automatic gain), which would change the music. Choose a line-in or a USB audio interface instead.';
+  }
   if (name === 'NotFoundError' || name === 'OverconstrainedError') {
     return 'This computer has no audio input. Connect the deck to a line-in or microphone input, or through a USB audio interface.';
   }
@@ -68,33 +73,35 @@ export function progressLabel(progress: {
 const files = (count: number) => `${String(count)} ${count === 1 ? 'file' : 'files'}`;
 
 /** What the summary says: how many files were saved and where, how it ended, and any clipping. */
-export function summaryLines(summary: {
-  readonly saved: readonly string[];
-  readonly folder: string | null;
-  readonly clipped: readonly string[];
-  readonly ending: 'done' | 'cancelled' | 'disconnected' | 'refused' | 'failed';
-}): string[] {
+export function summaryLines(summary: RecordingSummary): string[] {
   const where =
     summary.folder === null
-      ? `${files(summary.saved.length)} downloaded`
+      ? `${files(summary.saved.length)} sent to the browser’s downloads`
       : `${files(summary.saved.length)} saved to “${summary.folder}”`;
-  const lines = [
-    summary.ending === 'done'
-      ? `${where}.`
-      : summary.ending === 'cancelled'
-        ? `Recording cancelled. ${where}; the track in progress was not kept.`
-        : summary.ending === 'disconnected'
-          ? `The device was disconnected. ${where}; the track in progress was not kept.`
-          : summary.ending === 'refused'
-            ? `The device refused a playback command, so recording stopped. ${where}.`
-            : `Recording stopped because a file could not be saved. ${where}. Check the folder and the free space, then record the rest again.`,
-  ];
+  const lines = [endingLine(summary.ending, where)];
   if (summary.clipped.length > 0) {
     lines.push(
       `The input was too loud in ${summary.clipped.join(', ')}. Lower the deck’s volume or the input gain and record it again.`,
     );
   }
   return lines;
+}
+
+function endingLine(ending: RecordingEnding, where: string): string {
+  switch (ending) {
+    case 'done':
+      return `${where}.`;
+    case 'cancelled':
+      return `Recording cancelled. ${where}; the track in progress was not kept.`;
+    case 'disconnected':
+      return `The device was disconnected. ${where}; the track in progress was not kept.`;
+    case 'input-lost':
+      return `The audio input stopped, so recording stopped. ${where}; the track in progress was not kept. Check the cable or the audio interface, then record the rest again.`;
+    case 'refused':
+      return `The device refused a playback command, so recording stopped. ${where}.`;
+    case 'failed':
+      return `Recording stopped because a file could not be saved. ${where}. Check the folder and the free space, then record the rest again.`;
+  }
 }
 
 const AN_HOUR = 3600;

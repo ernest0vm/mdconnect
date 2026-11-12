@@ -44,3 +44,12 @@ The privileged API SHALL let UI code ask the user for a folder through the nativ
 
 - **WHEN** UI code asks to write before any folder was picked, or with a folder id from an earlier session
 - **THEN** the write is refused
+
+### Requirement: Recording files written in parts
+
+The privileged API SHALL write a recording file in parts, so a long recording does not cross it whole, and SHALL remove a file that UI code discards before it is finished.
+
+#### Scenario: Discarded file
+
+- **WHEN** UI code creates `03 Dawn.wav`, appends part of it and then discards it
+- **THEN** no `03 Dawn.wav` is left in the folder

@@ -1,4 +1,9 @@
 export { App } from './App';
 export { UnsupportedBrowser } from './UnsupportedBrowser';
-export { directoryRecordingFolders, type DirectoryHandleLike } from './features/recording/folders';
+export {
+  bridgeRecordingFolders,
+  directoryRecordingFolders,
+  type DirectoryHandleLike,
+  type RecordingFileBridge,
+} from './features/recording/folders';
 export * from './platform';

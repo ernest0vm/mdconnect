@@ -197,18 +197,18 @@ function DiscEditor({
   }, [focusRequest]);
   const reasonId = useId();
   const blocker = editBlocker({ writeProtected: raw.writeProtected, busy, recording });
-  const recordReason = recordBlocker({
-    selected: chosen.size,
-    busy,
-    playBlocker,
-    recording,
-  });
   const locked = blocker !== null;
   // Tracks that no longer exist after the disc is read again drop out of the selection.
   const selection = useMemo<Selection>(
     () => new Set([...chosen].filter((index) => index < raw.trackCount)),
     [chosen, raw.trackCount],
   );
+  const recordReason = recordBlocker({
+    selected: selection.size,
+    busy,
+    playBlocker,
+    recording,
+  });
 
   const selected = [...selection];
   const single = selected.length === 1 ? selected[0] : undefined;
