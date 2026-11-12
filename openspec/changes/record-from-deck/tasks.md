@@ -9,10 +9,10 @@
 
 ## 2. Capture and files
 
-- [ ] 2.1 Add `encodeWav(samples, sampleRate, channels)` and the 16-bit conversion of float blocks. Verify with tests on the header fields, sample order and clipping (deck-recording: "One track").
-- [ ] 2.2 Add `recordingFileName(track, disc)`. Verify with tests (deck-recording: "File name", "Untitled track"), plus full-width titles, 100+ track discs, Windows-forbidden endings and the length limit.
-- [ ] 2.3 Add `uniqueFileName` in `packages/core`, the web platform's `recordingFolder` (`showDirectoryPicker`), and the download fallback (the download helper generalised to a `Blob`). Verify `uniqueFileName` and the web folder with a fake directory handle (deck-recording: "Name already taken", "Folder chosen once").
-- [ ] 2.4 Add the capture: the audio worklet module, the input stream with the constraints and the 44.1 kHz fallback, sample counting and the peak level. Verify the stream-constraint fallback and the block handling with unit tests on a fake stream and worklet port.
+- [x] 2.1 Add `encodeWav(samples, sampleRate, channels)` and the 16-bit conversion of float blocks. Verify with tests on the header fields, sample order and clipping (deck-recording: "One track").
+- [x] 2.2 Add `recordingFileName(track, disc)`. Verify with tests (deck-recording: "File name", "Untitled track"), plus full-width titles, 100+ track discs, Windows-forbidden endings and the length limit.
+- [x] 2.3 Add `uniqueFileName` in `packages/core`, the web platform's `recordingFolder` (`showDirectoryPicker`), and the download fallback (the download helper generalised to a `Blob`). Verify `uniqueFileName` and the web folder with a fake directory handle (deck-recording: "Name already taken", "Folder chosen once").
+- [x] 2.4 Add the capture: the audio worklet module, the input stream with the constraints and the 44.1 kHz fallback, sample counting and the peak level. Verify the stream-constraint fallback and the block handling with unit tests on a fake stream and worklet port.
 
 ## 3. Recording session
 
