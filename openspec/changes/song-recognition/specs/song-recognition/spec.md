@@ -266,6 +266,11 @@ When full-width titles are on and a new title has characters, such as kanji or k
 - **WHEN** full-width titles are on and the new title is "ＡＢＣ"
 - **THEN** the track's title is "ABC" and its full-width title is empty, since the half-width title stores those letters
 
+#### Scenario: Full-width space
+
+- **WHEN** full-width titles are on and the new title is "Ａ　Ｂ"
+- **THEN** the track's title is "A B" and its full-width title is empty
+
 #### Scenario: Accents only
 
 - **WHEN** full-width titles are on and the new title is "Björk"
