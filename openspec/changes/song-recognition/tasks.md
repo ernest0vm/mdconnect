@@ -37,9 +37,9 @@
 
 ## 5. Identification session and preferences
 
-- [ ] 5.1 Add `recognition-preferences.ts`, which stores the method, the title format and the consent per service, with the `ConsentGuard` pattern. Verify with tests (song-recognition: "Remembered method", "Consent per service"; app-settings: "Withdraw one service").
-- [ ] 5.2 Add `formatTitle`. Verify with tests on all five formats and on missing parts (song-recognition: "Artist - Title", "Album unknown").
-- [ ] 5.3 Add `identifyTracks` with the `Identifier` plans, reusing `prime`, `recordFrames` and the stop in a `finally`. Verify with a fake deck, capture and identifiers:
+- [x] 5.1 Add `recognition-preferences.ts`, which stores the method, the title format and the consent per service, with the `ConsentGuard` pattern. Verify with tests (song-recognition: "Remembered method", "Consent per service"; app-settings: "Withdraw one service").
+- [x] 5.2 Add `formatTitle`. Verify with tests on all five formats and on missing parts (song-recognition: "Artist - Title", "Album unknown").
+- [x] 5.3 Add `identifyTracks` with the `Identifier` plans, reusing `prime`, `recordFrames` and the stop in a `finally`. Verify with a fake deck, capture and identifiers:
   - "Found on the first excerpt";
   - "Found on a later excerpt", where the captured frames are contiguous and play is sent once;
   - "Excerpts stay within the track", where a 20-second track gets one excerpt;

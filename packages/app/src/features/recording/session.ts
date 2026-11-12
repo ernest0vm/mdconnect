@@ -145,9 +145,9 @@ export async function recordTracks(
  * Plays the track until the deck reports it at its start, then pauses and sends it back, so the
  * real play starts at once instead of after the deck spins up and loads the track.
  */
-async function prime(
+export async function prime(
   index: number,
-  { deck, sleep, signal }: RecordingOptions,
+  { deck, sleep, signal }: Pick<RecordingOptions, 'deck' | 'sleep' | 'signal'>,
   send: (command: PlaybackCommand) => Promise<void>,
 ): Promise<void> {
   await send({ kind: 'goto', track: index });
