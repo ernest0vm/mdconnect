@@ -132,6 +132,11 @@ export function IdentifyDialog({
   const [rows, setRows] = useState<IdentifyRow[]>(() => initialRows(tracks));
   const [searches, setSearches] = useState<ReadonlyMap<number, Search>>(new Map());
   const [capture, setCapture] = useState<LiveCapture | null>(null);
+  /** The capture as it is now, for a listen that starts after the consent prompt. */
+  const currentCapture = useRef<LiveCapture | null>(null);
+  useEffect(() => {
+    currentCapture.current = capture;
+  }, [capture]);
   const [progress, setProgress] = useState<IdentifyProgress | null>(null);
   const [listening, setListening] = useState(false);
   const [stopping, setStopping] = useState(false);
@@ -255,7 +260,7 @@ export function IdentifyDialog({
           Find each track’s song, check the new titles, then apply the ones you keep.
         </GlassDialogDescription>
         <div className="mt-4 -mr-2 flex max-h-[calc(100dvh-12rem)] flex-col gap-4 overflow-y-auto pr-2 text-sm">
-          <fieldset className="flex flex-col gap-1" disabled={busy}>
+          <fieldset className="flex flex-col gap-1" disabled={busy || asking !== null}>
             <legend className="mb-1 font-semibold">How to find the songs</legend>
             {methodChoices(shazam !== undefined).map((choice) => (
               <label key={choice.method} className="flex items-start gap-2">
@@ -287,7 +292,8 @@ export function IdentifyDialog({
                 choose it below. The deck plays each track from its start while mdconnect listens.{' '}
                 {listeningEstimate(rowsToListen(rows), method)}
               </p>
-              <ListeningInput locked={busy} onCapture={setCapture} />
+              {/* The input stays put while the consent prompt waits, so the listen uses it. */}
+              <ListeningInput locked={busy || asking !== null} onCapture={setCapture} />
             </div>
           )}
 
@@ -469,9 +475,9 @@ export function IdentifyDialog({
                     size="sm"
                     disabled={capture === null || pendingCount === 0 || applying}
                     onClick={() => {
-                      if (capture === null) return;
                       withServiceConsent(method, () => {
-                        void listen(method, capture);
+                        const live = currentCapture.current;
+                        if (live !== null) void listen(method, live);
                       });
                     }}
                   >

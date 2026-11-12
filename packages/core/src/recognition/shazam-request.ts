@@ -4,6 +4,7 @@
  * them: Shazam refuses requests from web pages.
  */
 
+import { isJsonObject as isRecord, jsonList as list, jsonText as text } from './json';
 import type { ShazamSignature } from './shazam-signature';
 import type { Song } from './song';
 
@@ -64,11 +65,6 @@ export function shazamRequest(
   };
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const text = (value: unknown): string | null => (typeof value === 'string' ? value : null);
-
 /** The song in Shazam's answer, or null when it found none. */
 export function readShazamResponse(response: unknown): Song | null {
   if (!isRecord(response) || !Array.isArray(response.matches)) {
@@ -81,7 +77,6 @@ export function readShazamResponse(response: unknown): Song | null {
   if (!isRecord(track) || title === null || artist === null) {
     throw new Error('Shazam sent a match without a title or artist');
   }
-  const list = (value: unknown): readonly unknown[] => (Array.isArray(value) ? value : []);
   const sections = list(track.sections);
   const song = sections.find((section) => isRecord(section) && section.type === 'SONG');
   const metadata = isRecord(song) ? list(song.metadata) : [];

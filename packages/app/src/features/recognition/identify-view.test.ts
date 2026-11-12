@@ -92,6 +92,13 @@ describe('the Identify dialog rows', () => {
     expect(newTitleOf({ ...row, edited: 'Dawn' }, 'artist-title')).toBe('Dawn');
   });
 
+  it('treat a cleared new title as none, so the track keeps its title', () => {
+    const [row] = withResult(initialRows(tracks), 0, { kind: 'found', song: dawn });
+    if (row === undefined) throw new Error('no row');
+    expect(newTitleOf({ ...row, edited: '  ' }, 'title')).toBeNull();
+    expect(titlesToApply([{ ...row, edited: '' }], 'title')).toEqual([]);
+  });
+
   it('apply only ticked rows with a new title (song-recognition: "Leave a track out")', () => {
     const rows = withResult(withResult(initialRows(tracks), 0, { kind: 'found', song: dawn }), 1, {
       kind: 'found',

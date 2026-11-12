@@ -1,9 +1,15 @@
 import type { Song } from '@mdconnect/core';
 
 import type { PlaybackCommand } from '../disc/disc-reader';
-import { InputLostError, recordFrames } from '../recording/capture';
+import { recordFrames } from '../recording/capture';
 import type { LiveCapture } from '../recording/capture-source';
-import { prime, type RecordingDeck, type RecordingTrack } from '../recording/session';
+import {
+  deckEnding,
+  deckSender,
+  prime,
+  type RecordingDeck,
+  type RecordingTrack,
+} from '../recording/session';
 import type { PcmBuffer } from '../recording/wav';
 import { ServiceUnreachableError } from './retry';
 
@@ -80,8 +86,6 @@ export interface IdentifyOptions {
   readonly onResult?: (position: number, result: TrackResult) => void;
 }
 
-class DeckRefused extends Error {}
-
 /**
  * Identifies tracks by listening to the deck: each track is started from its beginning, and
  * excerpts are captured one after another while it plays, the next one while the previous is
@@ -94,9 +98,7 @@ export async function identifyTracks(
 ): Promise<IdentifyOutcome> {
   const { deck, signal } = options;
   const results: TrackResult[] = tracks.map(() => ({ kind: 'none' }));
-  const send = async (command: PlaybackCommand) => {
-    if (!(await deck.control(command)).ok) throw new DeckRefused();
-  };
+  const send = deckSender(deck);
   let ending: IdentifyEnding = 'done';
   try {
     await send({ kind: 'stop' });
@@ -187,9 +189,8 @@ function answer(
 }
 
 function endingFor(error: unknown, signal: AbortSignal): IdentifyEnding {
-  if (signal.aborted) return signal.reason === 'disconnected' ? 'disconnected' : 'cancelled';
-  if (error instanceof InputLostError) return 'input-lost';
-  if (error instanceof DeckRefused) return 'refused';
+  const ending = deckEnding(error, signal);
+  if (ending !== null) return ending;
   console.error('mdconnect: identification stopped', error);
   return 'failed';
 }

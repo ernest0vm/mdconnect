@@ -1,3 +1,5 @@
+import { isJsonObject as isRecord, jsonText as text } from '@mdconnect/core';
+
 /** A recognition service could not be reached, refused the request or limited it, twice. */
 export class ServiceUnreachableError extends Error {
   constructor(options?: ErrorOptions) {
@@ -47,13 +49,6 @@ export async function fetchJson(
   if (!response.ok) throw new Error(`The service answered ${String(response.status)}`);
   return (await response.json()) as unknown;
 }
-
-export const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-export const list = (value: unknown): readonly unknown[] => (Array.isArray(value) ? value : []);
-
-export const text = (value: unknown): string | null => (typeof value === 'string' ? value : null);
 
 /** An artist credit as one line: each name followed by its join phrase. */
 export function artistCredit(credits: readonly unknown[]): string {

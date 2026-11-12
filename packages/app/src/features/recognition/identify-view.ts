@@ -82,9 +82,12 @@ export function withResult(
   return rows.map((row, at) => (at === position ? { ...row, result, edited: null } : row));
 }
 
-/** The new title of a row: the edited one, else the song found in the chosen format, else null. */
+/**
+ * The new title of a row: the edited one, else the song found in the chosen format, else null. An
+ * edit cleared to nothing means no new title, so the track keeps its own.
+ */
 export function newTitleOf(row: IdentifyRow, format: TitleFormat): string | null {
-  if (row.edited !== null) return row.edited;
+  if (row.edited !== null) return row.edited.trim() === '' ? null : row.edited;
   return row.result.kind === 'found' ? formatTitle(row.result.song, format) : null;
 }
 
@@ -105,7 +108,9 @@ export function resultLabel(row: IdentifyRow): string {
 
 /** The ticked rows still without a new title, which the next listen is for. */
 export function rowsToListen(rows: readonly IdentifyRow[]): IdentifyRow[] {
-  return rows.filter((row) => row.ticked && row.edited === null && row.result.kind !== 'found');
+  return rows.filter(
+    (row) => row.ticked && (row.edited ?? '').trim() === '' && row.result.kind !== 'found',
+  );
 }
 
 /** The ticked rows' new titles, to convert and apply. */

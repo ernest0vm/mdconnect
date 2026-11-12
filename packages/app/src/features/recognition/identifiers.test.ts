@@ -75,8 +75,12 @@ describe('acoustIdIdentifier', () => {
     const fingerprinted: { length: number; rate: number; channels: number }[] = [];
     const bodies: string[] = [];
     const identifier = acoustIdIdentifier(
-      (pcm, rate, channels) => (
-        fingerprinted.push({ length: pcm.length, rate, channels }),
+      (chunks, rate, channels) => (
+        fingerprinted.push({
+          length: chunks.reduce((total, chunk) => total + chunk.length, 0),
+          rate,
+          channels,
+        }),
         Promise.resolve('FP')
       ),
       (_url, init) => {

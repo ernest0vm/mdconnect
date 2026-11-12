@@ -2,7 +2,8 @@ import type { MainModule } from '@unimusic/chromaprint/dist/chromaprint.js';
 
 /** A Chromaprint fingerprint of 16-bit PCM, compressed and base64-encoded as AcoustID expects. */
 export type Fingerprinter = (
-  pcm: Int16Array,
+  /** The interleaved samples in parts, as the capture keeps them. */
+  chunks: readonly Int16Array[],
   sampleRate: number,
   channels: number,
 ) => Promise<string>;
@@ -53,28 +54,34 @@ export async function loadChromaprint(): Promise<ChromaprintApi> {
  */
 export function chromaprintFingerprinter(load: () => Promise<ChromaprintApi>): Fingerprinter {
   let module: Promise<ChromaprintApi> | null = null;
-  return async (pcm, sampleRate, channels) => {
+  return async (chunks, sampleRate, channels) => {
     module ??= load();
-    return fingerprint(await module, pcm, sampleRate, channels);
+    return fingerprint(await module, chunks, sampleRate, channels);
   };
 }
 
 function fingerprint(
   api: ChromaprintApi,
-  pcm: Int16Array,
+  chunks: readonly Int16Array[],
   sampleRate: number,
   channels: number,
 ): string {
   const context = api._chromaprint_new(DEFAULT_ALGORITHM);
-  const samples = api._malloc(pcm.byteLength);
+  // One buffer the size of the largest part, reused for each, instead of a copy of the whole.
+  const largest = chunks.reduce((bytes, chunk) => Math.max(bytes, chunk.byteLength), 0);
+  const samples = api._malloc(Math.max(largest, 2));
   const pointerToText = api._malloc(4);
   let text = 0;
   try {
-    // Read the heap after allocating: a growing memory replaces the views.
-    (api.HEAP16 as Int16Array).set(pcm, samples >> 1);
-    const ok =
-      api._chromaprint_start(context, sampleRate, channels) === 1 &&
-      api._chromaprint_feed(context, samples, pcm.length) === 1 &&
+    let ok = api._chromaprint_start(context, sampleRate, channels) === 1;
+    for (const chunk of chunks) {
+      if (!ok) break;
+      // Read the heap after allocating: a growing memory replaces the views.
+      (api.HEAP16 as Int16Array).set(chunk, samples >> 1);
+      ok = api._chromaprint_feed(context, samples, chunk.length) === 1;
+    }
+    ok =
+      ok &&
       api._chromaprint_finish(context) === 1 &&
       api._chromaprint_get_fingerprint(context, pointerToText) === 1;
     if (!ok) throw new Error('Chromaprint could not fingerprint the audio');

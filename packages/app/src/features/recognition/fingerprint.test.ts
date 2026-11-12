@@ -12,7 +12,11 @@ describe('chromaprintFingerprinter with the real module', () => {
     vi.stubGlobal('window', globalThis);
     const fingerprint = chromaprintFingerprinter(loadChromaprint);
     // Expected value from Chromaprint's tests/test_api.cpp, `TEST(API, Test2SilenceFp)`.
-    expect(await fingerprint(new Int16Array(130 * 1024), 44_100, 1)).toBe('AQAAA0mUaEkSRZEGAA');
+    expect(await fingerprint([new Int16Array(130 * 1024)], 44_100, 1)).toBe('AQAAA0mUaEkSRZEGAA');
+    // Fed in parts, as the capture keeps them, the fingerprint is the same.
+    expect(
+      await fingerprint([new Int16Array(100 * 1024), new Int16Array(30 * 1024)], 44_100, 1),
+    ).toBe('AQAAA0mUaEkSRZEGAA');
   });
 });
 
@@ -74,7 +78,7 @@ describe('chromaprintFingerprinter', () => {
       return Promise.resolve(api);
     });
     const results = await Promise.allSettled(
-      Array.from({ length: 20 }, () => fingerprint(new Int16Array(4410), 44_100, 2)),
+      Array.from({ length: 20 }, () => fingerprint([new Int16Array(4410)], 44_100, 2)),
     );
     expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
     expect(results.find((result) => result.status === 'fulfilled')).toEqual({

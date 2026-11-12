@@ -1,14 +1,12 @@
-import { MUSICBRAINZ_ORIGIN, type Song } from '@mdconnect/core';
-
 import {
-  artistCredit,
-  fetchJson,
-  type FetchFunction,
-  isRecord,
-  list,
-  text,
-  withRetry,
-} from './retry';
+  MUSICBRAINZ_ORIGIN,
+  type Song,
+  isJsonObject as isRecord,
+  jsonList as list,
+  jsonText as text,
+} from '@mdconnect/core';
+
+import { artistCredit, fetchJson, type FetchFunction, withRetry } from './retry';
 
 /** MusicBrainz allows one request a second from each client. */
 const REQUEST_SPACING_MS = 1000;

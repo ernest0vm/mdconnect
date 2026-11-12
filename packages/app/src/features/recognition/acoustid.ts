@@ -1,14 +1,13 @@
-import { ACOUSTID_CLIENT_KEY, ACOUSTID_ORIGIN, type Song } from '@mdconnect/core';
-
 import {
-  artistCredit,
-  fetchJson,
-  type FetchFunction,
-  isRecord,
-  list,
-  text,
-  withRetry,
-} from './retry';
+  ACOUSTID_CLIENT_KEY,
+  ACOUSTID_ORIGIN,
+  type Song,
+  isJsonObject as isRecord,
+  jsonList as list,
+  jsonText as text,
+} from '@mdconnect/core';
+
+import { artistCredit, fetchJson, type FetchFunction, withRetry } from './retry';
 
 /** Below this score AcoustID's match is too weak to name a track. */
 export const MIN_ACOUSTID_SCORE = 0.5;

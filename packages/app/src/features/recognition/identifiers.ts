@@ -92,7 +92,7 @@ export function acoustIdIdentifier(
   return {
     plan: acoustIdPlan,
     async identify(pcm, sampleRate, trackSeconds, signal) {
-      const code = await fingerprint(pcm.samples(), sampleRate, pcm.channels);
+      const code = await fingerprint(pcm.chunkList(), sampleRate, pcm.channels);
       return lookupAcoustId(code, trackSeconds, { fetch, sleep, signal });
     },
   };
