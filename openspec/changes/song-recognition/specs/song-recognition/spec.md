@@ -254,7 +254,7 @@ Apply new titles SHALL change only the titles of the ticked tracks, leaving grou
 
 ### Requirement: Full-width titles from results
 
-When full-width titles are on, applying a new title SHALL also save its full-width form, unless that form reads the same as the half-width title once converted back. Otherwise, and when full-width titles are off, the track's full-width title SHALL be emptied, so an old one does not stay.
+When full-width titles are on and a new title has characters, such as kanji or kana, that a full-width title stores but a half-width title cannot, applying it SHALL also save its full-width form. Otherwise, and when full-width titles are off, the track's full-width title SHALL be emptied, so an old one does not stay.
 
 #### Scenario: Full-width title
 
@@ -264,7 +264,12 @@ When full-width titles are on, applying a new title SHALL also save its full-wid
 #### Scenario: Full-width letters only
 
 - **WHEN** full-width titles are on and the new title is "ＡＢＣ"
-- **THEN** the track's title is "ABC" and its full-width title is empty, since "ＡＢＣ" reads as "ABC"
+- **THEN** the track's title is "ABC" and its full-width title is empty, since the half-width title stores those letters
+
+#### Scenario: Accents only
+
+- **WHEN** full-width titles are on and the new title is "Björk"
+- **THEN** the track's title is "Bjoerk" and its full-width title is empty
 
 #### Scenario: Old full-width title cleared
 
