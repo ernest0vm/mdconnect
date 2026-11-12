@@ -271,6 +271,11 @@ When full-width titles are on and a new title has characters, such as kanji or k
 - **WHEN** full-width titles are on and the new title is "Björk"
 - **THEN** the track's title is "Bjoerk" and its full-width title is empty
 
+#### Scenario: Unsupported character in a Japanese title
+
+- **WHEN** full-width titles are on and the new title is "夜明け😀"
+- **THEN** the dialog shows before applying that the full-width title will be saved as plain ASCII, here empty, as when renaming a track, and the user can edit the title first
+
 #### Scenario: Old full-width title cleared
 
 - **WHEN** track 4 has the full-width title "夜明け" and the new title applied is "Dawn"
