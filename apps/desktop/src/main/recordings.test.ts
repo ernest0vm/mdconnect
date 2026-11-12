@@ -65,6 +65,20 @@ describe('RecordingFolders', () => {
     expect(await readdir(root)).toEqual([]);
   });
 
+  it("discards a page's open files when it goes away, such as a reload or a closed window", async () => {
+    const recordings = folders();
+    await recordings.choose();
+    const first = await recordings.create('id-1', '01 One.wav', 7);
+    await recordings.append(first.id, bytes('RIFF'));
+    await writeAll(recordings, 'id-1', '02 Two.wav', ['done']);
+    await recordings.create('id-1', '03 Three.wav', 7);
+    const otherPage = await recordings.create('id-1', '04 Four.wav', 8);
+    await recordings.discardOwnedBy(7);
+    expect((await readdir(root)).sort()).toEqual(['02 Two.wav', '04 Four.wav']);
+    await recordings.finish(otherPage.id);
+    await expect(recordings.append(first.id, bytes('more'))).rejects.toThrow();
+  });
+
   it('refuses a name with a path or a colon in it and creates nothing (desktop-shell: "Path in a file name")', async () => {
     const recordings = folders();
     await recordings.choose();

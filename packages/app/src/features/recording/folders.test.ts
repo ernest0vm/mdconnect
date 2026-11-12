@@ -12,7 +12,11 @@ const text = (value: string) => new TextEncoder().encode(value);
 const joined = (parts: readonly Uint8Array[]) => [...parts.flatMap((part) => [...part])];
 
 /** A directory in memory, with the File System Access calls the folder uses. */
-function fakeDirectory(name: string, existing: readonly string[] = [], failWrites = false) {
+function fakeDirectory(
+  name: string,
+  existing: readonly string[] = [],
+  fail: 'write' | 'open' | null = null,
+) {
   const files = new Map<string, number[]>(existing.map((file) => [file, [...text('old')]]));
   const handle: DirectoryHandleLike = {
     name,
@@ -25,18 +29,20 @@ function fakeDirectory(name: string, existing: readonly string[] = [], failWrite
       const pending: number[] = [];
       return Promise.resolve({
         createWritable: () =>
-          Promise.resolve({
-            write: (data: Uint8Array) => {
-              if (failWrites) return Promise.reject(new Error('disk full'));
-              pending.push(...data);
-              return Promise.resolve();
-            },
-            close: () => {
-              files.set(fileName, pending);
-              return Promise.resolve();
-            },
-            abort: () => Promise.resolve(),
-          }),
+          fail === 'open'
+            ? Promise.reject(new DOMException('no permission', 'NotAllowedError'))
+            : Promise.resolve({
+                write: (data: Uint8Array) => {
+                  if (fail === 'write') return Promise.reject(new Error('disk full'));
+                  pending.push(...data);
+                  return Promise.resolve();
+                },
+                close: () => {
+                  files.set(fileName, pending);
+                  return Promise.resolve();
+                },
+                abort: () => Promise.resolve(),
+              }),
       });
     },
     removeEntry(fileName) {
@@ -77,9 +83,18 @@ describe('directoryRecordingFolders', () => {
   });
 
   it('leaves no file behind when a write fails (deck-recording: "Unfinished file")', async () => {
-    const { handle, files } = fakeDirectory('MiniDisc', [], true);
+    const { handle, files } = fakeDirectory('MiniDisc', [], 'write');
     const folder = await directoryRecordingFolders(() => Promise.resolve(handle)).choose();
     await expect(folder?.write('01 One.wav', [bytes(1)])).rejects.toThrow('disk full');
+    expect(files.size).toBe(0);
+  });
+
+  it('leaves no empty file behind when the file cannot be opened for writing', async () => {
+    const { handle, files } = fakeDirectory('MiniDisc', [], 'open');
+    const folder = await directoryRecordingFolders(() => Promise.resolve(handle)).choose();
+    await expect(folder?.write('01 One.wav', [bytes(1)])).rejects.toMatchObject({
+      name: 'NotAllowedError',
+    });
     expect(files.size).toBe(0);
   });
 

@@ -22,8 +22,7 @@ export function recordingFileName(track: NamedTrack, trackCount: number): string
     first === undefined ? `Track ${number}` : second === undefined ? first : `${first} (${second})`;
   const stem = `${number} ${title}`
     // eslint-disable-next-line no-control-regex -- control characters are refused in file names.
-    .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/gu, '-')
-    .replace(/[. ]+$/u, '');
+    .replace(/[\\/:*?"<>|\u0000-\u001f\u007f]/gu, '-');
   return `${withinBytes(stem, MAX_BYTES - EXTENSION.length).replace(/[. ]+$/u, '')}${EXTENSION}`;
 }
 

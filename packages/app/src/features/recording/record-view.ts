@@ -48,6 +48,9 @@ export function inputProblem(error: unknown): string {
   if (name === 'NotAllowedError' || name === 'SecurityError') {
     return 'mdconnect cannot hear the input because audio capture was refused. Allow microphone access for mdconnect: on macOS in System Settings → Privacy & Security → Microphone, on Windows in Settings → Privacy → Microphone (with “Let desktop apps access your microphone” on), or in the browser through the site settings.';
   }
+  if (name === 'InputLostError') {
+    return 'The input stopped. Check that it is still connected, then choose it again.';
+  }
   if (name === 'InputProcessingError') {
     return 'This input keeps cleaning up the sound (echo cancellation, noise suppression or automatic gain), which would change the music. Choose a line-in or a USB audio interface instead.';
   }

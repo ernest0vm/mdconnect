@@ -12,7 +12,7 @@ import {
   recordBlocker,
   summaryLines,
 } from './record-view';
-import { InputProcessingError } from './capture';
+import { InputLostError, InputProcessingError } from './capture';
 
 const free = { selected: 2, busy: false, playBlocker: null, recording: false } as const;
 
@@ -98,6 +98,10 @@ describe('inputProblem', () => {
 
   it('describes other failures plainly', () => {
     expect(inputProblem(new Error('busy'))).toMatch(/could not be opened/u);
+  });
+
+  it('says when the input stopped, such as an unplugged interface', () => {
+    expect(inputProblem(new InputLostError())).toMatch(/input stopped/u);
   });
 
   it('asks for another input when this one cannot turn off its sound processing (deck-recording: "Processing that cannot be turned off")', () => {

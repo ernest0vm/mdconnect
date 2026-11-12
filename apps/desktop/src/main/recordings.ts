@@ -3,7 +3,7 @@ import { open, rm, type FileHandle } from 'node:fs/promises';
 import { basename, join } from 'node:path';
 
 import { isSafeFileName, uniqueFileName } from '@mdconnect/core';
-import { dialog, ipcMain, type BrowserWindow } from 'electron';
+import { dialog, ipcMain, type BrowserWindow, type WebContents } from 'electron';
 
 import { IPC, type RecordingFilePayload, type RecordingFolderPayload } from '../shared/ipc';
 import { isAppOrigin, type OriginContext } from './url-policy';
@@ -17,6 +17,8 @@ export interface RecordingFolderDependencies {
 interface OpenFile {
   readonly handle: FileHandle;
   readonly path: string;
+  /** The page that opened the file. */
+  readonly owner: number;
 }
 
 /**
@@ -43,7 +45,7 @@ export class RecordingFolders {
    * Opens a new file in the folder under `fileName`, or a free variant of it, for writing in
    * parts; resolves with the file's id and the name it got. An existing file is never opened.
    */
-  async create(folderId: string, fileName: string): Promise<RecordingFilePayload> {
+  async create(folderId: string, fileName: string, owner = 0): Promise<RecordingFilePayload> {
     const folder = this.paths.get(folderId);
     if (folder === undefined) throw new Error('No recording folder was picked');
     if (!isSafeFileName(fileName)) throw new Error('The file name is not allowed');
@@ -55,7 +57,7 @@ export class RecordingFolders {
         // `wx` creates the file only if no file has the name, even one made a moment ago.
         const handle = await open(path, 'wx');
         const id = this.dependencies.newId();
-        this.files.set(id, { handle, path });
+        this.files.set(id, { handle, path, owner });
         return { id, name };
       } catch (error) {
         if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
@@ -82,6 +84,12 @@ export class RecordingFolders {
     this.files.delete(fileId);
     await file.handle.close().catch(() => undefined);
     await rm(file.path, { force: true });
+  }
+
+  /** Discards the files a page still has open, for a page that reloaded, crashed or closed. */
+  async discardOwnedBy(owner: number): Promise<void> {
+    const owned = [...this.files].filter(([, file]) => file.owner === owner);
+    await Promise.all(owned.map(([fileId]) => this.discard(fileId)));
   }
 
   private file(fileId: string): OpenFile {
@@ -113,24 +121,41 @@ export function installRecordingHandlers(
     },
     newId: randomUUID,
   });
-  const handle = (channel: string, run: (...args: unknown[]) => Promise<unknown>) => {
+  const handle = (
+    channel: string,
+    run: (page: WebContents, ...args: unknown[]) => Promise<unknown>,
+  ) => {
     ipcMain.handle(channel, (event, ...args: unknown[]) => {
       if (!isAppOrigin(event.senderFrame?.origin ?? '', origins)) throw new Error('Not allowed');
-      return run(...args);
+      return run(event.sender, ...args);
     });
+  };
+  // A page that goes away never finishes its files, so they are removed instead of left partial.
+  const watched = new WeakSet<WebContents>();
+  const discardWhenGone = (page: WebContents) => {
+    if (watched.has(page)) return;
+    watched.add(page);
+    const id = page.id;
+    const discard = () => {
+      void folders.discardOwnedBy(id);
+    };
+    page.on('render-process-gone', discard);
+    page.on('did-navigate', discard);
+    page.on('destroyed', discard);
   };
   const text = (value: unknown): string => {
     if (typeof value !== 'string') throw new Error('Bad recording call');
     return value;
   };
   handle(IPC.recordingsChooseFolder, () => folders.choose());
-  handle(IPC.recordingsCreate, (folderId, fileName) =>
-    folders.create(text(folderId), text(fileName)),
-  );
-  handle(IPC.recordingsAppend, (fileId, bytes) => {
+  handle(IPC.recordingsCreate, (page, folderId, fileName) => {
+    discardWhenGone(page);
+    return folders.create(text(folderId), text(fileName), page.id);
+  });
+  handle(IPC.recordingsAppend, (_page, fileId, bytes) => {
     if (!(bytes instanceof Uint8Array)) throw new Error('Bad recording call');
     return folders.append(text(fileId), bytes);
   });
-  handle(IPC.recordingsFinish, (fileId) => folders.finish(text(fileId)));
-  handle(IPC.recordingsDiscard, (fileId) => folders.discard(text(fileId)));
+  handle(IPC.recordingsFinish, (_page, fileId) => folders.finish(text(fileId)));
+  handle(IPC.recordingsDiscard, (_page, fileId) => folders.discard(text(fileId)));
 }

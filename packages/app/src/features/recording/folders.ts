@@ -121,9 +121,12 @@ function directoryFolder(directory: DirectoryHandleLike, batchBytes: number): Re
         taken.add(name);
         name = uniqueFileName(fileName, (candidate) => taken.has(candidate));
       }
-      const writable = await (
-        await directory.getFileHandle(name, { create: true })
-      ).createWritable();
+      const handle = await directory.getFileHandle(name, { create: true });
+      const writable = await handle.createWritable().catch(async (error: unknown) => {
+        // The file was created empty above; it is removed rather than left behind.
+        await directory.removeEntry(name).catch(() => undefined);
+        throw error;
+      });
       await writeParts(
         {
           append: (bytes) => writable.write(bytes),

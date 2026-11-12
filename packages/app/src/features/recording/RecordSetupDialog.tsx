@@ -11,7 +11,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 
 import { browserStorage } from '../../browser-storage';
 import { percentText } from '../../percent';
-import { openInput } from './capture';
+import { InputLostError, openInput } from './capture';
 import { startCapture, type LiveCapture } from './capture-source';
 import {
   chooseInput,
@@ -98,6 +98,7 @@ export function RecordSetupDialog({
     if (inputId === null) return;
     let current = true;
     let opened: LiveCapture | null = null;
+    let stopWatchingEnd: () => void = () => undefined;
     openInput(navigator.mediaDevices, inputId)
       .then(startCapture)
       .then(
@@ -109,6 +110,11 @@ export function RecordSetupDialog({
           }
           setProblem(null);
           setCapture(live);
+          // An input that stops (unplugged) cannot be recorded from, so Start goes away with it.
+          stopWatchingEnd = live.onEnded(() => {
+            setCapture(null);
+            setProblem(inputProblem(new InputLostError()));
+          });
         },
         (error: unknown) => {
           if (current) setProblem(inputProblem(error));
@@ -116,6 +122,7 @@ export function RecordSetupDialog({
       );
     return () => {
       current = false;
+      stopWatchingEnd();
       setCapture(null);
       if (opened !== null && !handedOver.current) void opened.close();
     };

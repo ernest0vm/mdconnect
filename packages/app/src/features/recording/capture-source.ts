@@ -13,14 +13,15 @@ export interface LiveCapture extends BlockSource {
 export async function startCapture(stream: MediaStream): Promise<LiveCapture> {
   const track = stream.getAudioTracks()[0];
   const settings = track?.getSettings() ?? {};
-  const context = new AudioContext(
-    settings.sampleRate === undefined ? {} : { sampleRate: settings.sampleRate },
-  );
+  let context: AudioContext | undefined;
   const release = async () => {
     for (const each of stream.getTracks()) each.stop();
-    await context.close();
+    await context?.close();
   };
   try {
+    context = new AudioContext(
+      settings.sampleRate === undefined ? {} : { sampleRate: settings.sampleRate },
+    );
     await context.audioWorklet.addModule(workletUrl);
     const channels = Math.min(Math.max(settings.channelCount ?? 2, 1), 2);
     const capture = new AudioWorkletNode(context, 'mdconnect-capture', {
@@ -51,9 +52,16 @@ export async function startCapture(stream: MediaStream): Promise<LiveCapture> {
         };
       },
       onEnded(listener) {
-        track?.addEventListener('ended', listener);
+        // An input that ended before anyone listened fires no event, so it is reported here.
+        let listening = true;
+        const notify = () => {
+          if (listening) listener();
+        };
+        if (track === undefined || track.readyState === 'ended') queueMicrotask(notify);
+        else track.addEventListener('ended', notify);
         return () => {
-          track?.removeEventListener('ended', listener);
+          listening = false;
+          track?.removeEventListener('ended', notify);
         };
       },
       async close() {
