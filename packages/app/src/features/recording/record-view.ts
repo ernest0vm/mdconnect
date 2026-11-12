@@ -24,14 +24,20 @@ export interface AudioInput {
   readonly label: string;
 }
 
-/** The input to start with: the remembered one if it is still there, else the first. */
+/** Chromium's id for the input the operating system uses by default. */
+const SYSTEM_DEFAULT_INPUT = 'default';
+
+/**
+ * The input to start with: the remembered one if it is still there, else the system's default
+ * input (not whatever the browser happens to list first, such as a phone's microphone), else the
+ * first.
+ */
 export function chooseInput(
   inputs: readonly AudioInput[],
   remembered: string | null,
 ): string | null {
-  return (
-    inputs.find((input) => input.deviceId === remembered)?.deviceId ?? inputs[0]?.deviceId ?? null
-  );
+  const present = (id: string | null) => inputs.find((input) => input.deviceId === id)?.deviceId;
+  return present(remembered) ?? present(SYSTEM_DEFAULT_INPUT) ?? inputs[0]?.deviceId ?? null;
 }
 
 /** Why the chosen input cannot be used, from the error opening it. */

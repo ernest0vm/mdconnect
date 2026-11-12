@@ -73,9 +73,11 @@ describe('chooseInput (deck-recording: "Remembered input")', () => {
     expect(chooseInput(inputs, 'line')).toBe('line');
   });
 
-  it('falls back to the first input, or none', () => {
-    expect(chooseInput(inputs, 'gone')).toBe('default');
-    expect(chooseInput(inputs, null)).toBe('default');
+  it('falls back to the system default input, then the first, or none', () => {
+    const phoneFirst = [{ deviceId: 'phone', label: 'iPhone Microphone' }, ...inputs];
+    expect(chooseInput(phoneFirst, 'gone')).toBe('default');
+    expect(chooseInput(phoneFirst, null)).toBe('default');
+    expect(chooseInput([{ deviceId: 'line', label: 'Line In' }], null)).toBe('line');
     expect(chooseInput([], 'line')).toBeNull();
   });
 });
