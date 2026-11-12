@@ -1,3 +1,5 @@
+import type { Song } from '@mdconnect/core';
+
 import type {
   AppearancePayload,
   ChooseDeviceRequestPayload,
@@ -27,5 +29,10 @@ export interface MdconnectBridge {
     append(fileId: string, bytes: Uint8Array): Promise<void>;
     finish(fileId: string): Promise<void>;
     discard(fileId: string): Promise<void>;
+  };
+  /** Song recognition calls the page cannot make itself; Shazam refuses web pages. */
+  readonly recognition: {
+    /** Asks Shazam about a signature; the song found, or null. */
+    shazam(signature: { readonly uri: string; readonly sampleMs: number }): Promise<Song | null>;
   };
 }

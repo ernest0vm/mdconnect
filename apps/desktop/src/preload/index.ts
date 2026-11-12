@@ -1,3 +1,4 @@
+import type { Song } from '@mdconnect/core';
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 import type { MdconnectBridge } from '../shared/bridge';
@@ -43,6 +44,10 @@ const bridge: MdconnectBridge = {
       ipcRenderer.invoke(IPC.recordingsAppend, fileId, bytes) as Promise<void>,
     finish: (fileId) => ipcRenderer.invoke(IPC.recordingsFinish, fileId) as Promise<void>,
     discard: (fileId) => ipcRenderer.invoke(IPC.recordingsDiscard, fileId) as Promise<void>,
+  },
+  recognition: {
+    shazam: (signature) =>
+      ipcRenderer.invoke(IPC.recognitionShazam, signature) as Promise<Song | null>,
   },
   appearance: {
     get: () => appearance,

@@ -32,7 +32,7 @@
 
   Verify the handler with unit tests using a fake `fetch`: a recognised excerpt, a malformed request that sends nothing, and another origin (desktop-shell: "Recognised excerpt", "Malformed request", "Other origin").
 
-- [ ] 4.2 Set mdconnect's User-Agent on requests to `musicbrainz.org` and `api.acoustid.org` with `session.webRequest.onBeforeSendHeaders`. Verify with a unit test on the header function, and that other requests keep their headers.
+- [x] 4.2 Set mdconnect's User-Agent on requests to `musicbrainz.org` and `api.acoustid.org` with `session.webRequest.onBeforeSendHeaders`. Verify with a unit test on the header function, and that other requests keep their headers.
 - [x] 4.3 Add both origins to `connect-src` in `packages/core/src/security.ts` and in `apps/web/vercel.json`. Verify with the CSP tests (desktop-shell: "Recognition services allowed", "Other origins blocked"); also add a test in `apps/web` that the CSP in `vercel.json` equals the shared policy, which today only a comment in `security.ts` asks for.
 
 ## 5. Identification session and preferences
