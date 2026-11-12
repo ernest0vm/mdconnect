@@ -230,7 +230,7 @@ The dialog SHALL list each track with its number, current title and new title, o
 
 ### Requirement: Applying new titles
 
-Apply new titles SHALL change only the titles of the ticked tracks, leaving groups and every other title as they are, with the same title conversion and title-space rules as renaming a track, and SHALL show the converted titles before applying. When full-width titles are on, a new title that differs once converted to half-width SHALL also be saved as the full-width title. Apply SHALL be unavailable, with the reason, on a write-protected disc or when the titles do not fit.
+Apply new titles SHALL change only the titles of the ticked tracks, leaving groups and every other title as they are, with the same title conversion and title-space rules as renaming a track, and SHALL show the converted titles before applying. Apply SHALL be unavailable, with the reason, on a write-protected disc or when the titles do not fit.
 
 #### Scenario: Apply
 
@@ -242,16 +242,6 @@ Apply new titles SHALL change only the titles of the ticked tracks, leaving grou
 - **WHEN** the new title is "Te Lloré un Río"
 - **THEN** the dialog shows that "Te Llore un Rio" will be saved
 
-#### Scenario: Full-width title
-
-- **WHEN** full-width titles are on and the new title is "夜明け"
-- **THEN** the track's full-width title is set to "夜明け"
-
-#### Scenario: Old full-width title cleared
-
-- **WHEN** track 4 has the full-width title "夜明け" and the new title applied is "Dawn"
-- **THEN** track 4's full-width title is cleared, so the disc shows "Dawn"
-
 #### Scenario: Groups unchanged
 
 - **WHEN** tracks 1 to 3 form the group "Side A" and the user applies a new title to track 5 only
@@ -261,3 +251,22 @@ Apply new titles SHALL change only the titles of the ticked tracks, leaving grou
 
 - **WHEN** the disc is write-protected
 - **THEN** tracks can be identified, but Apply new titles is unavailable and says the disc is write-protected
+
+### Requirement: Full-width titles from results
+
+When full-width titles are on, applying a new title SHALL also save its full-width form, unless that form reads the same as the half-width title once converted back. Otherwise, and when full-width titles are off, the track's full-width title SHALL be emptied, so an old one does not stay.
+
+#### Scenario: Full-width title
+
+- **WHEN** full-width titles are on and the new title is "夜明け"
+- **THEN** the track's full-width title is set to "夜明け"
+
+#### Scenario: Full-width letters only
+
+- **WHEN** full-width titles are on and the new title is "ＡＢＣ"
+- **THEN** the track's title is "ABC" and its full-width title is empty, since "ＡＢＣ" reads as "ABC"
+
+#### Scenario: Old full-width title cleared
+
+- **WHEN** track 4 has the full-width title "夜明け" and the new title applied is "Dawn"
+- **THEN** track 4's full-width title is cleared, so the disc shows "Dawn"
