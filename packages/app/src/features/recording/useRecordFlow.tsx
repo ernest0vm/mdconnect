@@ -33,6 +33,11 @@ export interface RecordFlowOptions {
   readonly folders: PlatformRecordingFolders | undefined;
   /** Called when a recording starts and ends, so the panel can block other work and polling. */
   readonly onRecordingChange: (recording: boolean) => void;
+  /**
+   * Called with the summary of a recording the device's disconnection ended, which this flow
+   * can no longer show because the panel is gone; and with null when a new recording starts.
+   */
+  readonly onInterrupted?: (summary: RecordingSummary | null) => void;
 }
 
 export interface RecordFlow {
@@ -67,6 +72,7 @@ export function useRecordFlow({
   trackCount,
   folders,
   onRecordingChange,
+  onInterrupted,
 }: RecordFlowOptions): RecordFlow {
   const [phase, setPhase] = useState<Phase | null>(null);
   const [stopping, setStopping] = useState(false);
@@ -96,6 +102,7 @@ export function useRecordFlow({
     setStopping(false);
     setPhase({ kind: 'recording', capture, progress: null });
     onRecordingChange(true);
+    onInterrupted?.(null);
     const release = await holdWakeLock();
     try {
       const summary = await recordTracks(tracks, {
@@ -111,9 +118,8 @@ export function useRecordFlow({
           );
         },
       });
-      if (!abort.signal.aborted || abort.signal.reason !== 'disconnected') {
-        setPhase({ kind: 'summary', summary });
-      }
+      if (summary.ending === 'disconnected') onInterrupted?.(summary);
+      else setPhase({ kind: 'summary', summary });
     } finally {
       release();
       controller.current = null;

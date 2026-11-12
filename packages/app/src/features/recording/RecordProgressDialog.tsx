@@ -50,14 +50,25 @@ export function RecordProgressDialog({
           // A stray click outside must not cancel a recording.
           event.preventDefault();
         }}
+        onOpenAutoFocus={(event) => {
+          // Focus the status, not Cancel: a stray Space or Enter must not end a long recording.
+          event.preventDefault();
+          (event.currentTarget as HTMLElement | null)
+            ?.querySelector<HTMLElement>('[data-autofocus]')
+            ?.focus();
+        }}
       >
         <GlassDialogTitle className="text-lg font-semibold">
           {summary === null ? 'Recording' : 'Recording finished'}
         </GlassDialogTitle>
         {summary === null ? (
           <>
-            <GlassDialogDescription className="mt-1 text-sm">
-              {progress === null ? 'Starting the deck…' : progressLabel(progress)}. Keep the deck
+            <GlassDialogDescription
+              className="mt-1 text-sm outline-none"
+              tabIndex={-1}
+              data-autofocus
+            >
+              {progress === null ? 'Starting the deck' : progressLabel(progress)}. Keep the deck
               connected and playing.
             </GlassDialogDescription>
             <div className="mt-4 flex flex-col gap-3" aria-live="polite">

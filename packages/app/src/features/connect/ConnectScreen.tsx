@@ -11,6 +11,8 @@ import { AboutDialog } from '../about/AboutDialog';
 import { ChangelogDialog } from '../changelog/ChangelogDialog';
 import { menuTrigger } from '../disc/DiscMenu';
 import { DiscPanel } from '../disc/DiscPanel';
+import { summaryLines } from '../recording/record-view';
+import type { RecordingSummary } from '../recording/session';
 import { ChooserDialog } from './ChooserDialog';
 import { connectReducer, formatUsbId, initialConnectState } from './connect-state';
 import { ConnectionController } from './connection-controller';
@@ -25,6 +27,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   const chooserCancelled = useRef(false);
   const [menuSlot, setMenuSlot] = useState<HTMLElement | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
+  /** A recording the device's disconnection ended, reported until the next recording starts. */
+  const [interruptedRecording, setInterruptedRecording] = useState<RecordingSummary | null>(null);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const controller = useMemo(
     () => new ConnectionController(platform.usb, platform.deviceKinds, dispatch),
@@ -80,6 +84,13 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
 
   const alerts = (
     <>
+      {interruptedRecording !== null && (
+        <GlassAlert tone="warning" title="Recording stopped">
+          {summaryLines(interruptedRecording).map((line, index) => (
+            <p key={index}>{line}</p>
+          ))}
+        </GlassAlert>
+      )}
       {hint && (
         <GlassAlert tone="info" title="Device unplugged">
           <p>{hint}</p>
@@ -148,6 +159,7 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
               device={openDevice}
               menuSlot={menuSlot}
               recordingFolders={platform.recordingFolders}
+              onRecordingInterrupted={setInterruptedRecording}
               onAbout={() => {
                 setAboutOpen(true);
               }}

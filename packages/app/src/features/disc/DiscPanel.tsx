@@ -62,7 +62,7 @@ import { TitleDialog } from './TitleDialog';
 import { trackActions, trackAfterAction, type TrackAction } from './track-menu';
 import { TrackTable, trackRow } from './TrackTable';
 import { recordBlocker } from '../recording/record-view';
-import type { RecordingTrack } from '../recording/session';
+import type { RecordingSummary, RecordingTrack } from '../recording/session';
 import { useRecordFlow } from '../recording/useRecordFlow';
 import { useUploadFlow, type UploadFlow } from '../upload/useUploadFlow';
 
@@ -577,6 +577,8 @@ export interface DiscPanelProps {
   readonly onExit?: (device: UsbDeviceHandle) => void;
   /** Where recordings are saved; undefined downloads each file. */
   readonly recordingFolders?: PlatformRecordingFolders | undefined;
+  /** Receives the summary of a recording ended by unplugging the device, for the Connect screen. */
+  readonly onRecordingInterrupted?: (summary: RecordingSummary | null) => void;
 }
 
 type MenuDialog =
@@ -595,6 +597,7 @@ export function DiscPanel({
   onChangelog,
   onExit,
   recordingFolders,
+  onRecordingInterrupted,
 }: DiscPanelProps) {
   const reader = useMemo(
     () =>
@@ -719,6 +722,7 @@ export function DiscPanel({
     trackCount: status.kind === 'disc' ? status.raw.trackCount : 0,
     folders: recordingFolders,
     onRecordingChange: setRecording,
+    onInterrupted: onRecordingInterrupted,
   });
   const editNotice =
     editState.kind === 'failed' ? (
@@ -753,9 +757,9 @@ export function DiscPanel({
       }}
       variant="soft"
       size="sm"
-      aria-disabled={status.kind === 'reading' || saving || upload.uploading}
+      aria-disabled={status.kind === 'reading' || saving || upload.uploading || recording}
       onClick={(event) => {
-        if (status.kind === 'reading' || saving || upload.uploading) return;
+        if (status.kind === 'reading' || saving || upload.uploading || recording) return;
         keepRefreshFocus.current = document.activeElement === event.currentTarget;
         refresh();
       }}
