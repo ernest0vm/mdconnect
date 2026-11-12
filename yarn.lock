@@ -909,6 +909,7 @@ __metadata:
     "@types/react": "npm:^19"
     "@types/react-dom": "npm:^19"
     "@types/w3c-web-usb": "npm:^1.0.14"
+    "@unimusic/chromaprint": "npm:0.1.4"
     music-metadata: "npm:^12.3.4"
     react: "npm:^19"
     react-dom: "npm:^19"
@@ -2262,6 +2263,13 @@ __metadata:
     "@typescript-eslint/types": "npm:8.72.1"
     eslint-visitor-keys: "npm:^5.0.0"
   checksum: 10c0/758e253217971fb795a5988dffe6257a5655e4c1afebc66892b9d42b1569787a03059e1a64dcabae7cb847b6e7cfba2b8e9fc1a77d17f470cbdaa9419e65e6bb
+  languageName: node
+  linkType: hard
+
+"@unimusic/chromaprint@npm:0.1.4":
+  version: 0.1.4
+  resolution: "@unimusic/chromaprint@npm:0.1.4"
+  checksum: 10c0/acd900c331b61f879c201b2e7b18e8ae7eba9c3a7ae3eb9c5f9a77406c5a95360f113bad501ee9cbf4aa95e4c34ee74af9f22a9938354c44de3a769ec19a62eb
   languageName: node
   linkType: hard
 
