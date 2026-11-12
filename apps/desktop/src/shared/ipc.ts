@@ -4,7 +4,15 @@ export const IPC = {
   deviceChosen: 'usb:device-chosen',
   appearanceChanged: 'appearance:changed',
   appearanceGet: 'appearance:get',
+  recordingsChooseFolder: 'recordings:choose-folder',
+  recordingsWrite: 'recordings:write',
 } as const;
+
+/** A folder the user picked for recordings: an opaque id and the folder's own name, never a path. */
+export interface RecordingFolderPayload {
+  readonly id: string;
+  readonly name: string;
+}
 
 export interface ChooserDevicePayload {
   readonly deviceId: string;

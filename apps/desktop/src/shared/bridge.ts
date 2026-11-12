@@ -1,4 +1,9 @@
-import type { AppearancePayload, ChooseDeviceRequestPayload, DesktopOs } from './ipc';
+import type {
+  AppearancePayload,
+  ChooseDeviceRequestPayload,
+  DesktopOs,
+  RecordingFolderPayload,
+} from './ipc';
 
 /** The only privileged API the renderer sees, exposed by the preload as `window.mdconnect`. */
 export interface MdconnectBridge {
@@ -10,5 +15,10 @@ export interface MdconnectBridge {
   readonly appearance: {
     get(): AppearancePayload;
     onChange(callback: (signals: AppearancePayload) => void): () => void;
+  };
+  /** A folder the user picks for recordings, and writes into it; no paths cross the bridge. */
+  readonly recordings: {
+    chooseFolder(): Promise<RecordingFolderPayload | null>;
+    write(folderId: string, fileName: string, bytes: Uint8Array): Promise<string>;
   };
 }

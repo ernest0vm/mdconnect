@@ -5,13 +5,10 @@ import { app, BrowserWindow, ipcMain, nativeTheme, screen, session } from 'elect
 import { IPC, type AppearancePayload } from '../shared/ipc';
 import { registerAppScheme, serveAppProtocol } from './app-protocol';
 import { ChooserBridge } from './chooser-bridge';
-import {
-  applyDevelopmentCsp,
-  denyPermissionRequests,
-  lockNavigation,
-  SECURE_WEB_PREFERENCES,
-} from './security';
+import { applyDevelopmentCsp, lockNavigation, SECURE_WEB_PREFERENCES } from './security';
 import { APP_ORIGIN, type OriginContext } from './url-policy';
+import { installPermissionHandlers } from './permissions';
+import { installRecordingHandlers } from './recordings';
 import { installUsbHandlers } from './usb';
 import { mainWindowSize } from './window-size';
 
@@ -47,10 +44,11 @@ if (app.requestSingleInstanceLock()) {
 function start(): void {
   nativeTheme.themeSource = 'system';
   const defaultSession = session.defaultSession;
-  denyPermissionRequests(defaultSession);
+  installPermissionHandlers(defaultSession, origins);
   if (devServerUrl !== undefined) applyDevelopmentCsp(defaultSession);
   serveAppProtocol(join(import.meta.dirname, '../renderer'));
   installUsbHandlers(defaultSession, bridge, origins);
+  installRecordingHandlers(() => mainWindow, origins);
   forwardAppearance();
   showMainWindow();
 }

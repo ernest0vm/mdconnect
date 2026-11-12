@@ -26,6 +26,9 @@ mac:
   target: dmg
   category: public.app-category.music
   identity: null
+  extendInfo:
+    # Without this key macOS ends the app the first time it captures audio (recording from a deck).
+    NSMicrophoneUsageDescription: mdconnect records the audio from your MiniDisc deck through this input.
 win:
   target: nsis
 linux:

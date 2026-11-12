@@ -75,6 +75,19 @@ export interface PlatformAppearance {
   onChange(callback: (signals: AppearanceSignals) => void): Unsubscribe;
 }
 
+/** A folder the user picked for recordings. */
+export interface RecordingFolder {
+  /** The folder's own name, to tell the user where files went. */
+  readonly name: string;
+  /** Writes a file, or a free variant of its name; resolves with the name used. */
+  write(fileName: string, data: Blob): Promise<string>;
+}
+
+export interface PlatformRecordingFolders {
+  /** Asks the user for a folder; null when they cancel. */
+  choose(): Promise<RecordingFolder | null>;
+}
+
 export interface Platform {
   readonly kind: PlatformKind;
   readonly os: OperatingSystem;
@@ -88,4 +101,6 @@ export interface Platform {
   readonly buildCommit: string;
   /** The app version, the newest entry in CHANGELOG.md. */
   readonly version: string;
+  /** Folders to save recordings in; undefined where the platform cannot write to a folder. */
+  readonly recordingFolders?: PlatformRecordingFolders | undefined;
 }

@@ -19,6 +19,17 @@ const platform: Platform = {
       bridge.usb.respondChooseDevice(requestId, deviceId);
     },
   },
+  recordingFolders: {
+    async choose() {
+      const folder = await bridge.recordings.chooseFolder();
+      if (folder === null) return null;
+      return {
+        name: folder.name,
+        write: async (fileName, data) =>
+          bridge.recordings.write(folder.id, fileName, new Uint8Array(await data.arrayBuffer())),
+      };
+    },
+  },
   appearance: {
     get: () => bridge.appearance.get(),
     onChange: (callback) => bridge.appearance.onChange(callback),
