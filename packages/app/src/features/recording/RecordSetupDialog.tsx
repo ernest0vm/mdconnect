@@ -164,7 +164,8 @@ export function RecordSetupDialog({
               id={selectId}
               className="rounded-lg border border-[var(--lg-border)] bg-[var(--lg-control-surface)] px-2 py-1.5 text-sm"
               value={inputId ?? ''}
-              disabled={inputs === null || inputs.length === 0}
+              // Changing the input during a start would open a capture nobody closes.
+              disabled={inputs === null || inputs.length === 0 || starting}
               onChange={(event) => {
                 setInputId(event.target.value);
                 rememberInput(event.target.value);
