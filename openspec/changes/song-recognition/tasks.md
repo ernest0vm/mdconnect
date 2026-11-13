@@ -2,7 +2,7 @@
 
 ## 1. Service setup and dependency
 
-- [ ] 1.1 **Manual, maintainer:** register mdconnect as an application at https://acoustid.org/new-application (name "mdconnect", website the GitHub repository). Put the client key in `packages/core/src/recognition/services.ts` with the three service origins. Verify by sending one lookup with the key from a terminal (`curl` with a fingerprint from `fpcalc`), which must answer `"status": "ok"`.
+- [x] 1.1 **Manual, maintainer:** register mdconnect as an application at https://acoustid.org/new-application (name "mdconnect", website the GitHub repository). Put the client key in `packages/core/src/recognition/services.ts` with the three service origins. Verify by sending one lookup with the key from a terminal (`curl` with a fingerprint from `fpcalc`), which must answer `"status": "ok"`. Done 2026-11-13: the key `wO20poQINj` answered `{"results": [], "status": "ok"}` to a lookup of Chromaprint's silence fingerprint (`AQAAA0mUaEkSRZEGAA`, 130 s), where the earlier placeholder got `invalid API key`. No `fpcalc` was at hand, so the fingerprint came from Chromaprint's own tests.
 - [x] 1.2 Add `@unimusic/chromaprint` 0.1.4 to `packages/app` with Yarn, and confirm that no `dependenciesMeta` entry is needed. Verify that `yarn install` passes the 7-day age gate and that `yarn check:affected` passes, including repo-policy.
 
 ## 2. Shazam signature (packages/core)
