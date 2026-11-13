@@ -9,6 +9,7 @@ export const IPC = {
   recordingsAppend: 'recordings:append',
   recordingsFinish: 'recordings:finish',
   recordingsDiscard: 'recordings:discard',
+  recognitionShazam: 'recognition:shazam',
 } as const;
 
 /** A recording file being written: an opaque id and the name it was given. */

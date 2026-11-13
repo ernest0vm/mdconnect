@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { addTracksBlocker } from '../upload/upload-view';
 import { editBlocker } from '../disc/editing';
+import { IDENTIFYING_IN_PROGRESS } from '../disc/deck-busy';
 import { playerBlocker } from '../disc/player-view';
 import {
   chooseInput,
@@ -14,7 +15,7 @@ import {
 } from './record-view';
 import { InputLostError, InputProcessingError } from './capture';
 
-const free = { selected: 2, busy: false, playBlocker: null, recording: false } as const;
+const free = { selected: 2, busy: false, playBlocker: null, deckBusy: null } as const;
 
 describe('recordBlocker', () => {
   it('is available with tracks selected and the player usable', () => {
@@ -40,16 +41,17 @@ describe('recordBlocker', () => {
   });
 
   it('is unavailable during a recording', () => {
-    expect(recordBlocker({ ...free, recording: true })).toBe(RECORDING_IN_PROGRESS);
+    expect(recordBlocker({ ...free, deckBusy: 'recording' })).toBe(RECORDING_IN_PROGRESS);
+    expect(recordBlocker({ ...free, deckBusy: 'identifying' })).toBe(IDENTIFYING_IN_PROGRESS);
   });
 });
 
 describe('controls during a recording (deck-recording: "Controls blocked")', () => {
   it('say that a recording is in progress, before any other reason', () => {
-    expect(editBlocker({ writeProtected: true, busy: true, recording: true })).toBe(
+    expect(editBlocker({ writeProtected: true, busy: true, deckBusy: 'recording' })).toBe(
       RECORDING_IN_PROGRESS,
     );
-    expect(addTracksBlocker({ writeProtected: false, busy: false, recording: true })).toBe(
+    expect(addTracksBlocker({ writeProtected: false, busy: false, deckBusy: 'recording' })).toBe(
       RECORDING_IN_PROGRESS,
     );
     expect(
@@ -58,7 +60,7 @@ describe('controls during a recording (deck-recording: "Controls blocked")', () 
         reading: false,
         saving: false,
         readable: true,
-        recording: true,
+        deckBusy: 'recording',
       }),
     ).toBe(RECORDING_IN_PROGRESS);
   });

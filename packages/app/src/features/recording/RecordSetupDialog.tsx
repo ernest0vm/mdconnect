@@ -1,4 +1,3 @@
-import { GlassAlert } from '@mdconnect/ui/components/glassyui/glass-alert';
 import { GlassButton } from '@mdconnect/ui/components/glassyui/glass-button';
 import {
   GlassDialog,
@@ -6,46 +5,13 @@ import {
   GlassDialogDescription,
   GlassDialogTitle,
 } from '@mdconnect/ui/components/glassyui/glass-dialog';
-import { GlassMeter } from '@mdconnect/ui/components/glassyui/glass-meter';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useState } from 'react';
 
-import { browserStorage } from '../../browser-storage';
-import { percentText } from '../../percent';
-import { InputLostError, openInput } from './capture';
-import { startCapture, type LiveCapture } from './capture-source';
-import {
-  chooseInput,
-  FOLDER_PROBLEM,
-  inputProblem,
-  longTrackWarning,
-  type AudioInput,
-} from './record-view';
+import { AudioInputField } from './AudioInputField';
+import type { LiveCapture } from './capture-source';
+import { FOLDER_PROBLEM, longTrackWarning } from './record-view';
 import type { RecordingTrack } from './session';
-import { useInputLevel } from './useInputLevel';
-
-const INPUT_KEY = 'mdconnect.recordInput';
-
-/** The computer's audio inputs, asking for permission first so the browser gives their names. */
-async function listInputs(): Promise<AudioInput[]> {
-  const list = async () =>
-    (await navigator.mediaDevices.enumerateDevices())
-      .filter((device) => device.kind === 'audioinput')
-      .map((device) => ({ deviceId: device.deviceId, label: device.label }));
-  const first = await list();
-  if (first.length === 0 || first.every((input) => input.label !== '')) return first;
-  const probe = await navigator.mediaDevices.getUserMedia({ audio: true });
-  for (const track of probe.getTracks()) track.stop();
-  return list();
-}
-
-/** Remembers the input for next time; a profile that blocks storage just forgets it. */
-function rememberInput(deviceId: string): void {
-  try {
-    browserStorage()?.setItem(INPUT_KEY, deviceId);
-  } catch {
-    // Nothing to do: the next recording starts with the first input instead.
-  }
-}
+import { useLiveInput } from './useLiveInput';
 
 /**
  * Explains the cabling, lets the user pick the audio input and watch its level, and hands the
@@ -64,71 +30,9 @@ export function RecordSetupDialog({
   /** Where focus goes when the dialog closes: the control that opened it. */
   readonly returnFocus?: () => HTMLElement | null;
 }) {
-  const selectId = useId();
-  const [inputs, setInputs] = useState<AudioInput[] | null>(null);
-  const [inputId, setInputId] = useState<string | null>(null);
-  const [problem, setProblem] = useState<string | null>(null);
-  const [capture, setCapture] = useState<LiveCapture | null>(null);
+  const live = useLiveInput();
   const [starting, setStarting] = useState(false);
-  /** Bumped by Try again, to open the same input once more after it failed or stopped. */
-  const [attempt, setAttempt] = useState(0);
-  const handedOver = useRef(false);
-  const level = useInputLevel(capture);
-
-  useEffect(() => {
-    let current = true;
-    listInputs().then(
-      (found) => {
-        if (!current) return;
-        setInputs(found);
-        setInputId(chooseInput(found, browserStorage()?.getItem(INPUT_KEY) ?? null));
-        if (found.length === 0) setProblem(inputProblem(new DOMException('', 'NotFoundError')));
-      },
-      (error: unknown) => {
-        if (!current) return;
-        setInputs([]);
-        setProblem(inputProblem(error));
-      },
-    );
-    return () => {
-      current = false;
-    };
-  }, []);
-
-  // Opens the chosen input for the level meter; it stays open for the recording.
-  useEffect(() => {
-    if (inputId === null) return;
-    let current = true;
-    let opened: LiveCapture | null = null;
-    let stopWatchingEnd: () => void = () => undefined;
-    openInput(navigator.mediaDevices, inputId)
-      .then(startCapture)
-      .then(
-        (live) => {
-          opened = live;
-          if (!current) {
-            void live.close();
-            return;
-          }
-          setProblem(null);
-          setCapture(live);
-          // An input that stops (unplugged) cannot be recorded from, so Start goes away with it.
-          stopWatchingEnd = live.onEnded(() => {
-            setCapture(null);
-            setProblem(inputProblem(new InputLostError()));
-          });
-        },
-        (error: unknown) => {
-          if (current) setProblem(inputProblem(error));
-        },
-      );
-    return () => {
-      current = false;
-      stopWatchingEnd();
-      setCapture(null);
-      if (opened !== null && !handedOver.current) void opened.close();
-    };
-  }, [inputId, attempt]);
+  const { capture } = live;
 
   const warning = longTrackWarning(tracks);
   const count = tracks.length;
@@ -156,55 +60,8 @@ export function RecordSetupDialog({
           </li>
         </ol>
         <div className="mt-4 flex flex-col gap-3">
-          <div className="flex flex-col gap-1">
-            <label htmlFor={selectId} className="text-sm font-semibold">
-              Audio input
-            </label>
-            <select
-              id={selectId}
-              className="rounded-lg border border-[var(--lg-border)] bg-[var(--lg-control-surface)] px-2 py-1.5 text-sm"
-              value={inputId ?? ''}
-              // Changing the input during a start would open a capture nobody closes.
-              disabled={inputs === null || inputs.length === 0 || starting}
-              onChange={(event) => {
-                setInputId(event.target.value);
-                rememberInput(event.target.value);
-              }}
-            >
-              {inputs === null && <option value="">Looking for inputs…</option>}
-              {inputs?.length === 0 && <option value="">No input available</option>}
-              {(inputs ?? []).map((input) => (
-                <option key={input.deviceId} value={input.deviceId}>
-                  {input.label || 'Audio input'}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <p className="text-sm">Input level</p>
-            <GlassMeter label="Input level" value={level} max={1} valueText={percentText(level)} />
-          </div>
-          {problem !== null && (
-            <GlassAlert tone="warning" title="The input cannot be used">
-              <p>{problem}</p>
-              {inputId !== null && (
-                <GlassButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="mt-2"
-                  // The capture belongs to the starting recording until it starts or fails.
-                  disabled={starting}
-                  onClick={() => {
-                    setProblem(null);
-                    setAttempt((count) => count + 1);
-                  }}
-                >
-                  Try again
-                </GlassButton>
-              )}
-            </GlassAlert>
-          )}
+          {/* Changing the input during a start would open a capture nobody closes. */}
+          <AudioInputField live={live} locked={starting} />
           {warning !== null && <p className="text-sm">{warning}</p>}
           <div className="flex justify-end gap-2">
             <GlassButton
@@ -223,11 +80,10 @@ export function RecordSetupDialog({
               disabled={capture === null || starting}
               onClick={() => {
                 if (capture === null) return;
-                if (inputId !== null) rememberInput(inputId);
                 setStarting(true);
-                handedOver.current = true;
+                live.handOver();
                 const keepSetup = () => {
-                  handedOver.current = false;
+                  live.takeBack();
                   setStarting(false);
                 };
                 onStart(capture).then(
@@ -238,7 +94,7 @@ export function RecordSetupDialog({
                   (error: unknown) => {
                     console.error('mdconnect: the recording could not start', error);
                     keepSetup();
-                    setProblem(FOLDER_PROBLEM);
+                    live.report(FOLDER_PROBLEM);
                   },
                 );
               }}

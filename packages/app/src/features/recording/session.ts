@@ -68,7 +68,26 @@ export interface RecordingOptions {
   readonly onProgress?: (progress: RecordingProgress) => void;
 }
 
+/** The deck refused a playback command. */
 class DeckRefused extends Error {}
+
+/** Sends a playback command, throwing when the deck refuses it. */
+export function deckSender(deck: RecordingDeck): (command: PlaybackCommand) => Promise<void> {
+  return async (command) => {
+    if (!(await deck.control(command)).ok) throw new DeckRefused();
+  };
+}
+
+/** How a session that drives the deck ended, from an abort, the input or the deck; else null. */
+export function deckEnding(
+  error: unknown,
+  signal: AbortSignal,
+): 'cancelled' | 'disconnected' | 'input-lost' | 'refused' | null {
+  if (signal.aborted) return signal.reason === 'disconnected' ? 'disconnected' : 'cancelled';
+  if (error instanceof InputLostError) return 'input-lost';
+  if (error instanceof DeckRefused) return 'refused';
+  return null;
+}
 
 /** A file that could not be written, kept apart from deck and input failures. */
 class SaveFailed extends Error {}
@@ -101,9 +120,7 @@ export async function recordTracks(
   const { deck, capture, save, signal } = options;
   const saved: string[] = [];
   const clipped: string[] = [];
-  const send = async (command: PlaybackCommand) => {
-    if (!(await deck.control(command)).ok) throw new DeckRefused();
-  };
+  const send = deckSender(deck);
   let ending: RecordingEnding = 'done';
   try {
     await send({ kind: 'stop' });
@@ -145,9 +162,9 @@ export async function recordTracks(
  * Plays the track until the deck reports it at its start, then pauses and sends it back, so the
  * real play starts at once instead of after the deck spins up and loads the track.
  */
-async function prime(
+export async function prime(
   index: number,
-  { deck, sleep, signal }: RecordingOptions,
+  { deck, sleep, signal }: Pick<RecordingOptions, 'deck' | 'sleep' | 'signal'>,
   send: (command: PlaybackCommand) => Promise<void>,
 ): Promise<void> {
   await send({ kind: 'goto', track: index });
@@ -178,9 +195,8 @@ function atTrackStart(status: DeviceStatus | null, index: number): boolean {
  * reported.
  */
 function endingFor(error: unknown, signal: AbortSignal): RecordingEnding {
-  if (signal.aborted) return signal.reason === 'disconnected' ? 'disconnected' : 'cancelled';
-  if (error instanceof InputLostError) return 'input-lost';
-  if (error instanceof DeckRefused) return 'refused';
+  const ending = deckEnding(error, signal);
+  if (ending !== null) return ending;
   if (error instanceof SaveFailed) {
     console.error('mdconnect: a recording file could not be written', error.cause);
     return 'save-failed';

@@ -6,7 +6,10 @@ export type TitleSource =
 
 type TagName = 'title' | 'artist' | 'album';
 
-const PARTS: Readonly<Record<Exclude<TitleSource, 'file'>, readonly TagName[]>> = {
+/** A title built from tags, in the order each source names them. */
+export type TagTitleSource = Exclude<TitleSource, 'file'>;
+
+export const TITLE_PARTS: Readonly<Record<TagTitleSource, readonly TagName[]>> = {
   title: ['title'],
   'album-title': ['album', 'title'],
   'artist-title': ['artist', 'title'],
@@ -14,7 +17,7 @@ const PARTS: Readonly<Record<Exclude<TitleSource, 'file'>, readonly TagName[]>> 
   'artist-album-title': ['artist', 'album', 'title'],
 };
 
-const SEPARATOR = ' - ';
+export const TITLE_SEPARATOR = ' - ';
 
 /** The file name without its extension; a leading dot is part of the name. */
 export function baseName(fileName: string): string {
@@ -28,6 +31,6 @@ export function baseName(fileName: string): string {
  */
 export function titleFromSource(source: TitleSource, tags: AudioTags, fileName: string): string {
   if (source === 'file') return baseName(fileName);
-  const values = PARTS[source].map((name) => tags[name]?.trim() ?? '');
-  return values.every((value) => value !== '') ? values.join(SEPARATOR) : baseName(fileName);
+  const values = TITLE_PARTS[source].map((name) => tags[name]?.trim() ?? '');
+  return values.every((value) => value !== '') ? values.join(TITLE_SEPARATOR) : baseName(fileName);
 }

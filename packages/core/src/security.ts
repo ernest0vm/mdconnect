@@ -1,3 +1,5 @@
+import { ACOUSTID_ORIGIN, MUSICBRAINZ_ORIGIN } from './recognition/services';
+
 /**
  * Production Content Security Policy shared by both shells: the desktop `app://` protocol handler
  * sends it as a response header, and the web app's `vercel.json` must match it exactly.
@@ -14,8 +16,9 @@ export const CSP_DIRECTIVES: CspDirectives = {
   'style-src': ["'self'", "'unsafe-inline'"],
   'img-src': ["'self'", 'data:', 'blob:'],
   'font-src': ["'self'"],
-  // The online ATRAC encoder, used only after the user agrees to send audio to it.
-  'connect-src': ["'self'", ONLINE_ENCODER_ORIGIN],
+  // The online ATRAC encoder, used only after the user agrees to send audio to it, and the song
+  // recognition services, used only after the user agrees to send fingerprints or search text.
+  'connect-src': ["'self'", ONLINE_ENCODER_ORIGIN, ACOUSTID_ORIGIN, MUSICBRAINZ_ORIGIN],
   'object-src': ["'none'"],
   'base-uri': ["'none'"],
   'form-action': ["'none'"],

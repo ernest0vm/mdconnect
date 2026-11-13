@@ -1,5 +1,5 @@
 import type { NetMdUsbDevice } from '@mdconnect/netmd';
-import type { DeviceKind } from '@mdconnect/core';
+import type { DeviceKind, ShazamSignature, Song } from '@mdconnect/core';
 
 /**
  * What each shell (desktop, web) provides to the shared app. The app never touches Electron or
@@ -86,6 +86,12 @@ export interface RecordingFolder {
   write(fileName: string, parts: readonly Uint8Array[], signal?: AbortSignal): Promise<string>;
 }
 
+/** Song recognition calls a web page cannot make itself. */
+export interface PlatformRecognition {
+  /** Desktop only: asks Shazam about a signature through the main process; the song, or null. */
+  readonly shazam?: ((signature: ShazamSignature) => Promise<Song | null>) | undefined;
+}
+
 export interface PlatformRecordingFolders {
   /** Asks the user for a folder; null when they cancel. */
   choose(): Promise<RecordingFolder | null>;
@@ -106,4 +112,6 @@ export interface Platform {
   readonly version: string;
   /** Folders to save recordings in; undefined where the platform cannot write to a folder. */
   readonly recordingFolders?: PlatformRecordingFolders | undefined;
+  /** Song recognition through the platform; undefined where it has nothing to add (the web). */
+  readonly recognition?: PlatformRecognition | undefined;
 }

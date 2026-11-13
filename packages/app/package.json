@@ -18,6 +18,7 @@
     "@mdconnect/core": "workspace:^",
     "@mdconnect/netmd": "workspace:^",
     "@mdconnect/ui": "workspace:^",
+    "@unimusic/chromaprint": "0.1.4",
     "music-metadata": "^12.3.4"
   },
   "devDependencies": {

@@ -20,6 +20,9 @@ const platform: Platform = {
     },
   },
   recordingFolders: bridgeRecordingFolders(bridge.recordings),
+  recognition: {
+    shazam: (signature) => bridge.recognition.shazam(signature),
+  },
   appearance: {
     get: () => bridge.appearance.get(),
     onChange: (callback) => bridge.appearance.onChange(callback),

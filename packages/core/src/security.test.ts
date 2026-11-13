@@ -14,8 +14,13 @@ describe('contentSecurityPolicy', () => {
     expect(directives.get('script-src')).toEqual(["'self'", "'wasm-unsafe-eval'"]);
   });
 
-  it('connects only to the app and the online ATRAC encoder (desktop-shell: "Network destinations")', () => {
-    expect(directives.get('connect-src')).toEqual(["'self'", 'https://atrac.minidisc.wiki']);
+  it('connects only to the app, the online ATRAC encoder and the recognition services (desktop-shell: "Recognition services allowed", "Other origins blocked")', () => {
+    expect(directives.get('connect-src')).toEqual([
+      "'self'",
+      'https://atrac.minidisc.wiki',
+      'https://api.acoustid.org',
+      'https://musicbrainz.org',
+    ]);
   });
 
   it('never allows string evaluation', () => {

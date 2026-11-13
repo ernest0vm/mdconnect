@@ -8,6 +8,7 @@ import { ChooserBridge } from './chooser-bridge';
 import { applyDevelopmentCsp, lockNavigation, SECURE_WEB_PREFERENCES } from './security';
 import { APP_ORIGIN, type OriginContext } from './url-policy';
 import { installPermissionHandlers } from './permissions';
+import { installRecognitionHandlers } from './recognition';
 import { installRecordingHandlers } from './recordings';
 import { installUsbHandlers } from './usb';
 import { mainWindowSize } from './window-size';
@@ -49,6 +50,7 @@ function start(): void {
   serveAppProtocol(join(import.meta.dirname, '../renderer'));
   installUsbHandlers(defaultSession, bridge, origins);
   installRecordingHandlers(() => mainWindow, origins);
+  installRecognitionHandlers(defaultSession, origins, app.getVersion());
   forwardAppearance();
   showMainWindow();
 }

@@ -11,6 +11,7 @@ import { AboutDialog } from '../about/AboutDialog';
 import { ChangelogDialog } from '../changelog/ChangelogDialog';
 import { menuTrigger } from '../disc/DiscMenu';
 import { DiscPanel } from '../disc/DiscPanel';
+import { endingNotice } from '../recognition/identify-view';
 import { summaryLines } from '../recording/record-view';
 import type { RecordingSummary } from '../recording/session';
 import { ChooserDialog } from './ChooserDialog';
@@ -29,6 +30,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
   const [aboutOpen, setAboutOpen] = useState(false);
   /** A recording the device's disconnection ended, reported until the next recording starts. */
   const [interruptedRecording, setInterruptedRecording] = useState<RecordingSummary | null>(null);
+  /** Identification the device's disconnection stopped, reported until the next one starts. */
+  const [identifyInterrupted, setIdentifyInterrupted] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
   const controller = useMemo(
     () => new ConnectionController(platform.usb, platform.deviceKinds, dispatch),
@@ -89,6 +92,11 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
           {summaryLines(interruptedRecording).map((line, index) => (
             <p key={index}>{line}</p>
           ))}
+        </GlassAlert>
+      )}
+      {identifyInterrupted && (
+        <GlassAlert tone="warning" title="Identification stopped">
+          <p>{endingNotice('disconnected')} The new titles were not applied.</p>
         </GlassAlert>
       )}
       {hint && (
@@ -160,6 +168,8 @@ export function ConnectScreen({ platform }: { readonly platform: Platform }) {
               menuSlot={menuSlot}
               recordingFolders={platform.recordingFolders}
               onRecordingInterrupted={setInterruptedRecording}
+              shazam={platform.recognition?.shazam}
+              onIdentifyInterrupted={setIdentifyInterrupted}
               onAbout={() => {
                 setAboutOpen(true);
               }}

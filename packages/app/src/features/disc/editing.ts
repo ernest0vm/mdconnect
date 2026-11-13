@@ -1,6 +1,6 @@
 import type { EditOutcome } from './disc-reader';
 import type { EditPlan, GroupTracksResult, LayoutPlan } from './edit-plan';
-import { RECORDING_IN_PROGRESS } from '../recording/record-view';
+import { type DeckBusy, deckBusyReason } from './deck-busy';
 
 export type Selection = ReadonlySet<number>;
 
@@ -42,9 +42,10 @@ export function moveDestination(from: number, over: number, side: 'before' | 'af
 export function editBlocker(state: {
   writeProtected: boolean;
   busy: boolean;
-  recording?: boolean;
+  deckBusy?: DeckBusy;
 }): string | null {
-  if (state.recording === true) return RECORDING_IN_PROGRESS;
+  const deckReason = deckBusyReason(state.deckBusy);
+  if (deckReason !== null) return deckReason;
   if (state.writeProtected) return 'The disc is write-protected. Slide its tab to edit it.';
   if (state.busy) return 'Wait for the current change to finish.';
   return null;
